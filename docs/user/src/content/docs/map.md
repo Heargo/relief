@@ -69,7 +69,7 @@ Sélectionner un nœud (clic, recherche puis Entrée, fil d'Ariane) l'ouvre dans
 
 Le panneau ne montre que des faits tirés de git et du graphe : aucun texte n'est généré.
 
-Sur la carte, les arêtes du nœud sélectionné ressortent : les sortantes en couleur d'accent, les entrantes en couleur d'impact, plus épaisses ; les autres arêtes s'estompent, tout comme les nœuds qui ne sont pas ses voisins directs. Une arête sélectionnée reste seule nette avec ses deux extrémités. `Échap` ou un clic dans le vide rétablit tout.
+Sur la carte, les arêtes du nœud sélectionné ressortent : les sortantes en couleur d'accent, les entrantes en couleur d'impact, plus épaisses ; les autres arêtes s'estompent, tout comme les nœuds qui ne sont pas ses voisins directs. Les arêtes internes au nœud sélectionné, entre deux de ses enfants, sont masquées : seules ses dépendances vers l'extérieur restent. Une arête sélectionnée reste seule nette avec ses deux extrémités. `Échap` ou un clic dans le vide rétablit tout.
 
 ## Lire les dépendances
 

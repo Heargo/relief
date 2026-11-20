@@ -457,6 +457,10 @@ body.resizing {
   &.dim {
     opacity: 0.12;
   }
+
+  &.hidden {
+    display: none;
+  }
 }
 
 .map-canvas .map-node {

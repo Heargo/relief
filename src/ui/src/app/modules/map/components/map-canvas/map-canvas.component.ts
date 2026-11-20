@@ -328,7 +328,7 @@ export class MapCanvasComponent {
     }
   }
 
-  /** Selection classes on the edge groups: out / in / picked / dim. */
+  /** Selection classes on the edge groups: out / in / picked / dim / hidden. */
   private syncEdgeEmphasis(lines: EdgeLine[], selection: Selection | null): void {
     const states = edgeEmphasis(
       lines.map((l) => l.edge),
@@ -339,7 +339,8 @@ export class MapCanvasComponent {
     for (const { edge } of lines) {
       const group = this.edgeElements.get(`${edge.from}>${edge.to}`);
       const state = states.get(edgeKey(edge.from, edge.to)) ?? 'normal';
-      for (const cls of ['out', 'in', 'picked', 'dim']) group?.classList.toggle(cls, cls === state);
+      for (const cls of ['out', 'in', 'picked', 'dim', 'hidden'])
+        group?.classList.toggle(cls, cls === state);
     }
   }
 

@@ -69,7 +69,7 @@ Selecting a node (click, search then Enter, breadcrumbs) opens it in the right p
 
 The panel only shows facts taken from git and the graph: no text is generated.
 
-On the map, the edges of the selected node stand out: outgoing ones in the accent colour, incoming ones in the impact colour, thicker; the other edges fade, and so do the nodes that are not its direct neighbours. A selected edge stays the only sharp one, with its two ends. `Esc` or a click on empty space restores everything.
+On the map, the edges of the selected node stand out: outgoing ones in the accent colour, incoming ones in the impact colour, thicker; the other edges fade, and so do the nodes that are not its direct neighbours. The edges inside the selected node, between two of its children, are hidden: only its dependencies to the outside remain. A selected edge stays the only sharp one, with its two ends. `Esc` or a click on empty space restores everything.
 
 ## Reading dependencies
 
