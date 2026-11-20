@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>relief, propositions v3</title>
+<style>
+/* Same tokens as v2.html. One subject (U23): make the direction of the comparison readable. */
+:root{
+  --bg:#f3f4f7; --map:#f7f8fa; --panel:#ffffff; --panel-2:#f2f4f8; --line:#e2e5eb; --line-2:#cdd2dc;
+  --text:#1b1f27; --muted:#5b6475; --faint:#9aa2b1;
+  --add:#1f9d3a; --mod:#c48a00; --del:#d93a32; --acc:#1f6feb; --acc-soft:rgba(31,111,235,.12);
+  --shadow:0 8px 30px rgba(20,30,60,.15);
+  --mono:ui-monospace,"JetBrains Mono","SF Mono",Menlo,Consolas,monospace;
+  --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0c0f15; --map:#0f131b; --panel:#131720; --panel-2:#191e29; --line:#242a36; --line-2:#323a4a;
+  --text:#e6e9ef; --muted:#98a1b3; --faint:#5d6679;
+  --add:#3fb950; --mod:#e3b341; --del:#f85149; --acc:#5eb1ff; --acc-soft:rgba(94,177,255,.14);
+  --shadow:0 8px 30px rgba(0,0,0,.45); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0c0f15; --map:#0f131b; --panel:#131720; --panel-2:#191e29; --line:#242a36; --line-2:#323a4a;
+  --text:#e6e9ef; --muted:#98a1b3; --faint:#5d6679;
+  --add:#3fb950; --mod:#e3b341; --del:#f85149; --acc:#5eb1ff; --acc-soft:rgba(94,177,255,.14);
+  --shadow:0 8px 30px rgba(0,0,0,.45); color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font:14px/1.55 var(--sans);margin:0;padding:24px 16px 64px}
+button{font:inherit;color:inherit}
+.wrap{max-width:1100px;margin:0 auto;display:flex;flex-direction:column;gap:28px}
+h1{font-size:24px;margin:0 0 6px;text-wrap:balance}
+h2{font-size:18px;margin:0;text-wrap:balance}
+h3{font-size:15px;margin:0 0 6px}
+p{margin:0}
+.lead{color:var(--muted);max-width:75ch}
+.eyebrow{font:600 11px/1 var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--acc)}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.opt{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.opt.rec{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc) inset}
+.opt .tag{font:600 10px/1 var(--sans);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.opt.rec .tag{color:var(--acc)}
+.opt ul{margin:0;padding-left:18px;color:var(--muted);font-size:13px}
+.pro{color:var(--add)} .con{color:var(--del)}
+code,.mono{font-family:var(--mono);font-size:12px}
+kbd{font-family:var(--mono);font-size:11px;border:1px solid var(--line-2);border-bottom-width:2px;border-radius:4px;padding:0 4px;background:var(--panel-2)}
+.note{font-size:13px;color:var(--muted);border-left:2px solid var(--line-2);padding-left:10px;max-width:80ch}
+
+.frame{background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden;box-shadow:var(--shadow)}
+.ctrl{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;padding:10px 12px;border-bottom:1px solid var(--line);background:var(--panel-2);font-size:12px;color:var(--muted)}
+.seg{display:inline-flex;border:1px solid var(--line-2);border-radius:6px;overflow:hidden;background:var(--panel)}
+.seg button{background:transparent;border:0;padding:4px 10px;font-size:12px;cursor:pointer;color:var(--muted)}
+.seg button+button{border-left:1px solid var(--line-2)}
+.seg button[aria-pressed="true"]{background:var(--acc-soft);color:var(--text);font-weight:600}
+
+/* top bar */
+.tbwrap{overflow-x:auto}
+.tb{display:flex;align-items:center;gap:10px;padding:8px 12px;min-width:760px;border-bottom:1px solid var(--line);background:var(--panel)}
+.logo{font-weight:700;letter-spacing:-.01em}
+.repo{color:var(--muted);font-size:13px}
+.spacer{flex:1}
+.iconbtn{border:1px solid var(--line-2);border-radius:6px;padding:3px 8px;font-size:12px;color:var(--muted);background:var(--panel)}
+.count{font-size:12px;color:var(--muted);white-space:nowrap}
+.cmp{display:inline-flex;align-items:stretch;border:1px solid var(--line-2);border-radius:7px;background:var(--panel)}
+.side{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:0;border:0;background:transparent;padding:3px 10px;cursor:pointer;min-width:0;text-align:left}
+.side:hover{background:var(--panel-2)}
+.side .k{font:600 9.5px/1.2 var(--sans);letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}
+.side .v{font:500 13px/1.3 var(--mono);white-space:nowrap}
+.side.base .k{color:var(--muted)}
+.side.head .k{color:var(--acc)}
+.side.head{box-shadow:inset 0 -2px 0 var(--acc)}
+.arrow{display:flex;align-items:center;border:0;border-left:1px solid var(--line-2);border-right:1px solid var(--line-2);background:transparent;padding:0 8px;cursor:pointer;color:var(--muted);font:600 13px var(--mono)}
+.arrow:hover{color:var(--text);background:var(--panel-2)}
+.swap{border:0;border-left:1px solid var(--line-2);background:transparent;padding:0 9px;cursor:pointer;color:var(--muted)}
+.swap:disabled{opacity:.35;cursor:not-allowed}
+.swap:not(:disabled):hover{color:var(--text);background:var(--panel-2)}
+
+/* option B: sentence */
+.sent{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);white-space:nowrap}
+.chip{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line-2);border-radius:6px;padding:2px 8px;background:var(--panel);cursor:pointer;font:500 13px/1.4 var(--mono);color:var(--text)}
+.chip.head{border-color:var(--acc);box-shadow:inset 0 0 0 1px var(--acc)}
+.chip:hover{background:var(--panel-2)}
+.linkbtn{border:0;background:transparent;color:var(--acc);cursor:pointer;padding:0 2px;font-size:12px}
+
+/* caption line under the bar */
+.stage{background:var(--map);min-height:150px;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.caption{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;font-size:12.5px;color:var(--muted)}
+.caption b{color:var(--text);font-family:var(--mono);font-weight:500}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.tip{position:relative;display:inline-block;max-width:420px;background:var(--panel);border:1px solid var(--line-2);border-radius:8px;padding:10px 12px;font-size:12.5px;box-shadow:var(--shadow)}
+.tip dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:3px 10px}
+.tip dt{color:var(--muted)} .tip dd{margin:0;font-family:var(--mono);font-size:12px}
+.hidden{display:none !important}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="eyebrow">U23 · maquette</div>
+  <h1>Base / head : lire le sens de la comparaison</h1>
+  <p class="lead">Le contrôle <code>base ··· head ⇄</code> de U19 permet de choisir les deux côtés, mais rien ne dit lequel est la référence, ni que la carte montre <i>ce que head change par rapport à base</i>. En mode <code>...</code>, la vraie base est l'ancêtre commun, qui n'apparaît nulle part. Deux options, une recommandation ; rien n'est implémenté.</p>
+</header>
+
+<section class="cols">
+  <div class="opt rec">
+    <span class="tag">Option A · recommandée</span>
+    <h3>Rôles écrits sur le contrôle, flèche, ligne de lecture</h3>
+    <ul>
+      <li>Chaque côté porte son rôle au-dessus de la ref : <b>Référence</b> (base, gris) et <b>Changements</b> (head, couleur d'accent, souligné). Le head est le côté « actif » : c'est lui qu'on relit.</li>
+      <li><code>···</code> devient une flèche <code>→</code> (lecture base → head) ; un clic bascule toujours <code>...</code> / <code>..</code>, l'infobulle dit lequel.</li>
+      <li>Sous la barre, une ligne de lecture : « La carte montre ce que <b>develop</b> change par rapport à <b>main</b>, depuis leur ancêtre commun <b>4e1a9c2</b> ». Elle disparaît après 5 s ou au premier clic sur la carte, et revient au survol du contrôle.</li>
+      <li>⇄ reste, désactivé quand head est le working tree (on ne compare pas un commit « par-dessus » le working tree).</li>
+      <li class="pro">+ garde la place de U19, change peu de code (libellés, flèche, une ligne).</li>
+      <li class="con">− deux lignes de texte dans la barre : un peu plus haute (36 → 40 px).</li>
+    </ul>
+  </div>
+  <div class="opt">
+    <span class="tag">Option B</span>
+    <h3>Une phrase : « Changements de [head] par rapport à [base] »</h3>
+    <ul>
+      <li>Le contrôle se lit comme une phrase, head en premier : c'est ce qu'on relit.</li>
+      <li>Le mode <code>...</code> / <code>..</code> devient un lien en fin de phrase : « depuis l'ancêtre commun » / « diff direct ».</li>
+      <li class="pro">+ impossible de se tromper de sens.</li>
+      <li class="con">− long (≈ 420 px), mal adapté à 1024 px avec la recherche ; l'ordre head, base est l'inverse de git (<code>main...develop</code>).</li>
+    </ul>
+  </div>
+</section>
+
+<section class="cols">
+  <div class="opt">
+    <span class="tag">Cas particuliers (les deux options)</span>
+    <ul>
+      <li><b>Working tree</b> : head affiche « Working tree » avec la mention « non commité, index compris » ; la base par défaut est <code>HEAD</code>. La ligne de lecture dit « ce que vos modifications non commitées changent par rapport à HEAD (<b>a7c03f1</b>) ».</li>
+      <li><b>Ancêtre commun (<code>...</code>)</b> : la ligne nomme le sha court du merge-base, et le menu de base le montre aussi (marque BASE sur le rail de l'onglet Commits, déjà là depuis U19).</li>
+      <li><b>Diff direct (<code>..</code>)</b> : « … par rapport à <b>main</b> tel quel (diff direct) » ; ce que main a reçu depuis apparaît aussi, en sens inverse.</li>
+      <li><b>Pas d'ancêtre commun</b> : la ligne passe en avertissement et le mode bascule en diff direct.</li>
+    </ul>
+  </div>
+  <div class="opt">
+    <span class="tag">Ce qu'il faut côté cœur</span>
+    <ul>
+      <li>Le sha de la base réellement utilisée (merge-base en <code>...</code>, base telle quelle en <code>..</code>, <code>HEAD</code> pour le working tree) : aucun champ public ne l'expose aujourd'hui. Il faut un champ <code>base_resolved</code> (sha court) dans <code>DiffResponse</code>, et le contrat TS régénéré.</li>
+      <li>Rien d'autre : la plage reste la chaîne <code>base...head</code>.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="frame" aria-label="Maquette interactive">
+  <div class="ctrl">
+    <span>Option</span>
+    <span class="seg" id="optSeg"><button aria-pressed="true" data-v="A">A · rôles + flèche</button><button aria-pressed="false" data-v="B">B · phrase</button></span>
+    <span>Head</span>
+    <span class="seg" id="headSeg"><button aria-pressed="true" data-v="develop">develop</button><button aria-pressed="false" data-v="wt">Working tree</button></span>
+    <span>Langue</span>
+    <span class="seg" id="langSeg"><button aria-pressed="true" data-v="fr">FR</button><button aria-pressed="false" data-v="en">EN</button></span>
+  </div>
+  <div class="tbwrap">
+    <div class="tb">
+      <span class="logo">relief</span>
+      <span class="repo"><b>acme-shop</b></span>
+
+      <div class="cmp" id="ctlA">
+        <button class="side base" id="aBase" title=""><span class="k" id="aBaseK"></span><span class="v" id="aBaseV"></span></button>
+        <button class="arrow" id="aArrow"></button>
+        <button class="side head" id="aHead"><span class="k" id="aHeadK"></span><span class="v" id="aHeadV"></span></button>
+        <button class="swap" id="aSwap">⇄</button>
+      </div>
+
+      <div class="sent hidden" id="ctlB">
+        <span id="bPre"></span>
+        <button class="chip head" id="bHead"></button>
+        <span id="bMid"></span>
+        <button class="chip" id="bBase"></button>
+        <button class="linkbtn" id="bMode"></button>
+        <button class="swap iconbtn" id="bSwap">⇄</button>
+      </div>
+
+      <span class="count" id="count"></span>
+      <span class="spacer"></span>
+      <span class="iconbtn">⌕ <span id="search"></span> <kbd>/</kbd></span>
+      <span class="iconbtn">⚙</span>
+    </div>
+  </div>
+  <div class="stage">
+    <div class="caption" id="caption"></div>
+    <div class="legend" id="legend"></div>
+    <div class="tip" id="tip"></div>
+  </div>
+</section>
+
+<p class="note">Le dernier bloc est l'infobulle au survol du contrôle (option A) : elle détaille les deux côtés résolus. Le choix à faire : A ou B, et si la ligne de lecture reste affichée en permanence ou s'efface.</p>
+
+</div>
+<script>
+const T={
+  fr:{ref:'Référence',chg:'Changements',wt:'Working tree',wtSub:'non commité, index compris',
+      mb:'depuis l’ancêtre commun',direct:'diff direct',
+      shows:'La carte montre ce que',change:'change par rapport à',wtShows:'La carte montre ce que vos modifications non commitées changent par rapport à',
+      since:'depuis leur ancêtre commun',asIs:'tel quel (diff direct)',
+      bPre:'Changements de',bMid:'par rapport à',commits:n=>n+' commits',search:'Rechercher',
+      add:'ajouté dans head',mod:'modifié',del:'retiré dans head',
+      tipBase:'Référence (base)',tipHead:'Changements (head)',tipCmp:'Comparée à',tipMode:'Mode',
+      arrowMb:'Depuis l’ancêtre commun (...) : ce que head ajoute, comme une PR. Clic : diff direct.',
+      arrowDirect:'Diff direct (..) : head comparé à base tel quel. Clic : depuis l’ancêtre commun.',
+      swap:'Inverser référence et changements',swapOff:'Indisponible : le working tree est toujours du côté des changements'},
+  en:{ref:'Reference',chg:'Changes',wt:'Working tree',wtSub:'uncommitted, index included',
+      mb:'since the common ancestor',direct:'direct diff',
+      shows:'The map shows what',change:'changes compared with',wtShows:'The map shows what your uncommitted changes change compared with',
+      since:'since their common ancestor',asIs:'as is (direct diff)',
+      bPre:'Changes in',bMid:'compared with',commits:n=>n+' commits',search:'Search',
+      add:'added in head',mod:'modified',del:'removed in head',
+      tipBase:'Reference (base)',tipHead:'Changes (head)',tipCmp:'Compared with',tipMode:'Mode',
+      arrowMb:'Since the common ancestor (...): what head adds, like a PR. Click: direct diff.',
+      arrowDirect:'Direct diff (..): head compared with base as is. Click: since the common ancestor.',
+      swap:'Swap reference and changes',swapOff:'Unavailable: the working tree is always on the changes side'}
+};
+const st={opt:'A',lang:'fr',base:'main',head:'develop',mode:'mb'};
+const MB='4e1a9c2', HEADSHA='a7c03f1';
+const $=id=>document.getElementById(id);
+function seg(id,key){$(id).addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+  [...$(id).children].forEach(x=>x.setAttribute('aria-pressed',x===b));
+  if(key==='head'){ if(b.dataset.v==='wt'){st.head='wt';st.base='HEAD';} else {st.head='develop';st.base='main';} }
+  else st[key]=b.dataset.v; render();});}
+seg('optSeg','opt');seg('headSeg','head');seg('langSeg','lang');
+const isWt=()=>st.head==='wt';
+function name(r){const t=T[st.lang];return r==='wt'?t.wt:r;}
+function swap(){if(isWt())return;[st.base,st.head]=[st.head,st.base];render();}
+function toggleMode(){if(isWt())return;st.mode=st.mode==='mb'?'direct':'mb';render();}
+$('aSwap').onclick=swap;$('bSwap').onclick=swap;$('aArrow').onclick=toggleMode;$('bMode').onclick=toggleMode;
+function render(){
+  const t=T[st.lang];
+  document.documentElement.lang=st.lang;
+  $('ctlA').classList.toggle('hidden',st.opt!=='A');$('ctlB').classList.toggle('hidden',st.opt!=='B');
+  // A
+  $('aBaseK').textContent=t.ref+' · base';$('aHeadK').textContent=t.chg+' · head';
+  $('aBaseV').textContent=name(st.base);$('aHeadV').textContent=name(st.head);
+  $('aArrow').textContent=isWt()?'→':(st.mode==='mb'?'···→':'→');
+  $('aArrow').title=isWt()?'':(st.mode==='mb'?t.arrowMb:t.arrowDirect);
+  $('aArrow').disabled=isWt();
+  [$('aSwap'),$('bSwap')].forEach(b=>{b.disabled=isWt();b.title=isWt()?t.swapOff:t.swap;b.setAttribute('aria-label',b.title);});
+  // B
+  $('bPre').textContent=t.bPre;$('bMid').textContent=t.bMid;
+  $('bHead').textContent=name(st.head)+' ▾';$('bBase').textContent=name(st.base)+' ▾';
+  $('bMode').textContent=isWt()?'':(st.mode==='mb'?t.mb:t.direct);
+  $('count').textContent=isWt()?'':t.commits(st.head==='develop'?7:3);
+  $('search').textContent=t.search;
+  // caption
+  let cap;
+  if(isWt()) cap=`${t.wtShows} <b>HEAD</b> (<b>${HEADSHA}</b>).`;
+  else cap=`${t.shows} <b>${name(st.head)}</b> ${t.change} <b>${name(st.base)}</b>, ${st.mode==='mb'?`${t.since} <b>${MB}</b>`:t.asIs}.`;
+  $('caption').innerHTML=cap;
+  $('legend').innerHTML=`<span><i style="background:var(--add)"></i>${t.add}</span><span><i style="background:var(--mod)"></i>${t.mod}</span><span><i style="background:var(--del)"></i>${t.del}</span>`;
+  const cmpSha=isWt()?HEADSHA:(st.mode==='mb'?MB+' ('+t.mb+')':name(st.base));
+  $('tip').innerHTML=`<dl><dt>${t.tipHead}</dt><dd>${isWt()?t.wt+' — '+t.wtSub:name(st.head)}</dd><dt>${t.tipBase}</dt><dd>${name(st.base)}</dd><dt>${t.tipCmp}</dt><dd>${cmpSha}</dd>${isWt()?'':`<dt>${t.tipMode}</dt><dd>${st.mode==='mb'?'base...head':'base..head'}</dd>`}</dl>`;
+  $('tip').classList.toggle('hidden',st.opt!=='A');
+}
+render();
+</script>
+</body>
+</html>

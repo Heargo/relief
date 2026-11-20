@@ -14,6 +14,7 @@ Retour du 2026-11-20 : dans la barre du haut (U19), on ne voit pas quel côté e
 
 ## À faire
 
+- Maquette : `docs/product/maquette/v3.html` (option A recommandée, option B). En attente de validation.
 - Proposer un design avant d'implémenter (maquette) : libellés explicites « Référence (base) » et « Changements (head) », sens de lecture (`base → head`), rappel de ce que devient la carte (« ce que head change par rapport à base »).
 - Préciser le cas du working tree et du merge-base (`main...feature`) : quelle base est réellement utilisée.
 - Un bouton pour inverser base et head, si la maquette le retient.
