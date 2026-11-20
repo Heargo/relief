@@ -75,6 +75,12 @@ import {
 } from '../helpers/history.logic';
 import { escapeStep } from '../helpers/shortcuts.logic';
 import {
+  layerTransform,
+  REST_DELAY_MS,
+  shouldRecomputeModes,
+  viewLeavesRenderedArea,
+} from '../helpers/camera-layer.logic';
+import {
   computeModes,
   isInViewport,
   levelOfKind,
@@ -94,7 +100,7 @@ interface NavStep {
 
 export type MapStatus = 'loading' | 'error' | 'ready';
 
-/** A node to draw, in screen pixels. */
+/** A node to draw, in world units (the camera is the transform of the layer). */
 export interface VisibleNode {
   id: string;
   kind: string;
@@ -107,7 +113,7 @@ export interface VisibleNode {
   mark: NodeMark | null;
 }
 
-/** An aggregated edge placed on screen. */
+/** An aggregated edge placed in the world. */
 export interface EdgeLine {
   edge: AggregatedEdge;
   shape: EdgeShape;
@@ -124,7 +130,7 @@ export interface EdgeLine {
   review: boolean;
 }
 
-/** A logical coupling edge placed on screen. */
+/** A logical coupling edge placed in the world. */
 export interface CoChangeLine {
   edge: AggregatedEdge;
   shape: EdgeShape;
@@ -189,6 +195,11 @@ export class MapBusiness {
   private readonly _crossingTotals = signal<CrossingTotals>({ optimized: 0, raw: 0 });
   private readonly _infos = signal<Map<string, NodeInfo>>(new Map());
   private readonly _camera = signal<Camera>({ scale: 1, tx: 0, ty: 0 });
+  /** The camera the modes, headers and edge shapes were computed for (it lags during a zoom). */
+  private readonly _modesCamera = signal<Camera>({ scale: 1, tx: 0, ty: 0 });
+  /** The camera the nodes were culled for (it lags during a pan, up to the render margin). */
+  private readonly _cullCamera = signal<Camera>({ scale: 1, tx: 0, ty: 0 });
+  private restTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly _viewport = signal<Viewport>({ width: 0, height: 0 });
   /** Level chosen explicitly (button, key, fit, dive); cleared by zooming. */
   private readonly _forcedLevel = signal<number | null>(null);
@@ -236,6 +247,10 @@ export class MapBusiness {
   readonly hideExternal = this._hideExternal.asReadonly();
   readonly crossingTotals = this._crossingTotals.asReadonly();
   readonly camera = this._camera.asReadonly();
+  /** The whole camera, as the CSS transform of the layer that holds the nodes and the edges. */
+  readonly layerTransform = computed(() => layerTransform(this._camera()));
+  /** Scale the modes, headers and edge shapes are drawn for (the scale at rest). */
+  readonly modesScale = computed(() => this._modesCamera().scale);
   readonly viewport = this._viewport.asReadonly();
 
   private readonly scales = computed(() => levelScales(this._layout(), this._viewport()));
@@ -260,12 +275,17 @@ export class MapBusiness {
     );
   });
 
+  /** What each node shows (open, box, ghost), for the scale of the last rest or threshold. */
+  private readonly modes = computed(() =>
+    computeModes(this._layout(), { scale: this.modesScale(), tx: 0, ty: 0 }, this._cap() ?? 3),
+  );
+
   readonly visibleNodes = computed<VisibleNode[]>(() =>
     measured('visibleNodes', () => {
       const layout = this._layout();
-      const camera = this._camera();
+      const camera = this._cullCamera();
       const viewport = this._viewport();
-      const modes = computeModes(layout, camera, this._cap() ?? 3);
+      const modes = this.modes();
       const marks = this.marks();
       // A ring around the screen is drawn too, so that nodes just out of sight do not pop in.
       const padded: Viewport = {
@@ -285,16 +305,26 @@ export class MapBusiness {
           id: node.id,
           kind: node.kind,
           mode,
-          x: node.x * camera.scale + camera.tx,
-          y: node.y * camera.scale + camera.ty,
-          w: node.w * camera.scale,
-          h: node.h * camera.scale,
+          x: node.x,
+          y: node.y,
+          w: node.w,
+          h: node.h,
           mark: marks.get(node.id) ?? null,
         });
       }
       return result;
     }),
   );
+
+  /** The closed boxes, wherever they are: the edge labels slide off them. */
+  private readonly boxRects = computed<Rect[]>(() => {
+    const modes = this.modes();
+    const boxes: Rect[] = [];
+    for (const node of this._layout().nodes.values()) {
+      if (modes.get(node.id) === 'box') boxes.push(node);
+    }
+    return boxes;
+  });
 
   /** The closed container the user zooms into, whose content is to be loaded; null for none. */
   readonly containerToLoad = computed<string | null>(() => {
@@ -303,7 +333,16 @@ export class MapBusiness {
     // (a camera in flight would open every container it flies over).
     const point = this._zoomPoint();
     if (!point) return containerToLoad(graph, this._diveTarget());
-    const boxes = this.visibleNodes().filter((n) => n.mode === 'box');
+    const camera = this._camera();
+    const boxes = this.visibleNodes()
+      .filter((n) => n.mode === 'box')
+      .map((n) => ({
+        ...n,
+        x: n.x * camera.scale + camera.tx,
+        y: n.y * camera.scale + camera.ty,
+        w: n.w * camera.scale,
+        h: n.h * camera.scale,
+      }));
     const focus = zoomedBox(boxes, point, (id) => containerToLoad(graph, id) !== null);
     return containerToLoad(graph, focus);
   });
@@ -312,7 +351,7 @@ export class MapBusiness {
   private readonly boxIds = computed(
     () =>
       measured('boxIds', () => {
-        const modes = computeModes(this._layout(), this._camera(), this._cap() ?? 3);
+        const modes = this.modes();
         const ids = new Set<string>();
         for (const [id, mode] of modes) if (mode === 'open' || mode === 'box') ids.add(id);
         return ids;
@@ -333,19 +372,13 @@ export class MapBusiness {
   readonly coChangeLines = computed<CoChangeLine[]>(() =>
     measured('coChangeLines', () => {
       const layout = this._layout();
-      const camera = this._camera();
-      const boxes = this.visibleNodes().filter((n) => n.mode === 'box');
-      const screen = (n: { x: number; y: number; w: number; h: number }) => ({
-        x: n.x * camera.scale + camera.tx,
-        y: n.y * camera.scale + camera.ty,
-        w: n.w * camera.scale,
-        h: n.h * camera.scale,
-      });
+      const scale = this.modesScale();
+      const boxes = this.boxRects();
       const lines: CoChangeLine[] = [];
       for (const edge of aggregateEdges(this._coChangeEdges(), this._parents(), this.boxIds())) {
         const a = layout.nodes.get(edge.from);
         const b = layout.nodes.get(edge.to);
-        if (a && b) lines.push({ edge, shape: edgeShape(screen(a), screen(b), boxes) });
+        if (a && b) lines.push({ edge, shape: edgeShape(a, b, boxes, scale) });
       }
       return lines;
     }),
@@ -410,29 +443,23 @@ export class MapBusiness {
     return nodeEdges(filterEdges(around, this._showUnchangedEdges()), id);
   });
 
-  /** Edges in screen pixels, following the camera. */
+  /** Edges in world units: they follow the camera through the transform of their layer. */
   readonly edgeLines = computed<EdgeLine[]>(() =>
     measured('edgeLines', () => {
       const layout = this._layout();
-      const camera = this._camera();
+      const scale = this.modesScale();
       const selected = this.selectedEdge();
       const diff = this._diff()?.diff;
       const violations = this._violations();
       const lines: EdgeLine[] = [];
-      const boxes = this.visibleNodes().filter((n) => n.mode === 'box');
+      const boxes = this.boxRects();
       for (const edge of this.edges()) {
         const a = layout.nodes.get(edge.from);
         const b = layout.nodes.get(edge.to);
         if (!a || !b) continue;
-        const screen = (n: typeof a) => ({
-          x: n.x * camera.scale + camera.tx,
-          y: n.y * camera.scale + camera.ty,
-          w: n.w * camera.scale,
-          h: n.h * camera.scale,
-        });
         lines.push({
           edge,
-          shape: edgeShape(screen(a), screen(b), boxes),
+          shape: edgeShape(a, b, boxes, scale),
           selected: selected !== null && selected.from === edge.from && selected.to === edge.to,
           status: diff
             ? aggregateEdgeStatus(edge.links.map((link) => edgeStatus(link, diff)))
@@ -656,7 +683,7 @@ export class MapBusiness {
 
   setViewport(width: number, height: number): void {
     this._viewport.set({ width, height });
-    if (this.pristine && this._layout().roots.length > 0) this._camera.set(this.fitCamera());
+    if (this.pristine && this._layout().roots.length > 0) this.setCamera(this.fitCamera(), true);
   }
 
   async load(): Promise<void> {
@@ -704,6 +731,7 @@ export class MapBusiness {
     const later = this.afterShow;
     this.afterShow = [];
     if (keepView) {
+      this.settle();
       if (!graph.nodes.some((n) => n.id === this._selectedNodeId())) this._selectedNodeId.set(null);
       this._status.set('ready');
       // The map grew or shrank while a level is forced: aim at the level again, on the new layout.
@@ -716,7 +744,7 @@ export class MapBusiness {
     this.pristine = true;
     this._forcedLevel.set(0);
     this._cap.set(0);
-    this._camera.set(this.fitCamera());
+    this.setCamera(this.fitCamera(), true);
     this._status.set('ready');
     for (const action of later) action();
   }
@@ -754,7 +782,7 @@ export class MapBusiness {
     const start = performance.now();
     const settle = () => {
       this._layout.set(target);
-      this._camera.set(toCamera);
+      this.setCamera(toCamera, true);
     };
     this.pendingSettle = settle;
     const step = (now: number): void => {
@@ -767,7 +795,7 @@ export class MapBusiness {
       }
       const eased = easeInOutCubic(u);
       this._layout.set(interpolateLayout(from, target, eased));
-      this._camera.set(interpolateCamera(fromCamera, toCamera, eased, viewport));
+      this.setCamera(interpolateCamera(fromCamera, toCamera, eased, viewport), true);
       this.animation = requestAnimationFrame(step);
     };
     this.animation = requestAnimationFrame(step);
@@ -812,14 +840,14 @@ export class MapBusiness {
     this._forcedLevel.set(null);
     this._cap.set(null);
     this._zoomPoint.set(factor > 1 ? { x: px, y: py } : null);
-    this._camera.update((camera) => zoomAt(camera, factor, px, py, this.zoomBounds()));
+    this.setCamera(zoomAt(this._camera(), factor, px, py, this.zoomBounds()));
   }
 
   pan(dx: number, dy: number): void {
     this.interrupt();
     this._zoomPoint.set(null);
     this._diveTarget.set(null);
-    this._camera.update((camera) => panBy(camera, dx, dy));
+    this.setCamera(panBy(this._camera(), dx, dy));
   }
 
   fitAll(): void {
@@ -867,6 +895,45 @@ export class MapBusiness {
     );
   }
 
+  /**
+   * Moves the camera. Only the transform of the layer follows at once: the modes, headers, edge
+   * shapes and culling wait for the rest, a container crossing its opening threshold, or the view
+   * leaving the rendered area. `rest` is the end of a move: everything is brought up to date.
+   */
+  private setCamera(camera: Camera, rest = false): void {
+    this._camera.set(camera);
+    if (rest) {
+      this.settle();
+      return;
+    }
+    if (shouldRecomputeModes(this._layout(), this._modesCamera(), camera, 0, this._cap() ?? 3)) {
+      this.settle();
+      return;
+    }
+    if (viewLeavesRenderedArea(this._cullCamera(), camera, this._viewport(), RENDER_MARGIN)) {
+      this._cullCamera.set(camera);
+    }
+    if (this.restTimer !== null) clearTimeout(this.restTimer);
+    this.restTimer = setTimeout(() => this.settle(), REST_DELAY_MS);
+  }
+
+  /** The camera is at rest: modes and culling are computed for it, when they are not already. */
+  private settle(): void {
+    if (this.restTimer !== null) clearTimeout(this.restTimer);
+    this.restTimer = null;
+    const camera = this._camera();
+    const scaleChanged = camera.scale !== this._modesCamera().scale;
+    if (scaleChanged) this._modesCamera.set(camera);
+    // After a pan alone, culling again only pays once half the render margin is used up.
+    const moved = viewLeavesRenderedArea(
+      this._cullCamera(),
+      camera,
+      this._viewport(),
+      RENDER_MARGIN / 2,
+    );
+    if (scaleChanged || moved) this._cullCamera.set(camera);
+  }
+
   private fitCamera(): Camera {
     return fitRect(this._layout().bounds, this._viewport(), FIT_OPTIONS);
   }
@@ -903,8 +970,9 @@ export class MapBusiness {
     this.flightTarget = target;
     const step = (now: number): void => {
       const u = Math.min(1, (now - start) / ANIMATION_MS);
-      this._camera.set(
+      this.setCamera(
         u >= 1 ? target : interpolateCamera(from, target, easeInOutCubic(u), viewport),
+        u >= 1,
       );
       this.animation = u < 1 ? requestAnimationFrame(step) : 0;
       if (u >= 1) {

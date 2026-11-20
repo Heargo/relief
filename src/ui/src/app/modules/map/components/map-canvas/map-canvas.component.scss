@@ -26,6 +26,7 @@
 .map-layer {
   position: absolute;
   inset: 0;
+  transform-origin: 0 0;
 }
 
 .map-node {
@@ -410,6 +411,10 @@
   overflow: visible;
   pointer-events: none;
 
+  .map-world {
+    transform-origin: 0 0;
+  }
+
   .edge {
     --edge-color: var(--relief-faint);
 
@@ -421,6 +426,7 @@
       fill: none;
       stroke: transparent;
       stroke-width: 12;
+      vector-effect: non-scaling-stroke;
       pointer-events: stroke;
       cursor: pointer;
     }
@@ -428,6 +434,7 @@
     .line {
       fill: none;
       stroke: var(--edge-color);
+      vector-effect: non-scaling-stroke;
       opacity: 0.75;
     }
 
@@ -579,6 +586,7 @@
 .map-edges .co-change-edge .line {
   fill: none;
   stroke: var(--relief-cochange);
+  vector-effect: non-scaling-stroke;
   stroke-dasharray: 6 4;
   opacity: 0.85;
 }

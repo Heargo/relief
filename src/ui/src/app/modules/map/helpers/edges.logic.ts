@@ -169,7 +169,7 @@ export interface EdgeShape {
   my: number;
   /** The label could not leave a box: it must not catch clicks meant for that box. */
   covered: boolean;
-  /** On-screen distance between the two borders. */
+  /** On-screen distance between the two borders (world distance times the scale). */
   length: number;
 }
 
@@ -191,14 +191,34 @@ function borderPoint(rect: Rect, target: Point): Point {
   return { x: cx + dx * s, y: cy + dy * s };
 }
 
+/** On-screen distance between the borders of two world rects drawn at `scale`. */
+function screenLength(a: Rect, b: Rect, scale: number): number {
+  const screen = (r: Rect): Rect => ({
+    x: r.x * scale,
+    y: r.y * scale,
+    w: r.w * scale,
+    h: r.h * scale,
+  });
+  const sa = screen(a);
+  const sb = screen(b);
+  const p0 = borderPoint(sa, { x: sb.x + sb.w / 2, y: sb.y + sb.h / 2 });
+  const p1 = borderPoint(sb, { x: sa.x + sa.w / 2, y: sa.y + sa.h / 2 });
+  return Math.hypot(p1.x - p0.x, p1.y - p0.y);
+}
+
 const LABEL_POSITIONS = [0.5, 0.4, 0.6, 0.3, 0.7, 0.2, 0.8];
 const LABEL_HALF_WIDTH = 14;
 const LABEL_HALF_HEIGHT = 8;
 const ARROW_LENGTH = 9;
 const ARROW_HALF_WIDTH = 4;
 
-/** Quadratic curve from box border to box border, bent to the side so both directions apart. */
-export function edgeShape(a: Rect, b: Rect, avoid: Rect[] = []): EdgeShape {
+/**
+ * Quadratic curve from box border to box border, bent to the side so both directions apart. The
+ * rects are in world units and so is the shape; `scale` (screen pixels per world unit) only sizes
+ * what is drawn in screen pixels (bend cap, arrow head, label room), so that the shape is
+ * the screen one mapped back to the world.
+ */
+export function edgeShape(a: Rect, b: Rect, avoid: Rect[] = [], scale = 1): EdgeShape {
   const ca = { x: a.x + a.w / 2, y: a.y + a.h / 2 };
   const cb = { x: b.x + b.w / 2, y: b.y + b.h / 2 };
   const p0 = borderPoint(a, cb);
@@ -206,18 +226,18 @@ export function edgeShape(a: Rect, b: Rect, avoid: Rect[] = []): EdgeShape {
   const dx = p1.x - p0.x;
   const dy = p1.y - p0.y;
   const len = Math.hypot(dx, dy) || 1;
-  const bend = Math.min(60, len * 0.18);
+  const bend = Math.min(60 / scale, len * 0.18);
   const c = { x: (p0.x + p1.x) / 2 - (dy / len) * bend, y: (p0.y + p1.y) / 2 + (dx / len) * bend };
   const tx = p1.x - c.x;
   const ty = p1.y - c.y;
   const tl = Math.hypot(tx, ty) || 1;
   const ux = tx / tl;
   const uy = ty / tl;
-  const bx = p1.x - ux * ARROW_LENGTH;
-  const by = p1.y - uy * ARROW_LENGTH;
+  const bx = p1.x - (ux * ARROW_LENGTH) / scale;
+  const by = p1.y - (uy * ARROW_LENGTH) / scale;
   const arrow =
-    `M${p1.x},${p1.y}L${bx - uy * ARROW_HALF_WIDTH},${by + ux * ARROW_HALF_WIDTH}` +
-    `L${bx + uy * ARROW_HALF_WIDTH},${by - ux * ARROW_HALF_WIDTH}Z`;
+    `M${p1.x},${p1.y}L${bx - (uy * ARROW_HALF_WIDTH) / scale},${by + (ux * ARROW_HALF_WIDTH) / scale}` +
+    `L${bx + (uy * ARROW_HALF_WIDTH) / scale},${by - (ux * ARROW_HALF_WIDTH) / scale}Z`;
   const at = (t: number): Point => ({
     x: (1 - t) * (1 - t) * p0.x + 2 * (1 - t) * t * c.x + t * t * p1.x,
     y: (1 - t) * (1 - t) * p0.y + 2 * (1 - t) * t * c.y + t * t * p1.y,
@@ -227,10 +247,10 @@ export function edgeShape(a: Rect, b: Rect, avoid: Rect[] = []): EdgeShape {
     const m = at(t);
     return !avoid.some(
       (r) =>
-        m.x + LABEL_HALF_WIDTH > r.x &&
-        m.x - LABEL_HALF_WIDTH < r.x + r.w &&
-        m.y + LABEL_HALF_HEIGHT > r.y &&
-        m.y - LABEL_HALF_HEIGHT < r.y + r.h,
+        m.x + LABEL_HALF_WIDTH / scale > r.x &&
+        m.x - LABEL_HALF_WIDTH / scale < r.x + r.w &&
+        m.y + LABEL_HALF_HEIGHT / scale > r.y &&
+        m.y - LABEL_HALF_HEIGHT / scale < r.y + r.h,
     );
   });
   const mid = at(free ?? 0.5);
@@ -240,6 +260,6 @@ export function edgeShape(a: Rect, b: Rect, avoid: Rect[] = []): EdgeShape {
     mx: mid.x,
     my: mid.y,
     covered: free === undefined,
-    length: Math.hypot(dx, dy),
+    length: screenLength(a, b, scale),
   };
 }

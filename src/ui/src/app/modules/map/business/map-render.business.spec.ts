@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { MetaResponse, SnapshotResponse } from '../../../core/models/contract';
 import { ReliefApiService } from '../../../core/services/relief-api.service';
 import acmeShop from '../../../../testing/fixtures/acme-shop.snapshot.json';
+import { REST_DELAY_MS } from '../helpers/camera-layer.logic';
 import { MapBusiness } from './map.business';
 
 const SNAPSHOT = acmeShop as unknown as SnapshotResponse;
@@ -29,7 +30,15 @@ function settle(): void {
 
 describe('MapBusiness, render margin', () => {
   beforeEach(() => {
-    vi.useFakeTimers({ toFake: ['requestAnimationFrame', 'cancelAnimationFrame', 'performance'] });
+    vi.useFakeTimers({
+      toFake: [
+        'requestAnimationFrame',
+        'cancelAnimationFrame',
+        'performance',
+        'setTimeout',
+        'clearTimeout',
+      ],
+    });
     TestBed.configureTestingModule({
       providers: [
         MapBusiness,
@@ -52,7 +61,10 @@ describe('MapBusiness, render margin', () => {
   function placeRightmost(business: MapBusiness, left: number): string {
     const nodes = business.visibleNodes();
     const rightmost = nodes.reduce((a, b) => (b.x > a.x ? b : a));
-    business.pan(left - rightmost.x, 0);
+    const { scale, tx } = business.camera();
+    business.pan(left - (rightmost.x * scale + tx), 0);
+    // Culling is lazy: it is only redone once the view has moved by half the render margin or more.
+    vi.advanceTimersByTime(REST_DELAY_MS + 30);
     return rightmost.id;
   }
 
@@ -68,13 +80,19 @@ describe('MapBusiness, render margin', () => {
     expect(business.visibleNodes().some((n) => n.id === id)).toBe(false);
   });
 
-  it('draws a node just above the screen, within 120 px', async () => {
+  it('draws a node just above the screen, within 120 px, and drops it beyond the render margin', async () => {
     const business = await loaded();
     const nodes = business.visibleNodes();
     const lowest = nodes.reduce((a, b) => (b.y + b.h > a.y + a.h ? b : a));
-    business.pan(0, -(lowest.y + lowest.h) - 100);
+    const bottom = () => {
+      const { scale, ty } = business.camera();
+      return (lowest.y + lowest.h) * scale + ty;
+    };
+    business.pan(0, -bottom() - 100);
+    vi.advanceTimersByTime(REST_DELAY_MS + 30);
     expect(business.visibleNodes().some((n) => n.id === lowest.id)).toBe(true);
-    business.pan(0, -40);
+    business.pan(0, -70);
+    vi.advanceTimersByTime(REST_DELAY_MS + 30);
     expect(business.visibleNodes().some((n) => n.id === lowest.id)).toBe(false);
   });
 });

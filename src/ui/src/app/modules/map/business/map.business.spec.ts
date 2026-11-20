@@ -63,7 +63,17 @@ function settle(): void {
 }
 
 function rectOf(business: MapBusiness, id: string) {
-  return business.visibleNodes().find((n) => n.id === id);
+  const node = business.visibleNodes().find((n) => n.id === id);
+  if (!node) return undefined;
+  // Nodes are in world coordinates: the rect on screen goes through the camera.
+  const { scale, tx, ty } = business.camera();
+  return {
+    ...node,
+    x: node.x * scale + tx,
+    y: node.y * scale + ty,
+    w: node.w * scale,
+    h: node.h * scale,
+  };
 }
 
 describe('MapBusiness', () => {

@@ -98,7 +98,7 @@ export class MapCanvasComponent {
     { status: 'removed', key: 'removedEdge' },
     { status: 'unchanged', key: 'unchangedEdge' },
   ] as const;
-  private readonly edgesLayer = viewChild.required<ElementRef<SVGSVGElement>>('edgesLayer');
+  private readonly edgesLayer = viewChild.required<ElementRef<SVGGElement>>('edgesLayer');
   private shown = false;
   private readonly elements = new Map<string, HTMLElement>();
   private readonly edgeElements = new Map<string, SVGGElement>();
@@ -123,6 +123,12 @@ export class MapCanvasComponent {
     effect(() => {
       const name = this.repoName();
       untracked(() => this.map.setRepoName(name));
+    });
+    effect(() => {
+      // The camera is the only thing a pan or a zoom gesture writes: one transform for both layers.
+      const transform = this.map.layerTransform();
+      this.layer().nativeElement.style.transform = transform;
+      this.edgesLayer().nativeElement.style.transform = transform;
     });
     effect(() => {
       const nodes = this.map.visibleNodes();
@@ -247,6 +253,10 @@ export class MapCanvasComponent {
   ): void {
     const layer = this.layer().nativeElement;
     const seen = new Set<string>();
+    // The nodes are in world units, drawn at the scale of the last rest: their content is laid out
+    // in screen pixels at that scale and counter-scaled, so that at rest the layer's scale
+    // brings it back to 1:1 (a zoom gesture scales the content with the layer until the rest).
+    const scale = this.map.modesScale();
     for (const node of nodes) {
       seen.add(node.id);
       let el = this.elements.get(node.id);
@@ -259,10 +269,16 @@ export class MapCanvasComponent {
         layer.appendChild(el);
         this.elements.set(node.id, el);
       }
-      el.style.transform = `translate(${node.x}px, ${node.y}px)`;
-      el.style.width = `${node.w}px`;
-      el.style.height = `${node.h}px`;
-      const size = sizeClass(node.w);
+      const geometry = `${node.x}|${node.y}|${node.w}|${node.h}|${scale}`;
+      if (el.dataset['geometry'] !== geometry) {
+        el.dataset['geometry'] = geometry;
+        el.style.transform = `translate(${node.x}px, ${node.y}px) scale(${1 / scale})`;
+        el.style.width = `${node.w * scale}px`;
+        el.style.height = `${node.h * scale}px`;
+      }
+      const width = node.w * scale;
+      const height = node.h * scale;
+      const size = sizeClass(width);
       const mark = node.mark;
       const badges = mark?.badges.join(' ') ?? '';
       const inImpact = impact
@@ -283,8 +299,8 @@ export class MapCanvasComponent {
       else delete el.dataset['riskLevel'];
       if (faded) el.dataset['faded'] = 'true';
       else delete el.dataset['faded'];
-      const open = node.mode === 'open' ? headerLayout(node.kind, this.map.camera().scale) : null;
-      const labelShown = open ? open.label === 'header' : closedLabelVisible(node.w, node.h);
+      const open = node.mode === 'open' ? headerLayout(node.kind, scale) : null;
+      const labelShown = open ? open.label === 'header' : closedLabelVisible(width, height);
       const headKey = open ? `${open.height.toFixed(1)}${open.label}` : '';
       const key = `${labelShown}|${headKey}|${node.mode}|${size}|${lang}|${mark?.status}|${mark?.intensity}|${mark?.oldLocation}|${badges}|${inImpact}|${boxCount}|${readingKey}|${flagged}|${loading.has(node.id)}`;
       if (el.dataset['key'] !== key) {
@@ -375,6 +391,7 @@ export class MapCanvasComponent {
 
   private syncEdges(lines: EdgeLine[], lang: string, impact: ImpactMarks | null): void {
     const svg = this.edgesLayer().nativeElement;
+    const scale = this.map.modesScale();
     const seen = new Set<string>();
     for (const {
       edge,
@@ -440,8 +457,8 @@ export class MapCanvasComponent {
         }
         text.setAttribute('class', `el ${edgeLabelClass({ ...classInput, highlighted: hl })}`);
         text.textContent = label;
-        text.setAttribute('x', String(shape.mx));
-        text.setAttribute('y', String(shape.my));
+        // Drawn in screen pixels at the scale of the last rest, whatever the layer's scale.
+        text.setAttribute('transform', `translate(${shape.mx} ${shape.my}) scale(${1 / scale})`);
       } else {
         text?.remove();
       }

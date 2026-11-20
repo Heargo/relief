@@ -137,6 +137,20 @@ On the same harness (1600x900, `work` p95, same machine and Xvfb), each S06 to S
 
 The p95 budgets apply to both repositories (the figures in the table are fit / zoomed). On a machine with a GPU the paint costs less; since `work` leaves the paint out, the budget stays comparable. The harness writes the same JSON after each ticket: S06 to S09 append their column to this table.
 
+### After S06 (camera in one transform)
+
+Nodes and edges are in world units in two layers that carry the same `translate(tx, ty) scale(s)`; a pan writes that transform only. Modes, headers, edge shapes and culling are computed again at rest (120 ms), when a container crosses its opening threshold, or when the pan leaves the render margin. `work` p95 in ms, same harness, fit / zoomed (excalidraw: fit / zoomed):
+
+| Scenario   | dense before | dense after | excalidraw before | excalidraw after |
+| ---------- | ------------ | ----------- | ----------------- | ---------------- |
+| Pan        | 248 / 34     | 127 / 12    | 88 / 67           | 53 / 32          |
+| Wheel zoom | 252 / 267    | 227 / 371   | 493 / 209         | 625 / 296        |
+| Selection  | 177 / 143    | 160 / 142   | 242 / 212         | 253 / 248        |
+
+- Pan: the browser's style and layout of the 4,500 edge paths and 1,349 nodes is what is left on `dense` fit (`compute` and `dom` are 0 ms: no computed and no DOM write run during a pan). The budget (p95 < 16 ms) holds on `dense` zoomed (12 ms), not on `dense` fit (127 ms) nor on excalidraw (53 / 32 ms). Promoting the layers (`will-change: transform`) brings `dense` fit to 71 ms but blurs the text at rest (rasterised at another scale), so it was not kept.
+- Zoom: no better, and worse where many edges are on screen: each rest or threshold crossing rewrites all the edges (`syncEdges`, 70 to 75 ms p95) and the browser lays out the layer again. S07 (edge drawing) and S08 have to take that: draw fewer edges, do not rewrite unchanged ones.
+- Selection is not in the scope of S06.
+
 ## Shallow clones
 
 The clones are shallow (`--depth 400`). `repo_id` (the name of the data folder when it falls back to the user cache, and a cache key) is the SHA of the oldest stored commit, so it is not the same as in a full clone of the same repository, nor between clones of different depths. Churn and co-change ignore the commit at the shallow boundary (no parent to compare it with). The measures above (indexing, `analyse`, budgeted snapshot) do not depend on either, so they were not run again.

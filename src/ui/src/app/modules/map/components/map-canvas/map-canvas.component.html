@@ -6,8 +6,9 @@
   (dblclick)="onDoubleClick($event)"
 >
   <div #layer class="map-layer"></div>
-  <svg #edgesLayer class="map-edges" data-testid="map-edges" (click)="onEdgesClick($event)">
+  <svg class="map-edges" data-testid="map-edges" (click)="onEdgesClick($event)">
     <defs></defs>
+    <g #edgesLayer class="map-world"></g>
   </svg>
   <nav
     class="map-crumbs"
