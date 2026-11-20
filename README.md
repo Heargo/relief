@@ -113,3 +113,7 @@ Les écrans `rules` et `explore` prévus par [docs/dev/rules.md](docs/dev/rules.
 | [docs/adr/](docs/adr/) | Les décisions et leurs raisons |
 | [docs/dev/workflow.md](docs/dev/workflow.md) | Comment un ticket est développé (tests d'abord) |
 | [.scratch/ROADMAP.md](.scratch/ROADMAP.md) | L'ordre de développement ; les specs et tickets sont sous `.scratch/` |
+
+## Licence
+
+[MIT](LICENSE).
