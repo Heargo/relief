@@ -1,5 +1,6 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 
+import { measured } from '../../../core/helpers/perf';
 import type {
   DiffResponse,
   Edge,
@@ -259,39 +260,41 @@ export class MapBusiness {
     );
   });
 
-  readonly visibleNodes = computed<VisibleNode[]>(() => {
-    const layout = this._layout();
-    const camera = this._camera();
-    const viewport = this._viewport();
-    const modes = computeModes(layout, camera, this._cap() ?? 3);
-    const marks = this.marks();
-    // A ring around the screen is drawn too, so that nodes just out of sight do not pop in.
-    const padded: Viewport = {
-      width: viewport.width + 2 * RENDER_MARGIN,
-      height: viewport.height + 2 * RENDER_MARGIN,
-    };
-    const shifted: Camera = {
-      ...camera,
-      tx: camera.tx + RENDER_MARGIN,
-      ty: camera.ty + RENDER_MARGIN,
-    };
-    const result: VisibleNode[] = [];
-    for (const node of layout.nodes.values()) {
-      const mode = modes.get(node.id);
-      if (!mode || mode === 'hidden' || !isInViewport(node, shifted, padded)) continue;
-      result.push({
-        id: node.id,
-        kind: node.kind,
-        mode,
-        x: node.x * camera.scale + camera.tx,
-        y: node.y * camera.scale + camera.ty,
-        w: node.w * camera.scale,
-        h: node.h * camera.scale,
-        mark: marks.get(node.id) ?? null,
-      });
-    }
-    return result;
-  });
+  readonly visibleNodes = computed<VisibleNode[]>(() =>
+    measured('visibleNodes', () => {
+      const layout = this._layout();
+      const camera = this._camera();
+      const viewport = this._viewport();
+      const modes = computeModes(layout, camera, this._cap() ?? 3);
+      const marks = this.marks();
+      // A ring around the screen is drawn too, so that nodes just out of sight do not pop in.
+      const padded: Viewport = {
+        width: viewport.width + 2 * RENDER_MARGIN,
+        height: viewport.height + 2 * RENDER_MARGIN,
+      };
+      const shifted: Camera = {
+        ...camera,
+        tx: camera.tx + RENDER_MARGIN,
+        ty: camera.ty + RENDER_MARGIN,
+      };
+      const result: VisibleNode[] = [];
+      for (const node of layout.nodes.values()) {
+        const mode = modes.get(node.id);
+        if (!mode || mode === 'hidden' || !isInViewport(node, shifted, padded)) continue;
+        result.push({
+          id: node.id,
+          kind: node.kind,
+          mode,
+          x: node.x * camera.scale + camera.tx,
+          y: node.y * camera.scale + camera.ty,
+          w: node.w * camera.scale,
+          h: node.h * camera.scale,
+          mark: marks.get(node.id) ?? null,
+        });
+      }
+      return result;
+    }),
+  );
 
   /** The closed container the user zooms into, whose content is to be loaded; null for none. */
   readonly containerToLoad = computed<string | null>(() => {
@@ -307,41 +310,46 @@ export class MapBusiness {
 
   /** Boxes the edges attach to: open or closed boxes, not the ghosts drawn inside them. */
   private readonly boxIds = computed(
-    () => {
-      const modes = computeModes(this._layout(), this._camera(), this._cap() ?? 3);
-      const ids = new Set<string>();
-      for (const [id, mode] of modes) if (mode === 'open' || mode === 'box') ids.add(id);
-      return ids;
-    },
+    () =>
+      measured('boxIds', () => {
+        const modes = computeModes(this._layout(), this._camera(), this._cap() ?? 3);
+        const ids = new Set<string>();
+        for (const [id, mode] of modes) if (mode === 'open' || mode === 'box') ids.add(id);
+        return ids;
+      }),
     { equal: (a, b) => a.size === b.size && [...a].every((id) => b.has(id)) },
   );
 
-  private readonly allEdges = computed(() => {
-    const diff = this._diff()?.diff;
-    return aggregateEdges(this._edges(), this._parents(), this.boxIds(), {
-      changed: (edge) => diff !== undefined && edgeStatus(edge, diff) !== 'unchanged',
-    });
-  });
+  private readonly allEdges = computed(() =>
+    measured('allEdges', () => {
+      const diff = this._diff()?.diff;
+      return aggregateEdges(this._edges(), this._parents(), this.boxIds(), {
+        changed: (edge) => diff !== undefined && edgeStatus(edge, diff) !== 'unchanged',
+      });
+    }),
+  );
 
   /** The logical coupling edges, aggregated for the current visibility and placed on screen. */
-  readonly coChangeLines = computed<CoChangeLine[]>(() => {
-    const layout = this._layout();
-    const camera = this._camera();
-    const boxes = this.visibleNodes().filter((n) => n.mode === 'box');
-    const screen = (n: { x: number; y: number; w: number; h: number }) => ({
-      x: n.x * camera.scale + camera.tx,
-      y: n.y * camera.scale + camera.ty,
-      w: n.w * camera.scale,
-      h: n.h * camera.scale,
-    });
-    const lines: CoChangeLine[] = [];
-    for (const edge of aggregateEdges(this._coChangeEdges(), this._parents(), this.boxIds())) {
-      const a = layout.nodes.get(edge.from);
-      const b = layout.nodes.get(edge.to);
-      if (a && b) lines.push({ edge, shape: edgeShape(screen(a), screen(b), boxes) });
-    }
-    return lines;
-  });
+  readonly coChangeLines = computed<CoChangeLine[]>(() =>
+    measured('coChangeLines', () => {
+      const layout = this._layout();
+      const camera = this._camera();
+      const boxes = this.visibleNodes().filter((n) => n.mode === 'box');
+      const screen = (n: { x: number; y: number; w: number; h: number }) => ({
+        x: n.x * camera.scale + camera.tx,
+        y: n.y * camera.scale + camera.ty,
+        w: n.w * camera.scale,
+        h: n.h * camera.scale,
+      });
+      const lines: CoChangeLine[] = [];
+      for (const edge of aggregateEdges(this._coChangeEdges(), this._parents(), this.boxIds())) {
+        const a = layout.nodes.get(edge.from);
+        const b = layout.nodes.get(edge.to);
+        if (a && b) lines.push({ edge, shape: edgeShape(screen(a), screen(b), boxes) });
+      }
+      return lines;
+    }),
+  );
 
   readonly showUnchangedEdges = this._showUnchangedEdges.asReadonly();
   /** Aggregated edges for the current visibility, after the "unchanged edges" layer. */
@@ -403,38 +411,40 @@ export class MapBusiness {
   });
 
   /** Edges in screen pixels, following the camera. */
-  readonly edgeLines = computed<EdgeLine[]>(() => {
-    const layout = this._layout();
-    const camera = this._camera();
-    const selected = this.selectedEdge();
-    const diff = this._diff()?.diff;
-    const violations = this._violations();
-    const lines: EdgeLine[] = [];
-    const boxes = this.visibleNodes().filter((n) => n.mode === 'box');
-    for (const edge of this.edges()) {
-      const a = layout.nodes.get(edge.from);
-      const b = layout.nodes.get(edge.to);
-      if (!a || !b) continue;
-      const screen = (n: typeof a) => ({
-        x: n.x * camera.scale + camera.tx,
-        y: n.y * camera.scale + camera.ty,
-        w: n.w * camera.scale,
-        h: n.h * camera.scale,
-      });
-      lines.push({
-        edge,
-        shape: edgeShape(screen(a), screen(b), boxes),
-        selected: selected !== null && selected.from === edge.from && selected.to === edge.to,
-        status: diff
-          ? aggregateEdgeStatus(edge.links.map((link) => edgeStatus(link, diff)))
-          : 'unchanged',
-        violations: edgeViolations(edge.links, violations),
-        ...linkCounts(edge.links, diff),
-        review: diff !== undefined,
-      });
-    }
-    return lines;
-  });
+  readonly edgeLines = computed<EdgeLine[]>(() =>
+    measured('edgeLines', () => {
+      const layout = this._layout();
+      const camera = this._camera();
+      const selected = this.selectedEdge();
+      const diff = this._diff()?.diff;
+      const violations = this._violations();
+      const lines: EdgeLine[] = [];
+      const boxes = this.visibleNodes().filter((n) => n.mode === 'box');
+      for (const edge of this.edges()) {
+        const a = layout.nodes.get(edge.from);
+        const b = layout.nodes.get(edge.to);
+        if (!a || !b) continue;
+        const screen = (n: typeof a) => ({
+          x: n.x * camera.scale + camera.tx,
+          y: n.y * camera.scale + camera.ty,
+          w: n.w * camera.scale,
+          h: n.h * camera.scale,
+        });
+        lines.push({
+          edge,
+          shape: edgeShape(screen(a), screen(b), boxes),
+          selected: selected !== null && selected.from === edge.from && selected.to === edge.to,
+          status: diff
+            ? aggregateEdgeStatus(edge.links.map((link) => edgeStatus(link, diff)))
+            : 'unchanged',
+          violations: edgeViolations(edge.links, violations),
+          ...linkCounts(edge.links, diff),
+          review: diff !== undefined,
+        });
+      }
+      return lines;
+    }),
+  );
 
   /** Crossings among the edges drawn now, for the layout the map is at (not the one in flight). */
   readonly visibleCrossings = computed(() => crossingsOfEdges(this._targetLayout(), this.edges()));

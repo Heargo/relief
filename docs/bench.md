@@ -70,6 +70,73 @@ Left:
 - The warm n8n snapshot (5.0 s) is the sum of reading the 25,000 blobs, deserialising their indexes and the link resolution; it is under the pro rata budget (10.3 s).
 - The cold run is still the cost of one tree-sitter parse per file (about 1.2 ms), now paid once instead of twice.
 
+## Map render (S05)
+
+`just bench-ui` (harness `tests/e2e/wdio.bench.conf.ts` and `tests/e2e/bench/`, same driver and config as `just e2e` but never part of it): WebdriverIO on the release app, window 1600x900, one run on `dense` (10 packages x 150 files, 3 imports per file, 30 files modified in the working tree; opened without range) and on the excalidraw clone of S02 (range of the table above). The numbers are written to `target/bench-ui/<repo>.json`. It needs the clone of `just bench`.
+
+Machine: the one above, under Xvfb with software rendering (no DRI3: `MESA-EGL: warning`), so the paint and the raster are slow and the absolute figures are pessimistic; the split between phases is what matters.
+
+How it measures. Events are dispatched from the page, one per animation frame (120 pointer moves for the pan, 80 wheel events for the zoom, half in and half out; 8 to 12 clicks on nodes spread over the screen for the selection). After each event the script waits for a macrotask (the effects of Angular have run), then forces style and layout (`offsetHeight`). Per step:
+
+- `work` = event, signals, effects, forced style and layout (ms; the paint and the raster come after and are not in it). It is the number the budget uses. As the steps are sequential, `frame` (distance between two animation frames) is almost the same number.
+- `compute` = self time of the `computed` of `MapBusiness` (`visibleNodes`, `boxIds`, `allEdges`, `edgeLines`, `coChangeLines`); `dom` = self time of the `sync*` of `MapCanvasComponent`. Both come from `performance.measure('relief:<name>')` marks (`src/ui/src/app/core/helpers/perf.ts`), which do nothing unless `window.__reliefPerf` is true (the harness sets it): one property read per call.
+- `layout` = the forced style and layout. The rest of `work` is "other": Angular change detection of the panels, the handlers.
+- Long tasks: the Long Tasks API does not exist in this WebKitGTK (`PerformanceObserver.supportedEntryTypes` has no `longtask`), so the harness counts the steps whose `work` exceeds 50 ms (they are single tasks, since each step is one task chain).
+
+Two states per repository: `fit` (the view the app opens on) and `zoomed` (wheel zoom at the centre until at least 400 nodes are in the DOM). During the zoom scenario the camera goes in and back out, so it crosses the levels around the state it started from. Medians (p50) do not add up exactly; "other" is `work` minus the three others at the p50.
+
+### Results of 2026-11-20 (S05, before S06 to S09)
+
+Times in ms, p50 / p95. DOM counts are the `map-node` and `map-edge` elements.
+
+| Repo, state (nodes / edges in the DOM) | Scenario | work (frame) | compute | dom     | layout  | other | Long tasks (> 50 ms)      |
+| -------------------------------------- | -------- | ------------ | ------- | ------- | ------- | ----- | ------------------------- |
+| dense, fit (1,349 / 4,500)             | pan      | 231 / 248    | 31 / 35 | 85 / 91 | 79 / 84 | ~36   | 120 of 120 steps, max 449 |
+| dense, fit                             | zoom     | 119 / 252    | 11 / 30 | 78 / 89 | 29 / 85 | ~1    | 77 of 80, max 376         |
+| dense, fit                             | select   | 125 / 177    | 0 / 0   | 11 / 14 | 16 / 75 | ~98   | 8 of 8, max 177           |
+| dense, zoomed (1,467 / 30)             | pan      | 31 / 34      | 1 / 2   | 9 / 12  | 14 / 16 | ~7    | 1 of 120, max 70          |
+| dense, zoomed                          | zoom     | 123 / 267    | 11 / 33 | 79 / 92 | 30 / 87 | ~3    | 74 of 80, max 535         |
+| dense, zoomed                          | select   | 122 / 143    | 0 / 0   | 10 / 12 | 15 / 57 | ~97   | 8 of 8, max 143           |
+| excalidraw, fit (57 / 2,742)           | pan      | 80 / 88      | 12 / 16 | 39 / 43 | 26 / 27 | ~3    | 120 of 120, max 184       |
+| excalidraw, fit                        | zoom     | 124 / 493    | 19 / 26 | 79 / 89 | 29 / 42 | ~0    | 77 of 80, max 1,031       |
+| excalidraw, fit                        | select   | 148 / 242    | 0 / 0   | 24 / 30 | 23 / 95 | ~101  | 10 of 10, max 242         |
+| excalidraw, zoomed (839 / 933)         | pan      | 62 / 67      | 7 / 9   | 24 / 28 | 22 / 24 | ~9    | 120 of 120, max 125       |
+| excalidraw, zoomed                     | zoom     | 135 / 209    | 18 / 26 | 42 / 88 | 29 / 42 | ~46   | 74 of 80, max 629         |
+| excalidraw, zoomed                     | select   | 147 / 212    | 0 / 0   | 23 / 26 | 22 / 93 | ~102  | 11 of 11, max 212         |
+
+(`dense` at the start shows files at once: the fit already holds 1,349 nodes and 4,500 aggregated edges. In the `zoomed` state only 30 edges are drawn, but the zoom scenario goes back through the dense view, hence its figures.)
+
+### Where the time goes
+
+Mean self time per step, from the `relief:*` marks (ms):
+
+| Mark                                                  | dense fit pan                                    | dense fit zoom | excalidraw fit pan | excalidraw zoomed pan |
+| ----------------------------------------------------- | ------------------------------------------------ | -------------- | ------------------ | --------------------- |
+| `edgeLines` (computed)                                | 30.1                                             | 12.8           | 11.1               | 6.6                   |
+| `syncEdges` (DOM)                                     | 73.2                                             | 69.5           | 36.8               | 15.5                  |
+| `syncEdgeEmphasis` (DOM)                              | 4.2                                              | 4.6            | 2.2                | 2.0                   |
+| `syncNodes` (DOM)                                     | 7.1                                              | 2.1            | 0.5                | 5.6                   |
+| `syncNodeEmphasis` (DOM)                              | 0.6                                              | 0.2            | 0.2                | 0.9                   |
+| `visibleNodes`, `boxIds`, `allEdges`, `coChangeLines` | < 1 each (`allEdges`: 2 to 3 on excalidraw zoom) |                |                    |                       |
+
+- Pan and zoom with many edges on screen: the DOM writing of the edges (`syncEdges`, 4 to 5 attributes and a tooltip per edge, every frame) is the first cost (about 35 to 40 % of a frame on dense), then the browser's style and layout of the 4,500 paths (about 30 %), then `edgeLines` (shape, status, violations and counts of every edge, 10 to 13 %). The computations that the ticket suspected in the node path (`computeModes`, `visibleNodes`, `boxIds`) are under 1 ms each at this size: they are not where the time is.
+- With few edges (dense zoomed, 30 edges) a pan frame costs 31 ms, of which `syncNodes` (style of every node, 1,467) and style/layout split most; this is still twice the budget.
+- Zoom is worse than pan because the scale changes: every node and edge changes its geometry and the aggregation (`allEdges`) is invalidated when a level changes.
+- Selecting a node costs 120 to 150 ms, of which only 25 to 50 ms are the map's own writes (`syncNodes`, `syncEdges`, emphasis): the other ~100 ms are outside the marks (Angular change detection of the side panel and the node edges, `selectedNodeEdges`, `selectedEdge`, which are not marked), to be broken down by S07.
+
+### Budget for S06 to S09
+
+On the same harness (1600x900, `work` p95, same machine and Xvfb), each S06 to S09 ticket must bring its scenario under the line and not worsen the others:
+
+| Scenario                   | Budget (p95 of `work`)   | Now, dense   | Now, excalidraw | Held |
+| -------------------------- | ------------------------ | ------------ | --------------- | ---- |
+| Pan, fit and zoomed        | < 16 ms                  | 248 / 34 ms  | 88 / 67 ms      | no   |
+| Wheel zoom, fit and zoomed | < 33 ms                  | 252 / 267 ms | 493 / 209 ms    | no   |
+| Selection of a node        | < 100 ms                 | 177 / 143 ms | 242 / 212 ms    | no   |
+| Long tasks (> 50 ms)       | none during pan and zoom | 120 of 120   | 120 of 120      | no   |
+
+The p95 budgets apply to both repositories (the figures in the table are fit / zoomed). On a machine with a GPU the paint costs less; since `work` leaves the paint out, the budget stays comparable. The harness writes the same JSON after each ticket: S06 to S09 append their column to this table.
+
 ## Shallow clones
 
 The clones are shallow (`--depth 400`). `repo_id` (the name of the data folder when it falls back to the user cache, and a cache key) is the SHA of the oldest stored commit, so it is not the same as in a full clone of the same repository, nor between clones of different depths. Churn and co-change ignore the commit at the shallow boundary (no parent to compare it with). The measures above (indexing, `analyse`, budgeted snapshot) do not depend on either, so they were not run again.

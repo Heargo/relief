@@ -68,6 +68,19 @@ e2e: build
         npx wdio run wdio.conf.ts
     fi
 
+# Render benchmark of the map (pan, wheel zoom, selection) on dense and excalidraw (clone of `just bench`), numbers in target/bench-ui/*.json; not part of `just e2e`
+bench-ui: build
+    #!/usr/bin/env bash
+    set -euo pipefail
+    dir="${RELIEF_BENCH_DIR:-$HOME/dev/relief-bench}"
+    [ -d "$dir/excalidraw" ] || { echo "no clone in $dir/excalidraw: run just bench first" >&2; exit 1; }
+    cd tests/e2e
+    if command -v xvfb-run >/dev/null; then
+        GDK_BACKEND=x11 xvfb-run -a -s "-screen 0 3840x2160x24" npx wdio run wdio.bench.conf.ts
+    else
+        npx wdio run wdio.bench.conf.ts
+    fi
+
 # One line: e2e: N passed, S skipped, M failed
 e2e-summary: build
     #!/usr/bin/env bash

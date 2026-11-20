@@ -11,6 +11,7 @@ import {
   viewChild,
   ViewEncapsulation,
 } from '@angular/core';
+import { measured } from '../../../../core/helpers/perf';
 import { TranslatePipe } from '@ngx-translate/core';
 
 import { LanguageBusiness } from '../../../../core/business/language.business';
@@ -134,8 +135,10 @@ export class MapCanvasComponent {
       const loading = this.loading();
       const selection = this.map.selection();
       untracked(() => {
-        this.sync(nodes, lang, impact, reading, focus, archi, risk, loading);
-        this.syncNodeEmphasis(nodes, impact, selection);
+        measured('syncNodes', () =>
+          this.sync(nodes, lang, impact, reading, focus, archi, risk, loading),
+        );
+        measured('syncNodeEmphasis', () => this.syncNodeEmphasis(nodes, impact, selection));
       });
     });
     effect(() => {
@@ -144,13 +147,13 @@ export class MapCanvasComponent {
       const impact = this.impact();
       const selection = this.map.selection();
       untracked(() => {
-        this.syncEdges(lines, lang, impact);
-        this.syncEdgeEmphasis(lines, selection);
+        measured('syncEdges', () => this.syncEdges(lines, lang, impact));
+        measured('syncEdgeEmphasis', () => this.syncEdgeEmphasis(lines, selection));
       });
     });
     effect(() => {
       const lines = this.map.coChangeLines();
-      untracked(() => this.syncCoChange(lines));
+      untracked(() => measured('syncCoChange', () => this.syncCoChange(lines)));
     });
     afterNextRender(() => this.listen());
   }
