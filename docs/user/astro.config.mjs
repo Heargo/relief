@@ -2,7 +2,10 @@ import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
 
 export default defineConfig({
-  base: '/docs',
+  // The app serves the docs under /docs; a standalone host (Netlify) sets DOCS_BASE=/
+  base: process.env.DOCS_BASE ?? '/docs',
+  // Netlify sets URL to the site's address (canonical links, sitemap)
+  site: process.env.URL,
   integrations: [
     starlight({
       title: 'relief',
