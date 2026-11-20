@@ -1,0 +1,28 @@
+# Six dated commits by bob and carol; the last one (2024-06-30) anchors the churn window
+# (90 days => commits after 2024-04-01). Line numbers of pricing.ts never move, so the span of
+# `total` is lines 1-9 and the span of `discount` is lines 11-13.
+commits:
+  - id: c1
+    message: "feat: pricing and util"
+    date: "2024-01-10T10:00:00Z"
+    author: bob
+  - id: c2
+    message: "fix: discount rate"
+    date: "2024-02-01T10:00:00Z"
+    author: carol
+  - id: c3
+    message: "fix: total accumulation"
+    date: "2024-04-10T10:00:00Z"
+    author: bob
+  - id: c4
+    message: "fix: total threshold"
+    date: "2024-05-10T10:00:00Z"
+    author: bob
+  - id: c5
+    message: "feat: discount rate and pricing tests"
+    date: "2024-06-01T10:00:00Z"
+    author: carol
+  - id: c6
+    message: "fix: clamp bound"
+    date: "2024-06-30T10:00:00Z"
+    author: bob

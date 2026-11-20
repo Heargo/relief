@@ -1,0 +1,12 @@
+target/
+node_modules/
+dist/
+.angular/
+.env
+.env.*
+!.env.example
+**/test-results/
+.cache/
+out-tsc/
+.astro/
+.relief/

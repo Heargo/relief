@@ -1,0 +1,89 @@
+.actions {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.mode {
+  margin-bottom: 6px;
+}
+
+.progress,
+.hint {
+  margin: 6px 0;
+  font-size: 12px;
+}
+
+ol {
+  margin: 0;
+  padding: 0 0 0 20px;
+}
+
+li {
+  margin: 4px 0;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+
+  &.selected {
+    font-weight: 600;
+  }
+
+  &[data-seen='true'] .body {
+    opacity: 0.5;
+  }
+}
+
+li::marker {
+  font-size: 11px;
+}
+
+// The checkbox, then the text as a column beside it: a long path wraps inside that column instead
+// of going back under the number and the checkbox.
+$check: 20px;
+$check-gap: 6px;
+
+.body {
+  display: inline-block;
+  width: calc(100% - #{$check + $check-gap});
+  vertical-align: top;
+}
+
+p-checkbox {
+  display: inline-block;
+  width: $check;
+  vertical-align: top;
+  margin-right: $check-gap;
+}
+
+.tag {
+  display: inline-block;
+  white-space: nowrap;
+  overflow-wrap: normal;
+  margin-left: 4px;
+  padding: 0 5px;
+  border-radius: 8px;
+  background: var(--relief-line);
+  font-size: 10px;
+
+  &.warn {
+    color: var(--relief-danger);
+  }
+}
+
+.commits {
+  padding-left: 0;
+  list-style: none;
+}
+
+.commit-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.commit.selected > .commit-head {
+  font-weight: 600;
+}

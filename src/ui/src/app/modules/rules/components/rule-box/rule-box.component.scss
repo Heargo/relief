@@ -1,0 +1,34 @@
+.rule-box {
+  margin: 8px 0;
+  padding: 8px 10px;
+  border: 1px solid var(--relief-rule);
+  border-left-width: 3px;
+  border-radius: 4px;
+  font-size: 12px;
+
+  &.existing {
+    border-color: var(--relief-rule-old);
+  }
+
+  h4 {
+    margin: 0 0 4px;
+    font-size: 12px;
+  }
+
+  p {
+    margin: 2px 0;
+  }
+
+  .globs {
+    color: var(--relief-muted);
+    word-break: break-all;
+  }
+
+  .status {
+    color: var(--relief-rule);
+  }
+
+  &.existing .status {
+    color: var(--relief-muted);
+  }
+}

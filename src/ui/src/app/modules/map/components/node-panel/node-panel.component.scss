@@ -1,0 +1,187 @@
+:host {
+  display: block;
+}
+
+.head,
+.links,
+.metrics,
+.code-section,
+.state {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--relief-line);
+}
+
+.state {
+  margin: 0;
+  color: var(--relief-muted);
+  font-size: 12px;
+
+  &.error {
+    color: var(--relief-danger);
+  }
+}
+
+h3,
+h4 {
+  margin: 0 0 8px;
+}
+
+h3 {
+  padding-right: 28px;
+  font-size: 14px;
+  word-break: break-all;
+}
+
+h4 {
+  color: var(--relief-muted);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.meta {
+  display: flex;
+  gap: 10px;
+  margin: 0 0 6px;
+  color: var(--relief-muted);
+  font-size: 12px;
+}
+
+.path {
+  color: var(--relief-muted);
+  font-size: 11px;
+  word-break: break-all;
+}
+
+dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 12px;
+  margin: 0;
+  font-size: 12px;
+
+  dt {
+    color: var(--relief-muted);
+  }
+
+  dd {
+    margin: 0;
+  }
+}
+
+ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+li button {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  padding: 4px 6px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--relief-fg);
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--relief-bg);
+  }
+
+  .kind {
+    margin-left: auto;
+    color: var(--relief-muted);
+  }
+}
+
+.none {
+  padding: 4px 6px;
+  color: var(--relief-faint);
+  font-size: 12px;
+}
+
+.code {
+  margin: 0;
+  overflow: auto;
+  border: 1px solid var(--relief-line-2);
+  border-radius: 8px;
+  background: var(--relief-map);
+  font:
+    13px/1.6 ui-monospace,
+    'JetBrains Mono',
+    'SF Mono',
+    Menlo,
+    Consolas,
+    monospace;
+
+  code {
+    display: block;
+    width: max-content;
+    min-width: 100%;
+    font: inherit;
+  }
+
+  .ln {
+    display: flex;
+    white-space: pre;
+  }
+
+  .g {
+    flex: none;
+    width: 42px;
+    padding-right: 8px;
+    border-right: 1px solid var(--relief-line);
+    color: var(--relief-faint);
+    text-align: right;
+    user-select: none;
+  }
+
+  .t {
+    padding-left: 10px;
+  }
+}
+
+// Spans injected through [innerHTML] carry no emulated-encapsulation attribute.
+:host ::ng-deep {
+  .hljs-keyword,
+  .hljs-literal,
+  .hljs-built_in,
+  .hljs-meta {
+    color: var(--relief-syn-keyword);
+  }
+
+  .hljs-string,
+  .hljs-regexp,
+  .hljs-template-variable,
+  .hljs-subst {
+    color: var(--relief-syn-string);
+  }
+
+  .hljs-number,
+  .hljs-symbol {
+    color: var(--relief-syn-number);
+  }
+
+  .hljs-comment,
+  .hljs-doctag {
+    color: var(--relief-syn-comment);
+    font-style: italic;
+  }
+
+  .hljs-title,
+  .hljs-function,
+  .hljs-attr,
+  .hljs-property {
+    color: var(--relief-syn-title);
+  }
+
+  .hljs-type,
+  .hljs-class,
+  .hljs-params {
+    color: var(--relief-syn-type);
+  }
+}

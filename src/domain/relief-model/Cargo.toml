@@ -1,0 +1,23 @@
+[package]
+name = "relief-model"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+schemars = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+
+[features]
+testing = []
+
+[dev-dependencies]
+jsonschema = "0.30"
+relief-model = { path = ".", features = ["testing"] }
+insta = { version = "1", features = ["json"] }

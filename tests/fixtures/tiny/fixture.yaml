@@ -1,0 +1,10 @@
+commits:
+  - id: init
+    message: "feat: initial files"
+    date: "2024-01-01T10:00:00Z"
+  - id: edit
+    message: "feat: extend a"
+    date: "2024-01-02T10:00:00Z"
+  - id: reshape
+    message: "refactor: rename b to c and drop the readme"
+    date: "2024-01-03T10:00:00Z"

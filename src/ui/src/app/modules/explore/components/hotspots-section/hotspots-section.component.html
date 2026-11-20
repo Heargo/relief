@@ -1,0 +1,16 @@
+<section class="sec hotspots" data-testid="hotspots-section">
+  <h3>{{ 'explore.hotspots.title' | translate }}</h3>
+  @for (hotspot of hotspots(); track hotspot.id) {
+    <button
+      type="button"
+      data-testid="hotspot-row"
+      [attr.data-node-id]="hotspot.id"
+      (click)="nodeSelect.emit(hotspot.id)"
+    >
+      <span class="name">{{ label()(hotspot.id) }}</span>
+      <span class="risk">{{ hotspot.risk * 100 | number: '1.0-0' }}</span>
+    </button>
+  } @empty {
+    <p class="hint">{{ 'explore.hotspots.none' | translate }}</p>
+  }
+</section>

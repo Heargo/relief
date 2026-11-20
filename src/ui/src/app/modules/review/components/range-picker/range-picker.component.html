@@ -1,0 +1,162 @@
+<div class="range" role="group" [attr.aria-label]="'review.rangePicker.label' | translate">
+  <button
+    type="button"
+    class="side"
+    data-testid="range-base"
+    aria-haspopup="dialog"
+    [attr.aria-expanded]="picker.open() === 'base'"
+    [attr.aria-label]="'review.rangePicker.base' | translate"
+    [attr.title]="picker.parts().base"
+    (click)="toggle('base')"
+  >
+    {{ short(picker.parts().base) }}
+  </button>
+  <button
+    type="button"
+    class="mode"
+    data-testid="range-mode"
+    [disabled]="picker.headIsWorktree()"
+    [attr.aria-label]="
+      (picker.parts().mergeBase ? 'review.rangePicker.mergeBase' : 'review.rangePicker.direct')
+        | translate
+    "
+    [attr.title]="
+      (picker.parts().mergeBase ? 'review.rangePicker.mergeBase' : 'review.rangePicker.direct')
+        | translate
+    "
+    (click)="picker.toggleMode()"
+  >
+    {{ picker.parts().mergeBase ? '...' : '..' }}
+  </button>
+  <button
+    type="button"
+    class="side"
+    data-testid="range-head"
+    aria-haspopup="dialog"
+    [attr.aria-expanded]="picker.open() === 'head'"
+    [attr.aria-label]="'review.rangePicker.head' | translate"
+    [attr.title]="picker.parts().head"
+    (click)="toggle('head')"
+  >
+    {{
+      picker.headIsWorktree()
+        ? ('review.rangePicker.worktree' | translate)
+        : short(picker.parts().head)
+    }}
+  </button>
+  <button
+    type="button"
+    class="swap"
+    data-testid="range-swap"
+    [disabled]="picker.headIsWorktree()"
+    [attr.aria-label]="'review.rangePicker.swap' | translate"
+    [attr.title]="'review.rangePicker.swap' | translate"
+    (click)="picker.swap()"
+  >
+    ⇄
+  </button>
+  @if (picker.count() !== null) {
+    <span class="count" data-testid="range-count">{{
+      'review.rangePicker.commits' | translate: { count: picker.count() }
+    }}</span>
+  }
+  @if (picker.open(); as side) {
+    <div
+      class="popover"
+      data-testid="range-popover"
+      role="dialog"
+      [class.right]="side === 'head'"
+      (keydown)="onKey($event)"
+    >
+      <input
+        #filter
+        pInputText
+        class="filter"
+        type="text"
+        autocomplete="off"
+        data-testid="range-filter"
+        [placeholder]="'review.rangePicker.filter' | translate"
+        [value]="picker.query()"
+        (input)="picker.setQuery($any($event.target).value)"
+      />
+      <ul class="quick" role="listbox">
+        @for (ref of picker.shortcuts(); track ref; let i = $index) {
+          <li
+            role="option"
+            data-testid="range-option"
+            [class.active]="picker.active() === i"
+            [attr.aria-selected]="picker.active() === i"
+            (mouseenter)="picker.setActive(i)"
+            (click)="picker.pick(ref)"
+          >
+            {{ ref === worktree ? ('review.rangePicker.worktree' | translate) : ref }}
+          </li>
+        }
+      </ul>
+      <div class="tabs" role="tablist">
+        @for (tab of tabs; track tab) {
+          <button
+            type="button"
+            role="tab"
+            [attr.data-testid]="'range-tab-' + tab"
+            [class.on]="picker.tab() === tab"
+            [attr.aria-selected]="picker.tab() === tab"
+            (click)="picker.setTab(tab)"
+          >
+            {{ 'review.rangePicker.tabs.' + tab | translate }}
+          </button>
+        }
+      </div>
+      <ul class="list" role="listbox">
+        @switch (picker.tab()) {
+          @case ('branches') {
+            @for (ref of picker.branches(); track ref; let i = $index) {
+              <li
+                role="option"
+                data-testid="range-option"
+                [class.active]="picker.active() === picker.shortcuts().length + i"
+                (mouseenter)="picker.setActive(picker.shortcuts().length + i)"
+                (click)="picker.pick(ref)"
+              >
+                {{ ref }}
+              </li>
+            }
+          }
+          @case ('tags') {
+            @for (ref of picker.tags(); track ref; let i = $index) {
+              <li
+                role="option"
+                data-testid="range-option"
+                [class.active]="picker.active() === picker.shortcuts().length + i"
+                (mouseenter)="picker.setActive(picker.shortcuts().length + i)"
+                (click)="picker.pick(ref)"
+              >
+                {{ ref }}
+              </li>
+            }
+          }
+          @case ('commits') {
+            @for (row of picker.commits(); track row.entry.sha; let i = $index) {
+              <li
+                role="option"
+                class="commit"
+                data-testid="range-commit"
+                [attr.data-mark]="row.mark"
+                [class.active]="picker.active() === picker.shortcuts().length + i"
+                (mouseenter)="picker.setActive(picker.shortcuts().length + i)"
+                (click)="picker.pick(row.entry.sha)"
+              >
+                <span class="rail" aria-hidden="true"></span>
+                <span class="sha">{{ row.entry.short }}</span>
+                <span class="subject">{{ row.entry.subject }}</span>
+                @if (row.mark === 'head' || row.mark === 'base') {
+                  <span class="tag">{{ 'review.rangePicker.marks.' + row.mark | translate }}</span>
+                }
+              </li>
+            }
+          }
+        }
+      </ul>
+    </div>
+  }
+</div>

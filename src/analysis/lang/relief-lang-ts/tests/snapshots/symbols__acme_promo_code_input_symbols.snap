@@ -1,0 +1,27 @@
+---
+source: src/analysis/lang/relief-lang-ts/tests/symbols.rs
+expression: spans_json(&index)
+---
+[
+  {
+    "endLine": 6,
+    "name": "Props",
+    "startLine": 6,
+    "subkind": "type",
+    "visibility": "internal"
+  },
+  {
+    "endLine": 10,
+    "name": "validateCodeLocally",
+    "startLine": 8,
+    "subkind": "function",
+    "visibility": "internal"
+  },
+  {
+    "endLine": 25,
+    "name": "PromoCodeInput",
+    "startLine": 12,
+    "subkind": "component",
+    "visibility": "public"
+  }
+]

@@ -1,0 +1,20 @@
+commits:
+  - id: base
+    message: "chore: acme-shop before the promo codes pull request"
+    date: "2024-03-01T09:00:00Z"
+  - id: db
+    message: "feat(db): table discounts et repo"
+    date: "2024-03-04T10:00:00Z"
+    branch: feat/promo-codes
+  - id: discount
+    message: "feat(billing): remise dans computeTotal"
+    date: "2024-03-05T10:00:00Z"
+  - id: auth
+    message: "refactor(auth): refresh() renvoie null au lieu de lever"
+    date: "2024-03-06T10:00:00Z"
+  - id: move
+    message: "refactor: formatPrice déplacé dans shared (+ prettier)"
+    date: "2024-03-07T10:00:00Z"
+  - id: checkout
+    message: "feat(checkout): champ code promo et route /promo/validate"
+    date: "2024-03-08T10:00:00Z"

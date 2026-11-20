@@ -1,0 +1,37 @@
+<div class="ends">
+  <button
+    type="button"
+    class="iconbtn"
+    data-testid="inspector-from"
+    [attr.data-node-id]="from()"
+    (click)="nodeSelect.emit(from())"
+  >
+    {{ fromLabel() }}
+  </button>
+  <span aria-hidden="true">→</span>
+  <button
+    type="button"
+    class="iconbtn"
+    data-testid="inspector-to"
+    [attr.data-node-id]="to()"
+    (click)="nodeSelect.emit(to())"
+  >
+    {{ toLabel() }}
+  </button>
+</div>
+<div class="chips">
+  <span class="chip" data-testid="inspector-chip" data-chip="kind">{{ kinds() }}</span>
+  <span class="chip" data-testid="inspector-chip" data-chip="precision">
+    {{ (heuristic() ? 'map.inspector.heuristic' : 'map.inspector.resolved') | translate }}
+  </span>
+  <span class="chip" data-testid="inspector-chip" data-chip="count">
+    {{
+      (count() === 1 ? 'map.edges.links_one' : 'map.edges.links') | translate: { count: count() }
+    }}
+  </span>
+  @if (added()) {
+    <span class="chip added" data-testid="inspector-chip" data-chip="added">
+      {{ 'map.inspector.added' | translate }}
+    </span>
+  }
+</div>

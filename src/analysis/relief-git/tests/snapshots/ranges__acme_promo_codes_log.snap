@@ -1,0 +1,24 @@
+---
+source: src/analysis/relief-git/tests/ranges.rs
+expression: text
+---
+== feat(db): table discounts et repo
+A  packages/db/repos/discountRepo.ts  +9 -0
+A  packages/db/schema/discounts.ts  +7 -0
+== feat(billing): remise dans computeTotal
+A  apps/api/billing/discount.ts  +17 -0
+M  apps/api/billing/invoice.ts  +4 -2
+M  apps/api/routes/invoices.ts  +1 -1
+== refactor(auth): refresh() renvoie null au lieu de lever
+M  apps/api/auth/session.ts  +2 -2
+M  apps/api/billing/payment.ts  +2 -0
+== refactor: formatPrice déplacé dans shared (+ prettier)
+M  apps/web/pages/Invoices.tsx  +1 -1
+M  packages/shared/http/client.ts  +29 -29
+R100 apps/web/utils/format.ts -> packages/shared/money/format.ts  +0 -0
+== feat(checkout): champ code promo et route /promo/validate
+D  apps/api/billing/legacyCoupon.ts  +0 -6
+M  apps/api/routes/checkout.ts  +12 -3
+M  apps/web/components/CartSummary.tsx  +4 -3
+A  apps/web/components/PromoCodeInput.tsx  +25 -0
+M  apps/web/pages/Checkout.tsx  +9 -4

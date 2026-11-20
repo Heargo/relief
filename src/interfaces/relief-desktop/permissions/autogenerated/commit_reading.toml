@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-commit-reading"
+description = "Enables the commit_reading command without any pre-configured scope."
+commands.allow = ["commit_reading"]
+
+[[permission]]
+identifier = "deny-commit-reading"
+description = "Denies the commit_reading command without any pre-configured scope."
+commands.deny = ["commit_reading"]

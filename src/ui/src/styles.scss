@@ -1,0 +1,475 @@
+:root {
+  --relief-bg: #f3f4f7;
+  --relief-fg: #1b1f24;
+  --relief-muted: #5b6570;
+  --relief-panel: #ffffff;
+  --relief-map: #f7f8fa;
+  --relief-line: #e2e5eb;
+  --relief-danger: #c62828;
+  --relief-panel-2: #f2f4f8;
+  --relief-line-2: #cdd2dc;
+  --relief-faint: #9aa2b1;
+  --relief-accent: #1f6feb;
+  --relief-add: #1f9d3a;
+  --relief-impact: #e8590c;
+  --relief-mod: #c48a00;
+  --relief-del: #d93a32;
+  --relief-mov: #7c5cf0;
+  --relief-rule: #e11d2e;
+  --relief-rule-old: #dba7ac;
+  --relief-risk-1: #e8c547;
+  --relief-risk-2: #f0a030;
+  --relief-risk-3: #e8590c;
+  --relief-risk-4: #c9202a;
+  --relief-cochange: #0e9f8e;
+  --relief-node: #ffffff;
+  --relief-node-open: rgba(20, 30, 60, 0.025);
+  --relief-shadow: 0 8px 30px rgba(20, 30, 60, 0.15);
+  --relief-syn-keyword: #8250df;
+  --relief-syn-string: #0a7d4a;
+  --relief-syn-number: #b35900;
+  --relief-syn-comment: #8a93a2;
+  --relief-syn-title: #1f6feb;
+  --relief-syn-type: #0b7a8a;
+}
+
+:root.dark {
+  --relief-bg: #0c0f15;
+  --relief-fg: #e6e9ed;
+  --relief-muted: #98a2ad;
+  --relief-panel: #131720;
+  --relief-map: #0f131b;
+  --relief-line: #242a36;
+  --relief-danger: #ff6b6b;
+  --relief-panel-2: #191e29;
+  --relief-line-2: #323a4a;
+  --relief-faint: #5d6679;
+  --relief-accent: #5eb1ff;
+  --relief-add: #3fb950;
+  --relief-impact: #ff922b;
+  --relief-mod: #e3b341;
+  --relief-del: #f85149;
+  --relief-mov: #a78bfa;
+  --relief-rule: #ff4d5a;
+  --relief-rule-old: #80484f;
+  --relief-risk-1: #b89b2f;
+  --relief-risk-2: #d98b1f;
+  --relief-risk-3: #ff7a2e;
+  --relief-risk-4: #ff4d5a;
+  --relief-cochange: #2dd4bf;
+  --relief-node: #161b25;
+  --relief-node-open: rgba(255, 255, 255, 0.018);
+  --relief-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
+  --relief-syn-keyword: #c792ea;
+  --relief-syn-string: #7fd6a0;
+  --relief-syn-number: #f0a860;
+  --relief-syn-comment: #6b7588;
+  --relief-syn-title: #7ab8ff;
+  --relief-syn-type: #5fd0e0;
+}
+
+body {
+  margin: 0;
+  background: var(--relief-bg);
+  color: var(--relief-fg);
+  font:
+    13px/1.45 ui-sans-serif,
+    system-ui,
+    sans-serif;
+}
+
+/* Optimus UI theme, set once: the controls follow the mockup (13 px, panel-2 fill, line-2 border,
+   6 px radius, accent focus). */
+body {
+  --p-inputtext-background: var(--relief-panel-2);
+  --p-inputtext-color: var(--relief-fg);
+  --p-inputtext-border-color: var(--relief-line-2);
+  --p-inputtext-hover-border-color: var(--relief-faint);
+  --p-inputtext-focus-border-color: var(--relief-accent);
+  --p-inputtext-border-radius: 6px;
+  --p-inputtext-padding-y: 6px;
+  --p-inputtext-padding-x: 10px;
+  --p-inputtext-placeholder-color: var(--relief-faint);
+  --p-inputtext-focus-ring-width: 0;
+  --p-inputtext-focus-ring-shadow: none;
+  --p-select-background: var(--relief-panel-2);
+  --p-select-color: var(--relief-fg);
+  --p-select-border-color: var(--relief-line-2);
+  --p-select-hover-border-color: var(--relief-faint);
+  --p-select-focus-border-color: var(--relief-accent);
+  --p-select-padding-y: 5px;
+  --p-select-padding-x: 8px;
+  --p-select-focus-ring-width: 0;
+  --p-select-focus-ring-shadow: none;
+}
+
+:root .p-inputtext,
+:root .p-select,
+:root .p-select-label,
+:root .p-select-option {
+  font-size: inherit;
+}
+
+:root .p-select-label {
+  font-family: inherit;
+  /* `clip` rather than `hidden`: same look, and WebDriver reads the text of the field. */
+  overflow: clip;
+}
+
+body.resizing {
+  cursor: col-resize;
+  user-select: none;
+}
+
+/* The risk map layer tints the map nodes by step (0 is left as is). */
+@for $level from 1 through 4 {
+  .map-node[data-risk-level='#{$level}'] {
+    background-image: linear-gradient(
+      color-mix(in srgb, var(--relief-risk-#{$level}) 32%, transparent),
+      color-mix(in srgb, var(--relief-risk-#{$level}) 32%, transparent)
+    );
+    border-color: var(--relief-risk-#{$level});
+  }
+}
+
+/* Left panel, like the mockup: sections, segmented controls, switches, stats, progress bar. */
+.sec {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--relief-line);
+
+  h3 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 10px;
+    color: var(--relief-muted);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+
+    .r {
+      margin-left: auto;
+      color: var(--relief-faint);
+      font-weight: 500;
+      letter-spacing: 0;
+      text-transform: none;
+    }
+  }
+
+  .hint {
+    margin: 6px 0 0;
+    color: var(--relief-faint);
+    font-size: 11px;
+  }
+}
+
+.seg {
+  display: flex;
+  padding: 3px;
+  border: 1px solid var(--relief-line-2);
+  border-radius: 8px;
+  background: var(--relief-panel-2);
+
+  button {
+    flex: 1;
+    padding: 6px 8px;
+    border: 0;
+    border-radius: 6px;
+    background: none;
+    color: var(--relief-muted);
+    font: inherit;
+    font-weight: 500;
+    cursor: pointer;
+
+    &.on {
+      background: var(--relief-panel);
+      color: var(--relief-fg);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+    }
+  }
+}
+
+.iconbtn {
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
+  padding: 4px 9px;
+  border: 1px solid var(--relief-line-2);
+  border-radius: 6px;
+  background: none;
+  color: var(--relief-muted);
+  font: inherit;
+  text-decoration: none;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--relief-fg);
+    border-color: var(--relief-faint);
+  }
+
+  &:disabled {
+    color: var(--relief-faint);
+    border-color: var(--relief-line);
+    cursor: default;
+  }
+}
+
+.tog {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 0;
+  cursor: pointer;
+  user-select: none;
+
+  .sw {
+    position: relative;
+    flex: none;
+    width: 28px;
+    height: 16px;
+    border-radius: 8px;
+    background: var(--relief-line-2);
+    transition: 0.15s;
+
+    &::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #fff;
+      transition: 0.15s;
+    }
+  }
+
+  &.on .sw {
+    background: var(--relief-accent);
+
+    &::after {
+      left: 14px;
+    }
+  }
+
+  small {
+    display: block;
+    color: var(--relief-faint);
+    font-size: 11px;
+  }
+
+  kbd {
+    margin-left: auto;
+  }
+}
+
+.stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 8px;
+  font-size: 12px;
+}
+
+.prog {
+  height: 6px;
+  margin-top: 8px;
+  border-radius: 3px;
+  background: var(--relief-panel-2);
+  overflow: hidden;
+
+  i {
+    display: block;
+    height: 100%;
+    background: var(--relief-add);
+    transition: width 0.3s;
+  }
+}
+
+.dot {
+  display: inline-block;
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+
+  &.add {
+    background: var(--relief-add);
+  }
+
+  &.mod {
+    background: var(--relief-mod);
+  }
+
+  &.del {
+    background: var(--relief-del);
+  }
+
+  &.mov {
+    background: var(--relief-mov);
+  }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+// Edge label of the map (mockup `.el`): a text with a halo of the map colour, by status.
+.edge .tag text.el {
+  font:
+    600 10.5px ui-sans-serif,
+    system-ui;
+  paint-order: stroke;
+  stroke: var(--relief-map);
+  stroke-width: 4px;
+  stroke-linejoin: round;
+  text-anchor: middle;
+  dominant-baseline: central;
+  fill: var(--relief-muted);
+
+  &.add {
+    fill: var(--relief-add);
+  }
+
+  &.del {
+    fill: var(--relief-del);
+  }
+
+  &.viol {
+    fill: var(--relief-rule);
+  }
+
+  &.violOld {
+    fill: var(--relief-rule-old);
+    opacity: 0.8;
+  }
+
+  &.mov {
+    fill: var(--relief-mov);
+  }
+
+  &.hl {
+    fill: var(--relief-impact);
+  }
+}
+
+/* Settings menu of the top bar. */
+.settings {
+  position: relative;
+}
+
+.settings-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 260px;
+  padding: 10px;
+  border: 1px solid var(--relief-line-2);
+  border-radius: 8px;
+  background: var(--relief-panel);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+
+  .row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    color: var(--relief-muted);
+    font-size: 12px;
+  }
+
+  .seg button {
+    font-size: 13px;
+  }
+
+  .item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 8px;
+    border: 0;
+    border-radius: 6px;
+    background: none;
+    color: var(--relief-fg);
+    font: inherit;
+    cursor: pointer;
+
+    &:hover {
+      background: var(--relief-panel-2);
+    }
+  }
+}
+
+/* Left panel block titles, like .ptitle in the mockup. */
+.ptitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--relief-line);
+  background: var(--relief-panel);
+  font-size: 12px;
+  font-weight: 600;
+
+  .sub {
+    color: var(--relief-muted);
+    font-weight: 400;
+  }
+}
+
+// Selection emphasis: the edges of the selected node (out: accent, in: impact colour) stand out,
+// the rest fades. Not `data-faded`, which belongs to the focus layer.
+.map-canvas .map-edges .edge {
+  transition: opacity 0.15s;
+
+  &.out {
+    --edge-color: var(--relief-accent);
+  }
+
+  &.in {
+    --edge-color: var(--relief-impact);
+  }
+
+  &.picked {
+    --edge-color: var(--relief-accent);
+  }
+
+  &.out .line,
+  &.in .line {
+    stroke-width: 2.4;
+    opacity: 1;
+  }
+
+  &.picked .line {
+    stroke-width: 3;
+    opacity: 1;
+  }
+
+  &.dim {
+    opacity: 0.12;
+  }
+}
+
+.map-canvas .map-node {
+  transition: opacity 0.15s;
+
+  &[data-emph='dim'] {
+    opacity: 0.35;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .map-canvas .map-edges .edge,
+  .map-canvas .map-node {
+    transition: none;
+  }
+}

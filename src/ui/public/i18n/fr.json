@@ -1,0 +1,374 @@
+{
+  "home": {
+    "help": "Aide",
+    "tagline": "Carte zoomable d'un dépôt git"
+  },
+  "optimus": {},
+  "map": {
+    "search": "Aller à un symbole, fichier, module…",
+    "help": "Aide",
+    "shortcuts": "Raccourcis",
+    "expand": "Élargir le panneau de droite",
+    "loading": "Chargement…",
+    "empty": "Dépôt vide : rien à cartographier.",
+    "theme": {
+      "dark": "Sombre",
+      "light": "Clair",
+      "system": "Système"
+    },
+    "level": "Niveau",
+    "levels": {
+      "0": "Système",
+      "1": "Modules",
+      "2": "Fichiers",
+      "3": "Symboles",
+      "code": "Niveau 4 · Code : panneau de droite"
+    },
+    "zoom": {
+      "in": "Zoomer",
+      "out": "Dézoomer",
+      "fit": "Tout voir"
+    },
+    "counts": {
+      "symbols": "{{count}} symboles",
+      "symbols_one": "{{count}} symbole",
+      "files": "{{count}} fichiers",
+      "files_one": "{{count}} fichier"
+    },
+    "external": {
+      "hide": "Masquer les dépendances externes"
+    },
+    "edges": {
+      "links": "{{count}} liens",
+      "links_one": "{{count}} lien",
+      "new": "nouveau",
+      "moved": "déplacé",
+      "unchanged": "Arêtes inchangées",
+      "close": "Fermer"
+    },
+    "node": {
+      "children": "Contient",
+      "uses": "Utilise",
+      "usedBy": "Utilisé par",
+      "none": "Aucun",
+      "code": "Code",
+      "codeLoading": "Chargement du code…",
+      "codeError": "Code indisponible"
+    },
+    "panel": {
+      "tools": "Outils",
+      "display": "Affichage",
+      "modePr": "PR",
+      "modeExplore": "Explorateur"
+    },
+    "layout": {
+      "title": "Disposition",
+      "fewerCrossings": "Moins de croisements",
+      "rawGrid": "Grille brute",
+      "optimizedTotal": "Moins de croisements : {{count}}",
+      "rawTotal": "Grille brute : {{count}}",
+      "visible": "À l'écran : {{count}}",
+      "totals": "Croisements, tous niveaux"
+    },
+    "breadcrumbs": "Fil d'Ariane",
+    "shortcutsList": {
+      "rangeBase": "Choisir la base de la plage",
+      "rangeHead": "Choisir le head de la plage",
+      "levels": "Niveau de zoom : système, modules, fichiers, symboles",
+      "search": "Rechercher",
+      "help": "Afficher cette aide",
+      "escape": "Désélectionner, puis remonter d'un niveau, puis tout voir (ferme aussi cette fenêtre)",
+      "impact": "Rayon d'impact",
+      "focus": "Calque Focus PR",
+      "next": "Entrée suivante de l'ordre de lecture",
+      "previous": "Entrée précédente de l'ordre de lecture",
+      "seen": "Marquer l'entrée sélectionnée comme vue"
+    },
+    "kinds": {
+      "repo": "dépôt",
+      "workspace": "workspace",
+      "service": "système",
+      "package": "package",
+      "module": "module",
+      "file": "fichier",
+      "symbol": "symbole",
+      "external": "externe"
+    },
+    "settings": {
+      "title": "Paramètres",
+      "theme": "Thème",
+      "language": "Langue",
+      "docs": "Documentation"
+    },
+    "inspector": {
+      "none": "Vue d'ensemble",
+      "node": "Nœud",
+      "edge": "Arête",
+      "dependsOn": "Dépend de",
+      "usedBy": "Utilisé par",
+      "resolved": "résolue",
+      "heuristic": "heuristique",
+      "added": "ajoutée par la PR",
+      "hint": "Clique un nœud ou une arête"
+    },
+    "usages": {
+      "title": "Utilisations dans le code",
+      "loading": "Recherche des utilisations…",
+      "empty": "Importé mais jamais utilisé.",
+      "unsupported": "Utilisations : non pris en charge pour ce langage.",
+      "more": "et {{count}} de plus",
+      "in": "dans"
+    }
+  },
+  "review": {
+    "toggle": "Relire la PR",
+    "reload": "Recharger",
+    "rangePicker": {
+      "label": "Plage",
+      "base": "Base",
+      "head": "Head",
+      "worktree": "Arbre de travail",
+      "swap": "Échanger base et head",
+      "mergeBase": "base...head : compare depuis l'ancêtre commun des deux côtés (ce que la PR ajoute). Cliquer pour un diff direct.",
+      "direct": "base..head : compare les deux côtés tels quels (diff direct). Cliquer pour comparer depuis l'ancêtre commun.",
+      "filter": "Filtrer par nom, sujet ou SHA",
+      "tabs": {
+        "branches": "Branches",
+        "tags": "Tags",
+        "commits": "Commits"
+      },
+      "commits": "{{count}} commits",
+      "commits_one": "{{count}} commit",
+      "marks": {
+        "base": "BASE",
+        "head": "HEAD"
+      }
+    },
+    "range": "Plage",
+    "worktree": "arbre de travail vs HEAD",
+    "layers": {
+      "title": "Calques",
+      "diff": "Calque de diff",
+      "focus": "Focus PR",
+      "description": {
+        "diff": "couleurs ajouté / modifié / supprimé",
+        "unchanged-edges": "sinon seulement les dépendances qui bougent",
+        "focus": "le changé + 1 saut, le reste estompé",
+        "impact": "à la sélection d'un nœud",
+        "rules": "relief.config.yaml",
+        "risk": "complexité × churn × absence de tests",
+        "hide-external": "paquets tiers et leurs liens",
+        "co-change": "fichiers qui changent ensemble"
+      }
+    },
+    "card": {
+      "title": "La PR",
+      "files": "{{count}} fichiers",
+      "files_one": "{{count}} fichier",
+      "added": "{{count}} ajoutés",
+      "modified": "{{count}} modifiés",
+      "removed": "{{count}} supprimés",
+      "moved": "{{count}} déplacés",
+      "signatures": "{{count}} signatures",
+      "signatures_one": "{{count}} signature",
+      "filesMoved": "{{count}} fichiers déplacés",
+      "filesMoved_one": "{{count}} fichier déplacé",
+      "formatOnly": "{{count}} format seul",
+      "added_one": "{{count}} ajouté",
+      "modified_one": "{{count}} modifié",
+      "removed_one": "{{count}} supprimé",
+      "moved_one": "{{count}} déplacé",
+      "formatOnly_one": "{{count}} format seul"
+    },
+    "legend": {
+      "added": "Ajouté",
+      "modified": "Modifié",
+      "removed": "Supprimé",
+      "moved": "Déplacé",
+      "newEdge": "Nouvelle dépendance",
+      "removedEdge": "Dépendance retirée",
+      "unchangedEdge": "Inchangée"
+    },
+    "badges": {
+      "breaking-api": "API cassée",
+      "api": "API",
+      "internal-signature": "sig. interne",
+      "format-only": "format seul"
+    },
+    "diffPanel": {
+      "title": "Diff structurel",
+      "expand": "élargir",
+      "breaking": "cassante",
+      "compatible": "compatible",
+      "publicApi": "API publique",
+      "internal": "interne",
+      "showAnyway": "Afficher quand même le diff texte",
+      "formatOnlyHidden_one": "{{count}} ligne de diff texte masquée : seul le formatage change",
+      "formatOnlyHidden": "{{count}} lignes de diff texte masquées : seul le formatage change",
+      "collapse": "réduire"
+    },
+    "reason": {
+      "exportRemoved": "Export supprimé",
+      "visibilityReduced": "Visibilité réduite",
+      "paramRequiredAdded": "Paramètre obligatoire ajouté ({{param}})",
+      "paramTypeChanged": "Type du paramètre {{param}} modifié",
+      "paramBecameRequired": "Paramètre {{param}} devenu obligatoire",
+      "paramRemoved": "Paramètre retiré",
+      "paramOptionalAdded": "Paramètre optionnel ajouté",
+      "returnWidenedNull": "Type de retour élargi (null possible)",
+      "returnWidenedUndefined": "Type de retour élargi (undefined possible)",
+      "returnWidened": "Type de retour élargi",
+      "returnNarrowed": "Type de retour restreint",
+      "returnChanged": "Type de retour modifié",
+      "unspecified": "Signature modifiée"
+    },
+    "overview": {
+      "title": "Changements structurels",
+      "signatures": "Signatures modifiées",
+      "violations": "Violations de règles introduites",
+      "files": "Fichiers ajoutés, supprimés, déplacés",
+      "outOfDiff": "Hors du diff, appelle une signature cassante",
+      "breaking": "cassante",
+      "compatible": "compatible",
+      "direct": "{{count}} appelants directs",
+      "transitive": "{{count}} transitifs",
+      "tested": "testé",
+      "untested": "sans test",
+      "fileKinds": {
+        "added": "ajouté",
+        "removed": "supprimé",
+        "moved": "déplacé",
+        "format-only": "format seul"
+      },
+      "direct_one": "{{count}} appelant direct",
+      "transitive_one": "{{count}} transitif"
+    },
+    "signals": {
+      "title": "Signaux",
+      "violation": "Violation",
+      "callers": "{{count}} appelants transitifs",
+      "callers_one": "{{count}} appelant transitif",
+      "withoutTests": "{{count}} sans tests",
+      "withoutTests_one": "{{count}} sans test",
+      "ignored": "ignoré (format seul)"
+    },
+    "impact": {
+      "layer": "Rayon d'impact",
+      "callers": "Appelants",
+      "dependencies": "Dépendances",
+      "viaHttp": "via HTTP",
+      "transitiveCallers": "{{count}} appelants transitifs",
+      "transitiveCallers_one": "{{count}} appelant transitif",
+      "transitiveDeps": "{{count}} dépendances transitives",
+      "transitiveDeps_one": "{{count}} dépendance transitive",
+      "withoutTests": "{{count}} sans tests",
+      "withoutTests_one": "{{count}} sans test",
+      "services": "{{count}} services",
+      "services_one": "{{count}} service",
+      "direct": "Direct",
+      "hops": "À {{count}} sauts",
+      "http": "via HTTP",
+      "outOfDiff": "hors diff",
+      "tested": "testé",
+      "untested": "sans test",
+      "boxCount": "⚡ {{count}}"
+    },
+    "reading": {
+      "title": "Ordre de lecture",
+      "file": "Fichier",
+      "symbol": "Symbole",
+      "progress": "{{seen}}/{{total}} vus",
+      "counts": "{{seen}}/{{total}} vus",
+      "mark": "Marquer vu",
+      "markNext": "Vu, suivant →",
+      "memoryOnly": "Pas de dossier de données : la progression reste en mémoire seulement.",
+      "reasons": {
+        "breakingSignature": "signature cassante",
+        "modifiedSignature": "signature modifiée",
+        "violation": "violation de règle",
+        "new": "nouveau",
+        "removed": "supprimé",
+        "movedIdentical": "déplacé"
+      },
+      "commit": "Commit",
+      "showAll": "Voir tous les commits",
+      "otherFiles": "{{count}} sans changement structurel"
+    }
+  },
+  "rules": {
+    "title": "Règles d'architecture",
+    "introduced": "{{count}} introduites",
+    "introduced_one": "{{count}} introduite",
+    "existing": "{{count}} existantes",
+    "existing_one": "{{count}} existante",
+    "respected": "respectée",
+    "viewFile": "Voir le fichier",
+    "hideFile": "Masquer le fichier",
+    "noSource": "Aucun relief.config.yaml",
+    "layer": "Règles d'architecture",
+    "badge": "⚠ archi",
+    "edgeWarning": "⚠ {{count}}",
+    "box": {
+      "title": "Règle d'architecture",
+      "from": "depuis",
+      "deny": "interdit",
+      "introduced": "introduite par cette plage",
+      "existing": "existait déjà sur {{base}}",
+      "existingNoBase": "existait déjà sur la base"
+    },
+    "overviewExisting": "Violations de règles déjà existantes",
+    "signalExisting": "existante"
+  },
+  "explore": {
+    "toggle": "Explorer le repo",
+    "entryTypes": {
+      "route": "Routes",
+      "page": "Pages",
+      "job": "Jobs",
+      "script": "Scripts",
+      "main": "Main"
+    },
+    "entryPoints": {
+      "title": "Points d'entrée",
+      "none": "Aucun point d'entrée trouvé."
+    },
+    "overview": {
+      "title": "Vue d'ensemble",
+      "detector": "Détecteur",
+      "packages": "{{count}} packages",
+      "externals": "{{count}} externes",
+      "files": "{{count}} fichiers",
+      "symbols": "{{count}} symboles",
+      "linkKinds": {
+        "imports": "imports",
+        "calls": "appels",
+        "references": "références",
+        "renders": "rendus",
+        "extends": "extensions",
+        "implements": "implémentations",
+        "http": "appels HTTP",
+        "depends_on": "dépendances"
+      }
+    },
+    "coChange": {
+      "layer": "Couplage logique"
+    },
+    "hotspots": {
+      "title": "Hotspots",
+      "none": "Aucun hotspot : rien n'a changé récemment."
+    },
+    "risk": {
+      "layer": "Carte de risque"
+    },
+    "metrics": {
+      "title": "Métriques",
+      "churn": "Churn",
+      "complexity": "Complexité",
+      "owner": "Auteur majoritaire",
+      "tested": "Testé",
+      "loc": "Lignes",
+      "yes": "oui",
+      "no": "non"
+    }
+  }
+}

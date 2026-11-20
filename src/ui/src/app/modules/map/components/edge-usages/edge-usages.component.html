@@ -1,0 +1,56 @@
+<section class="usages" data-testid="edge-usages">
+  <h4>{{ 'map.usages.title' | translate }}</h4>
+  @switch (status()) {
+    @case ('loading') {
+      <p class="state" data-testid="usage-loading">{{ 'map.usages.loading' | translate }}</p>
+    }
+    @case ('unsupported') {
+      <p class="state" data-testid="usage-unsupported">
+        {{ 'map.usages.unsupported' | translate }}
+      </p>
+    }
+    @case ('ready') {
+      @if (files().length === 0) {
+        <p class="state" data-testid="usage-empty">{{ 'map.usages.empty' | translate }}</p>
+      }
+      @for (file of files(); track file.file) {
+        <div class="file" data-testid="usage-file" [attr.data-file-id]="file.file">
+          <h5 [title]="file.file">{{ label()(file.file) }}</h5>
+          @for (group of file.groups; track group.binding) {
+            <div class="group" data-testid="usage-group" [attr.data-binding]="group.binding">
+              <h6>
+                <code>{{ group.binding }}</code>
+                <span class="count" data-testid="usage-group-count">{{ group.rows.length }}</span>
+              </h6>
+              @for (row of group.rows; track $index) {
+                <button
+                  type="button"
+                  class="row"
+                  data-testid="usage-row"
+                  [attr.data-line]="row.line"
+                  (click)="openUsage.emit({ file: file.file, line: row.line })"
+                >
+                  <span class="line" data-testid="usage-line">{{ row.line }}</span>
+                  <code class="snippet" data-testid="usage-snippet"
+                    >{{ row.parts.before }}<mark data-testid="usage-mark">{{ row.parts.mark }}</mark
+                    >{{ row.parts.after }}</code
+                  >
+                  @if (row.enclosing) {
+                    <span class="enclosing" data-testid="usage-enclosing">
+                      {{ 'map.usages.in' | translate }} {{ row.enclosing }}
+                    </span>
+                  }
+                </button>
+              }
+            </div>
+          }
+        </div>
+      }
+      @if (hidden() > 0) {
+        <p class="state" data-testid="usage-more">
+          {{ 'map.usages.more' | translate: { count: hidden() } }}
+        </p>
+      }
+    }
+  }
+</section>

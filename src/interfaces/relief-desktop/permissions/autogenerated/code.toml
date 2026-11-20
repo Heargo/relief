@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-code"
+description = "Enables the code command without any pre-configured scope."
+commands.allow = ["code"]
+
+[[permission]]
+identifier = "deny-code"
+description = "Denies the code command without any pre-configured scope."
+commands.deny = ["code"]

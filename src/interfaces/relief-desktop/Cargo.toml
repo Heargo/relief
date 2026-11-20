@@ -1,0 +1,38 @@
+[package]
+name = "relief-desktop"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "relief"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[features]
+# Embeds the UI in the binary (set by `just build`); without it the window loads `devUrl`.
+custom-protocol = ["tauri/custom-protocol"]
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+relief-app = { path = "../../app/relief-app" }
+relief-detect = { path = "../../analysis/relief-detect" }
+relief-lang-python = { path = "../../analysis/lang/relief-lang-python" }
+relief-lang-ts = { path = "../../analysis/lang/relief-lang-ts" }
+relief-model = { path = "../../domain/relief-model" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tauri = { version = "2", features = ["wry", "x11", "compression"] }
+
+[dev-dependencies]
+assert_cmd = "2"
+predicates = "3"
+relief-fixtures = { path = "../../../tests/relief-fixtures" }
+tauri = { version = "2", features = ["test"] }
+tempfile = "3"
+
+[lints]
+workspace = true

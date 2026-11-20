@@ -1,0 +1,55 @@
+---
+source: src/analysis/lang/relief-lang-ts/tests/symbols.rs
+expression: spans_json(&index)
+---
+[
+  {
+    "endLine": 4,
+    "name": "SessionExpiredError",
+    "startLine": 4,
+    "subkind": "class",
+    "visibility": "public"
+  },
+  {
+    "endLine": 6,
+    "name": "Session",
+    "startLine": 6,
+    "subkind": "type",
+    "visibility": "public"
+  },
+  {
+    "endLine": 25,
+    "name": "SessionStore",
+    "startLine": 8,
+    "subkind": "class",
+    "visibility": "public"
+  },
+  {
+    "endLine": 13,
+    "name": "SessionStore.login",
+    "startLine": 9,
+    "subkind": "method",
+    "visibility": "public"
+  },
+  {
+    "endLine": 19,
+    "name": "SessionStore.refresh",
+    "startLine": 15,
+    "subkind": "method",
+    "visibility": "public"
+  },
+  {
+    "endLine": 24,
+    "name": "SessionStore.load",
+    "startLine": 21,
+    "subkind": "method",
+    "visibility": "internal"
+  },
+  {
+    "endLine": 27,
+    "name": "sessions",
+    "startLine": 27,
+    "subkind": "const",
+    "visibility": "public"
+  }
+]

@@ -1,0 +1,73 @@
+<section class="sec signals" data-testid="signals-section">
+  <h3>
+    {{ 'review.signals.title' | translate }}
+    <span class="count" data-testid="signals-count">{{ count() }}</span>
+  </h3>
+  <ul>
+    @for (violation of violations().introduced; track $index) {
+      <li>
+        <button
+          type="button"
+          data-testid="signal-row"
+          data-kind="violation"
+          (click)="nodeSelect.emit(violation.edge.from)"
+        >
+          {{ 'review.signals.violation' | translate }} <code>{{ label(violation.edge.from) }}</code>
+          <span class="hint">{{ violation.rule }}</span>
+        </button>
+      </li>
+    }
+    @for (violation of violations().existing; track $index) {
+      <li class="quiet">
+        <button
+          type="button"
+          data-testid="quiet-row"
+          data-kind="existing-violation"
+          (click)="nodeSelect.emit(violation.edge.from)"
+        >
+          {{ 'review.signals.violation' | translate }} <code>{{ label(violation.edge.from) }}</code>
+          <span class="hint">{{ violation.rule }} · {{ 'rules.signalExisting' | translate }}</span>
+        </button>
+      </li>
+    }
+    @for (sig of breaking(); track sig.node) {
+      <li>
+        <button
+          type="button"
+          data-testid="signal-row"
+          data-kind="breaking"
+          (click)="nodeSelect.emit(sig.node)"
+        >
+          <code>{{ label(sig.node) }}</code>
+          <span class="hint">
+            {{ plural('review.signals.callers', sig.transitiveCallers) }}
+            ·
+            {{ plural('review.signals.withoutTests', sig.untestedCallers) }}
+          </span>
+        </button>
+      </li>
+    }
+    @for (coupling of summary().couplingsAdded; track coupling.from + coupling.to) {
+      <li data-testid="signal-row" data-kind="new-coupling">
+        <span class="mark add">+</span> {{ coupling.from }} → {{ coupling.to }}
+      </li>
+    }
+    @for (coupling of summary().couplingsRemoved; track coupling.from + coupling.to) {
+      <li data-testid="signal-row" data-kind="removed-coupling">
+        <span class="mark del">−</span> {{ coupling.from }} → {{ coupling.to }}
+      </li>
+    }
+    @for (file of summary().formatOnlyFiles; track file.path) {
+      <li>
+        <button
+          type="button"
+          data-testid="signal-row"
+          data-kind="format-only"
+          (click)="nodeSelect.emit(file.node)"
+        >
+          <span class="hint">{{ 'review.signals.ignored' | translate }}</span> {{ file.path }}
+        </button>
+      </li>
+    }
+  </ul>
+</section>

@@ -1,0 +1,68 @@
+ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+li {
+  margin: 6px 0;
+  font-size: 12px;
+}
+
+// The rule rows are bare buttons; the other buttons keep the shared `.iconbtn` style.
+button:not(.iconbtn) {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.glob {
+  display: block;
+  color: var(--relief-muted);
+  word-break: break-all;
+}
+
+.chip {
+  display: inline-block;
+  margin-right: 4px;
+  padding: 0 6px;
+  border-radius: 8px;
+  background: var(--relief-line);
+  font-size: 11px;
+
+  &.ok {
+    color: var(--relief-add);
+  }
+
+  &.new {
+    background: var(--relief-rule);
+    color: #fff;
+  }
+
+  &.old {
+    color: var(--relief-rule);
+    border: 1px solid var(--relief-rule-old);
+    background: transparent;
+  }
+}
+
+.view-file {
+  margin-top: 6px;
+  font-size: 12px;
+}
+
+.file {
+  margin: 6px 0 0;
+  padding: 8px;
+  overflow: auto;
+  max-height: 260px;
+  border: 1px solid var(--relief-line);
+  border-radius: 4px;
+  background: var(--relief-bg);
+  font-size: 11px;
+}

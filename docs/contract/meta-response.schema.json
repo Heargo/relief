@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MetaResponse",
+  "description": "Response of `GET /api/meta`.",
+  "type": "object",
+  "properties": {
+    "branches": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "range": {
+      "description": "Range the server was opened with, if any.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "repo": {
+      "description": "Name of the repository directory.",
+      "type": "string"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "repo",
+    "branches",
+    "tags"
+  ]
+}

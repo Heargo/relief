@@ -1,0 +1,288 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ReviewSummary",
+  "description": "Response of `GET /api/review/summary`: the structural overview of a range.",
+  "type": "object",
+  "properties": {
+    "addedFiles": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/FileRef"
+      }
+    },
+    "couplingsAdded": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ModuleCoupling"
+      }
+    },
+    "couplingsRemoved": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ModuleCoupling"
+      }
+    },
+    "formatOnlyFiles": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/FormatOnlyFile"
+      }
+    },
+    "movedFiles": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/MovedFile"
+      }
+    },
+    "outOfDiff": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/OutOfDiffCaller"
+      }
+    },
+    "removedFiles": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/FileRef"
+      }
+    },
+    "signatures": {
+      "description": "Breaking signatures first.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/SignatureSummary"
+      }
+    },
+    "violations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Violation"
+      }
+    }
+  },
+  "required": [
+    "signatures",
+    "violations",
+    "addedFiles",
+    "removedFiles",
+    "movedFiles",
+    "formatOnlyFiles",
+    "outOfDiff",
+    "couplingsAdded",
+    "couplingsRemoved"
+  ],
+  "$defs": {
+    "EdgeKind": {
+      "description": "Kind of relation between two nodes.",
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": [
+            "imports",
+            "calls",
+            "references",
+            "renders",
+            "extends",
+            "implements",
+            "http",
+            "depends_on"
+          ]
+        },
+        {
+          "description": "Files that change in the same commits (git history, not the code).",
+          "type": "string",
+          "const": "co_change"
+        }
+      ]
+    },
+    "FileRef": {
+      "description": "A file of the range and its node.",
+      "type": "object",
+      "properties": {
+        "node": {
+          "$ref": "#/$defs/NodeId"
+        },
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "node"
+      ]
+    },
+    "FormatOnlyFile": {
+      "description": "A file whose text changed in format only.",
+      "type": "object",
+      "properties": {
+        "linesAdded": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "linesRemoved": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "node": {
+          "$ref": "#/$defs/NodeId"
+        },
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "node",
+        "linesAdded",
+        "linesRemoved"
+      ]
+    },
+    "ModuleCoupling": {
+      "description": "A dependency between two modules (directories).",
+      "type": "object",
+      "properties": {
+        "from": {
+          "type": "string"
+        },
+        "to": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "from",
+        "to"
+      ]
+    },
+    "MovedFile": {
+      "description": "A file moved by the range; `node` is its id on the head side.",
+      "type": "object",
+      "properties": {
+        "from": {
+          "type": "string"
+        },
+        "node": {
+          "$ref": "#/$defs/NodeId"
+        },
+        "to": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "from",
+        "to",
+        "node"
+      ]
+    },
+    "NodeId": {
+      "type": "string"
+    },
+    "OutOfDiffCaller": {
+      "description": "A direct caller that the range did not touch, of a breaking signature.",
+      "type": "object",
+      "properties": {
+        "calls": {
+          "description": "The breaking signature it calls.",
+          "$ref": "#/$defs/NodeId"
+        },
+        "node": {
+          "$ref": "#/$defs/NodeId"
+        },
+        "tested": {
+          "description": "A test reaches it directly.",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "node",
+        "calls",
+        "tested"
+      ]
+    },
+    "SignatureSummary": {
+      "description": "A symbol whose signature changed, with the callers it reaches in the head.",
+      "type": "object",
+      "properties": {
+        "breaking": {
+          "type": "boolean"
+        },
+        "directCallers": {
+          "description": "Callers at depth 1.",
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        },
+        "internal": {
+          "description": "The symbol is not exported.",
+          "type": "boolean"
+        },
+        "node": {
+          "$ref": "#/$defs/NodeId"
+        },
+        "transitiveCallers": {
+          "description": "All the callers, direct ones included.",
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        },
+        "untestedCallers": {
+          "description": "Callers (direct or transitive) that no test reaches.",
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "node",
+        "breaking",
+        "internal",
+        "directCallers",
+        "transitiveCallers",
+        "untestedCallers"
+      ]
+    },
+    "Violation": {
+      "description": "An edge of the head that a rule denies.",
+      "type": "object",
+      "properties": {
+        "edge": {
+          "$ref": "#/$defs/ViolationEdge"
+        },
+        "introduced": {
+          "description": "The range adds the edge; otherwise it was already there.",
+          "type": "boolean"
+        },
+        "rule": {
+          "description": "Id of the broken rule.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "rule",
+        "edge",
+        "introduced"
+      ]
+    },
+    "ViolationEdge": {
+      "description": "The edge that breaks a rule.",
+      "type": "object",
+      "properties": {
+        "from": {
+          "$ref": "#/$defs/NodeId"
+        },
+        "kind": {
+          "$ref": "#/$defs/EdgeKind"
+        },
+        "to": {
+          "$ref": "#/$defs/NodeId"
+        }
+      },
+      "required": [
+        "from",
+        "to",
+        "kind"
+      ]
+    }
+  }
+}

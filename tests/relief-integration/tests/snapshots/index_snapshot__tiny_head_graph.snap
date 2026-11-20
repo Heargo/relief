@@ -1,0 +1,44 @@
+---
+source: tests/relief-integration/tests/index_snapshot.rs
+expression: indexed.graph
+---
+{
+  "commit": "1ad585ea97387992733a0f44f984763a80819397",
+  "nodes": [
+    {
+      "id": "pkg:tiny",
+      "kind": "repo",
+      "subkind": "system",
+      "parent": null,
+      "visibility": "public",
+      "contentHash": ""
+    },
+    {
+      "id": "pkg:tiny/src",
+      "kind": "module",
+      "subkind": "module",
+      "parent": "pkg:tiny",
+      "visibility": "public",
+      "contentHash": ""
+    },
+    {
+      "id": "pkg:tiny/src::file:src/a.ts",
+      "kind": "file",
+      "subkind": "file",
+      "parent": "pkg:tiny/src",
+      "lang": "ts",
+      "visibility": "public",
+      "contentHash": "b77c78994c811593"
+    },
+    {
+      "id": "pkg:tiny/src::file:src/c.ts",
+      "kind": "file",
+      "subkind": "file",
+      "parent": "pkg:tiny/src",
+      "lang": "ts",
+      "visibility": "public",
+      "contentHash": "40461aa10b8f66cb"
+    }
+  ],
+  "edges": []
+}

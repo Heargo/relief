@@ -1,0 +1,34 @@
+---
+source: src/analysis/lang/relief-lang-ts/tests/symbols.rs
+expression: spans_json(&index)
+---
+[
+  {
+    "endLine": 3,
+    "name": "InvoiceLine",
+    "startLine": 3,
+    "subkind": "type",
+    "visibility": "public"
+  },
+  {
+    "endLine": 5,
+    "name": "Invoice",
+    "startLine": 5,
+    "subkind": "type",
+    "visibility": "public"
+  },
+  {
+    "endLine": 10,
+    "name": "computeTotal",
+    "startLine": 7,
+    "subkind": "function",
+    "visibility": "public"
+  },
+  {
+    "endLine": 14,
+    "name": "renderInvoice",
+    "startLine": 12,
+    "subkind": "function",
+    "visibility": "public"
+  }
+]

@@ -1,0 +1,14 @@
+# relief.config.yaml
+rules:
+  - id: web-sans-db
+    description: "le front ne parle jamais directement à la base"
+    from: apps/web/**
+    deny: packages/db/**
+  - id: packages-sans-apps
+    description: "une lib partagée ne dépend jamais d'une app"
+    from: packages/**
+    deny: apps/**
+  - id: routes-via-repos
+    description: "les routes passent par les repos, pas par le schéma"
+    from: apps/api/routes/**
+    deny: packages/db/schema/**

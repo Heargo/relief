@@ -1,0 +1,11 @@
+commits:
+  - id: base
+    message: "chore: py-shop before the currency pull request"
+    date: "2024-04-01T09:00:00Z"
+  - id: signature
+    message: "feat(billing): compute_total takes a currency"
+    date: "2024-04-04T10:00:00Z"
+    branch: feat/currency
+  - id: move
+    message: "refactor: format_price moves to shop/money"
+    date: "2024-04-05T10:00:00Z"

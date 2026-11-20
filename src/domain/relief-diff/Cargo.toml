@@ -1,0 +1,24 @@
+[package]
+name = "relief-diff"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+relief-model = { path = "../relief-model" }
+
+[dev-dependencies]
+relief-model = { path = "../relief-model", features = ["testing"] }
+schemars = "1"
+serde_json = "1"
+relief-fixtures = { path = "../../../tests/relief-fixtures" }
+relief-adapter-api = { path = "../../analysis/relief-adapter-api" }
+relief-detect = { path = "../../analysis/relief-detect" }
+relief-git = { path = "../../analysis/relief-git" }
+relief-index = { path = "../../analysis/relief-index" }
+relief-lang-ts = { path = "../../analysis/lang/relief-lang-ts" }
+tempfile = "3"

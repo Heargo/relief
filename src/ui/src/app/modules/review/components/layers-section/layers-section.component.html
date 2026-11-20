@@ -1,0 +1,25 @@
+<section class="sec" data-testid="layers-section">
+  <h3>{{ 'review.layers.title' | translate }}</h3>
+  @for (row of rows(); track row.layer) {
+    <button
+      type="button"
+      role="switch"
+      class="tog"
+      [class.on]="row.on"
+      [attr.data-testid]="row.testId"
+      [attr.aria-checked]="row.on"
+      (click)="row.toggle()"
+    >
+      <span class="sw" aria-hidden="true"></span>
+      <span class="what" data-testid="layer-toggle" [attr.data-layer]="row.layer">
+        <span>
+          {{ row.labelKey | translate }}
+          <small data-testid="layer-description">{{ row.descriptionKey | translate }}</small>
+        </span>
+        @if (row.shortcut) {
+          <kbd data-testid="layer-shortcut">{{ row.shortcut }}</kbd>
+        }
+      </span>
+    </button>
+  }
+</section>

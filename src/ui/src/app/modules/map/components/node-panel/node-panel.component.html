@@ -1,0 +1,112 @@
+@if (panel.facts(); as facts) {
+  <header class="head">
+    <h3 class="name" data-testid="node-name">{{ facts.name }}</h3>
+    <p class="meta">
+      <span class="kind" data-testid="node-type">
+        {{ 'map.kinds.' + facts.kind | translate }}
+        @if (facts.kind === 'symbol' || facts.kind === 'service') {
+          · {{ facts.subkind }}
+        }
+      </span>
+      <span class="visibility" data-testid="node-visibility">{{ facts.visibility }}</span>
+    </p>
+    @if (facts.path; as path) {
+      <code class="path" data-testid="node-path">{{ path }}</code>
+    }
+  </header>
+
+  @if (metrics(); as m) {
+    <section class="metrics" data-testid="node-metrics">
+      <h4>{{ 'explore.metrics.title' | translate }}</h4>
+      <dl>
+        <dt>{{ 'explore.metrics.churn' | translate }}</dt>
+        <dd data-testid="metric-churn">{{ m.churn ?? 0 }}</dd>
+        @if (m.complexity != null) {
+          <dt>{{ 'explore.metrics.complexity' | translate }}</dt>
+          <dd data-testid="metric-complexity">{{ m.complexity }}</dd>
+        }
+        @if (m.owner) {
+          <dt>{{ 'explore.metrics.owner' | translate }}</dt>
+          <dd data-testid="metric-owner">{{ m.owner }}</dd>
+        }
+        <dt>{{ 'explore.metrics.tested' | translate }}</dt>
+        <dd data-testid="metric-tested">
+          {{ (m.tested ? 'explore.metrics.yes' : 'explore.metrics.no') | translate }}
+        </dd>
+        <dt>{{ 'explore.metrics.loc' | translate }}</dt>
+        <dd>{{ m.loc }}</dd>
+      </dl>
+    </section>
+  }
+
+  @if (facts.children.length > 0) {
+    <section class="links" data-testid="node-children">
+      <h4>{{ 'map.node.children' | translate }}</h4>
+      <ul>
+        @for (child of facts.children; track child.id) {
+          <li>
+            <button type="button" data-testid="node-child" (click)="selectNode.emit(child.id)">
+              <span>{{ child.label }}</span>
+              <span class="kind">{{ 'map.kinds.' + child.kind | translate }}</span>
+            </button>
+          </li>
+        }
+      </ul>
+    </section>
+  }
+
+  <ng-template #linkList let-title="title" let-links="links" let-testid="testid">
+    <section class="links">
+      <h4>{{ title | translate }}</h4>
+      <ul [attr.data-testid]="testid">
+        @for (link of links; track link.id + link.edgeKind) {
+          <li>
+            <button
+              type="button"
+              data-testid="node-link"
+              [attr.data-node-id]="link.id"
+              (click)="selectNode.emit(link.id)"
+            >
+              <span>{{ link.label }}</span>
+              <span class="kind">{{ link.edgeKind }}</span>
+            </button>
+          </li>
+        } @empty {
+          <li class="none">{{ 'map.node.none' | translate }}</li>
+        }
+      </ul>
+    </section>
+  </ng-template>
+  <ng-container
+    *ngTemplateOutlet="
+      linkList;
+      context: { title: 'map.node.uses', links: facts.uses, testid: 'node-uses' }
+    "
+  />
+  <ng-container
+    *ngTemplateOutlet="
+      linkList;
+      context: { title: 'map.node.usedBy', links: facts.usedBy, testid: 'node-used-by' }
+    "
+  />
+
+  @switch (panel.status()) {
+    @case ('loading') {
+      <p class="state">{{ 'map.node.codeLoading' | translate }}</p>
+    }
+    @case ('error') {
+      <p class="state error" data-testid="node-code-error">
+        {{ 'map.node.codeError' | translate }}
+      </p>
+    }
+    @case ('ready') {
+      <section class="code-section">
+        <h4>{{ 'map.node.code' | translate }}</h4>
+        <pre
+          class="code"
+          data-testid="node-code"
+        ><code>@for (line of panel.lines(); track line.number) {<span class="ln" data-testid="code-line" [attr.data-line]="line.number" [attr.data-focused]="line.number === focusLine() ? 'true' : null"><span class="g">{{ line.number }}</span>@if (line.html !== null) {<span class="t" [innerHTML]="line.html"></span>} @else {<span class="t">{{ line.text }}</span>}</span>}</code></pre>
+      </section>
+    }
+  }
+}

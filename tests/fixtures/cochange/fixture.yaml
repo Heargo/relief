@@ -1,0 +1,37 @@
+# Co-change history. src/a.md and src/b.md change together in k1, k2, k3 and k5 (4 commits out of the
+# 5 normal ones that touch a or b: k4 touches a alone); k6 touches only src/d.md; `big` rewrites a
+# and b along with 31 generated files (a mass refactor, over the 30 files limit, to be ignored).
+# The last commit (2024-06-01) anchors the period (90 days => commits after 2024-03-03: k3, k4, k6,
+# k5 and big).
+commits:
+  - id: k1
+    message: "feat: a and b"
+    date: "2024-01-10T10:00:00Z"
+    author: bob
+  - id: k2
+    message: "fix: a and b"
+    date: "2024-02-10T10:00:00Z"
+    author: bob
+  - id: k3
+    message: "fix: a and b again"
+    date: "2024-03-10T10:00:00Z"
+    author: carol
+  - id: k4
+    message: "fix: a alone"
+    date: "2024-04-10T10:00:00Z"
+    author: bob
+  - id: k6
+    message: "feat: d"
+    date: "2024-04-20T10:00:00Z"
+    author: bob
+  - id: k5
+    message: "fix: a and b a fourth time"
+    date: "2024-05-10T10:00:00Z"
+    author: carol
+  - id: big
+    message: "refactor: mass rewrite"
+    date: "2024-06-01T10:00:00Z"
+    author: bob
+    generate:
+      packages: 1
+      files_per_package: 31

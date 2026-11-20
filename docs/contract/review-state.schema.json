@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ReviewState",
+  "description": "The nodes a reviewer marked as seen in one range.",
+  "type": "object",
+  "properties": {
+    "seen": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/NodeId"
+      }
+    }
+  },
+  "required": [
+    "seen"
+  ],
+  "$defs": {
+    "NodeId": {
+      "type": "string"
+    }
+  }
+}

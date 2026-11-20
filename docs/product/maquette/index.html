@@ -1,0 +1,1617 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>relief — maquette UX</title>
+<style>
+:root{
+  --bg:#0c0f15; --map:#0f131b; --panel:#131720; --panel-2:#191e29; --line:#242a36; --line-2:#323a4a;
+  --text:#e6e9ef; --muted:#98a1b3; --faint:#5d6679;
+  --node:#161b25; --node-open:rgba(255,255,255,.018);
+  --add:#3fb950; --mod:#e3b341; --del:#f85149; --mov:#a78bfa; --acc:#5eb1ff; --imp:#ff9e3d; --viol:#ff3b6b; --risk:#ff5a3c;
+  --code-add:rgba(63,185,80,.15); --code-del:rgba(248,81,73,.15);
+  --shadow:0 8px 30px rgba(0,0,0,.45);
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light){
+  :root{
+    --bg:#f3f4f7; --map:#f7f8fa; --panel:#ffffff; --panel-2:#f2f4f8; --line:#e2e5eb; --line-2:#cdd2dc;
+    --text:#1b1f27; --muted:#5b6475; --faint:#9aa2b1;
+    --node:#ffffff; --node-open:rgba(20,30,60,.025);
+    --add:#1f9d3a; --mod:#c48a00; --del:#d93a32; --mov:#7c5cf0; --acc:#1f6feb; --imp:#e67700; --viol:#e0174f; --risk:#e8432a;
+    --code-add:rgba(31,157,58,.12); --code-del:rgba(217,58,50,.12);
+    --shadow:0 8px 30px rgba(20,30,60,.15);
+    color-scheme: light;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:13px/1.45 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+button{font:inherit;color:inherit}
+code,.mono{font-family:ui-monospace,"JetBrains Mono","SF Mono",Menlo,Consolas,monospace}
+.app{display:grid;grid-template-rows:48px 1fr;height:100vh}
+.main{display:grid;grid-template-columns:var(--lw,300px) 1fr var(--rw,430px);min-height:0;position:relative}
+.rz{position:absolute;top:0;bottom:0;width:9px;cursor:col-resize;z-index:15}
+.rz::after{content:"";position:absolute;left:4px;top:0;bottom:0;width:1px;background:transparent;transition:background .15s}
+.rz:hover::after,.rz.on::after{background:var(--acc);width:2px}
+#rzL{left:calc(var(--lw,300px) - 5px)} #rzR{right:calc(var(--rw,430px) - 5px)}
+body.resizing{cursor:col-resize;user-select:none}
+body.resizing .mapwrap{pointer-events:none}
+.rule{padding:7px 8px;margin:0 -8px;border-radius:6px;cursor:pointer}
+.rule:hover{background:var(--panel-2)}
+.rule .bdg{margin-left:4px}
+pre.yaml{background:var(--panel-2);border:1px solid var(--line);border-radius:6px;padding:8px 10px;font:11px/1.55 ui-monospace,monospace;overflow:auto;margin:8px 0 0}
+.ovl .ico.viol{color:var(--viol)} .ovl .ico.imp{color:var(--imp)}
+.sub-h{font-size:11px;color:var(--faint);margin:12px 0 2px}
+.sub-h:first-of-type{margin-top:0}
+
+/* top bar */
+.top{display:flex;align-items:center;gap:14px;padding:0 14px;border-bottom:1px solid var(--line);background:var(--panel)}
+.logo{font-weight:700;letter-spacing:.3px;font-size:15px;display:flex;align-items:center;gap:8px}
+.logo svg{display:block}
+.repo{color:var(--muted)} .repo b{color:var(--text);font-weight:600}
+.refsel{background:var(--panel-2);border:1px solid var(--line-2);border-radius:6px;padding:5px 8px;color:var(--text);font:12px ui-monospace,monospace}
+.search{position:relative;margin-left:auto}
+.search input{width:280px;background:var(--panel-2);border:1px solid var(--line-2);border-radius:6px;padding:6px 10px 6px 28px;color:var(--text);font:inherit;outline:none}
+.search input:focus{border-color:var(--acc)}
+.search .mag{position:absolute;left:9px;top:7px;color:var(--faint)}
+.search kbd{position:absolute;right:8px;top:6px}
+.sres{position:absolute;top:34px;left:0;right:0;background:var(--panel);border:1px solid var(--line-2);border-radius:8px;box-shadow:var(--shadow);z-index:30;overflow:hidden;display:none}
+.sres div{padding:6px 10px;cursor:pointer;display:flex;gap:8px;align-items:baseline}
+.sres div.on,.sres div:hover{background:var(--panel-2)}
+.sres small{color:var(--faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+kbd{font:11px ui-monospace,monospace;border:1px solid var(--line-2);border-bottom-width:2px;border-radius:4px;padding:0 4px;color:var(--muted);background:var(--panel-2)}
+.iconbtn{background:none;border:1px solid var(--line-2);border-radius:6px;padding:4px 9px;cursor:pointer;color:var(--muted)}
+.iconbtn:hover{color:var(--text);border-color:var(--faint)}
+
+/* sidebars */
+.side{background:var(--panel);border-right:1px solid var(--line);overflow:auto;min-height:0}
+.right{background:var(--panel);border-left:1px solid var(--line);overflow:auto;min-height:0}
+.sec{padding:14px 16px;border-bottom:1px solid var(--line)}
+.sec h3{margin:0 0 10px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600;display:flex;align-items:center;gap:8px}
+.sec h3 .r{margin-left:auto;text-transform:none;letter-spacing:0;font-weight:500}
+.seg{display:flex;background:var(--panel-2);border:1px solid var(--line-2);border-radius:8px;padding:3px}
+.seg button{flex:1;border:0;background:none;padding:6px 8px;border-radius:6px;cursor:pointer;color:var(--muted);font-weight:500}
+.seg button.on{background:var(--panel);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.prtitle{font-weight:600;font-size:14px;margin:2px 0 4px}
+.muted{color:var(--muted)} .faint{color:var(--faint)}
+.stats{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;font-size:12px}
+.plus{color:var(--add)} .minus{color:var(--del)}
+.prog{height:6px;border-radius:3px;background:var(--panel-2);overflow:hidden;margin-top:8px}
+.prog i{display:block;height:100%;background:var(--add);transition:width .3s}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;flex:none}
+.dot.add{background:var(--add)} .dot.mod{background:var(--mod)} .dot.del{background:var(--del)} .dot.mov,.dot.movfrom{background:var(--mov)} .dot.fmt{background:var(--faint)} .dot.none{background:var(--line-2)}
+.ro{list-style:none;margin:0;padding:0}
+.ro li{display:flex;gap:8px;align-items:flex-start;padding:6px 8px;margin:0 -8px;border-radius:6px;cursor:pointer}
+.ro li:hover{background:var(--panel-2)}
+.ro li.cur{background:color-mix(in srgb,var(--acc) 14%,transparent)}
+.ro li .n{width:18px;color:var(--faint);font-size:11px;text-align:right;padding-top:1px;flex:none}
+.ro li .dot{margin-top:5px}
+.ro li .t{flex:1;min-width:0}
+.ro li .t b{font-weight:500;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ro li .t small{color:var(--faint);display:block;font-size:11px}
+.ro li.seen .t b{color:var(--faint);text-decoration:line-through;text-decoration-color:var(--line-2)}
+.ro li .ck{width:16px;height:16px;border-radius:4px;border:1px solid var(--line-2);flex:none;margin-top:1px;display:grid;place-items:center;font-size:11px}
+.ro li.seen .ck{background:var(--add);border-color:var(--add);color:#fff}
+.ro li.cgrp{background:var(--panel-2);margin-top:8px;align-items:flex-start}
+.ro li.cgrp:first-child{margin-top:0}
+.ro li.cgrp.on{box-shadow:inset 0 0 0 1px var(--acc)}
+.ro li.cgrp .t b{white-space:normal}
+.ro .sha{font:11px ui-monospace,monospace;color:var(--acc);flex:none;padding-top:2px}
+.ro.commit li:not(.cgrp){padding-left:20px}
+.alert{display:flex;gap:8px;padding:7px 8px;margin:0 -8px;border-radius:6px;cursor:pointer;align-items:flex-start}
+.alert:hover{background:var(--panel-2)}
+.alert .ai{flex:none;width:18px;text-align:center}
+.alert small{display:block;color:var(--faint)}
+.alert.viol .ai{color:var(--viol)} .alert.brk .ai{color:var(--del)} .alert.info .ai{color:var(--muted)} .alert.new .ai{color:var(--add)}
+.tog{display:flex;align-items:center;gap:10px;padding:5px 0;cursor:pointer;user-select:none}
+.tog .sw{width:28px;height:16px;border-radius:8px;background:var(--line-2);position:relative;flex:none;transition:.15s}
+.tog .sw::after{content:"";position:absolute;width:12px;height:12px;border-radius:50%;background:#fff;top:2px;left:2px;transition:.15s}
+.tog.on .sw{background:var(--acc)} .tog.on .sw::after{left:14px}
+.tog small{color:var(--faint);display:block;font-size:11px}
+.tog kbd{margin-left:auto}
+
+/* map */
+.mapwrap{position:relative;overflow:hidden;background:var(--map);cursor:grab;min-width:0}
+.mapwrap.drag{cursor:grabbing}
+.mapwrap::before{content:"";position:absolute;inset:0;background-image:radial-gradient(var(--line) 1px,transparent 1px);background-size:22px 22px;opacity:.6;pointer-events:none}
+#nodes{position:absolute;inset:0}
+#edges{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
+#edges .hit{pointer-events:stroke;stroke:transparent;stroke-width:12;fill:none;cursor:pointer}
+.crumbs{position:absolute;top:10px;left:12px;z-index:5;display:flex;gap:4px;align-items:center;background:color-mix(in srgb,var(--panel) 88%,transparent);border:1px solid var(--line);border-radius:8px;padding:4px 8px;font-size:12px;backdrop-filter:blur(6px)}
+.crumbs span{cursor:pointer;color:var(--muted)} .crumbs span:hover{color:var(--text)} .crumbs span.last{color:var(--text);font-weight:500}
+.crumbs i{color:var(--faint);font-style:normal}
+.levels{position:absolute;right:12px;bottom:12px;z-index:5;background:color-mix(in srgb,var(--panel) 90%,transparent);border:1px solid var(--line);border-radius:10px;padding:8px 6px;display:flex;flex-direction:column;gap:2px;backdrop-filter:blur(6px)}
+.levels button{border:0;background:none;text-align:left;padding:5px 8px;border-radius:6px;cursor:pointer;color:var(--muted);font-size:12px;display:flex;gap:8px;align-items:center}
+.levels button i{width:7px;height:7px;border-radius:50%;border:1.5px solid var(--faint);flex:none}
+.levels button.on{color:var(--text)} .levels button.on i{background:var(--acc);border-color:var(--acc)}
+.levels button:hover{background:var(--panel-2)}
+.levels .zb{display:flex;gap:4px;margin-top:6px;padding-top:6px;border-top:1px solid var(--line)}
+.levels .zb button{flex:1;justify-content:center;font-size:14px;padding:3px}
+.levels .hint{font-size:10.5px;color:var(--faint);padding:2px 8px;max-width:118px;line-height:1.3}
+.legend{position:absolute;left:12px;bottom:12px;z-index:5;background:color-mix(in srgb,var(--panel) 90%,transparent);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:11px;color:var(--muted);display:grid;grid-template-columns:auto auto;gap:3px 14px;backdrop-filter:blur(6px)}
+.legend span{display:flex;align-items:center;gap:6px}
+.legend svg{flex:none}
+.tip{position:absolute;z-index:20;pointer-events:none;background:var(--panel);border:1px solid var(--line-2);border-radius:6px;padding:6px 8px;font-size:12px;box-shadow:var(--shadow);max-width:340px;display:none;white-space:pre-line}
+
+/* nodes */
+.node{position:absolute;border:1px solid var(--line-2);border-radius:6px;background:var(--node);overflow:hidden;cursor:pointer;transition:opacity .2s,box-shadow .15s}
+.node.k-system{border-radius:14px}
+.node.k-module{border-radius:10px}
+.node.open{background:var(--node-open)}
+.node.k-system.open{border-color:var(--line-2)}
+.node.k-module.open{border-style:solid;border-color:var(--line)}
+.node.k-file.open{background:var(--node)}
+.node.box.st{background:color-mix(in srgb,var(--c) calc(var(--a)*100%),var(--node));box-shadow:inset 3px 0 0 var(--c)}
+.node.open.st{box-shadow:inset 0 3px 0 var(--c)}
+.node.open.k-file.st{background:color-mix(in srgb,var(--c) 5%,var(--node))}
+.node.risk{background:color-mix(in srgb,var(--risk) calc(var(--r)*100%),var(--node))!important;box-shadow:none!important}
+.node.s-del{border-style:dashed;border-color:color-mix(in srgb,var(--del) 60%,transparent)}
+.node.s-del .lb{text-decoration:line-through}
+.node.s-movfrom{border-style:dashed;border-color:var(--mov);background:transparent!important;box-shadow:none!important;opacity:.75}
+.node.s-movfrom .lb{font-style:italic;color:var(--mov)}
+.node.ghost{pointer-events:none;border-color:transparent;border-radius:3px;background:color-mix(in srgb,var(--c,var(--faint)) calc(var(--ga,.16)*100%),transparent)}
+.node.ghost.s-movfrom{border:1px dashed var(--mov);background:transparent}
+.node.sel{outline:2px solid var(--acc);outline-offset:1px;z-index:2}
+.node.imp{outline:2px dashed var(--imp);outline-offset:1px}
+.node.seed{outline:2px solid var(--imp);outline-offset:1px}
+.node.sel.seed{outline-color:var(--acc)}
+.node.dim{opacity:.28}
+.node.hovered{box-shadow:0 0 0 1px var(--acc)}
+.node .hd{position:absolute;left:0;top:0;right:0;display:flex;gap:6px;align-items:center;padding:0 8px;white-space:nowrap;overflow:hidden}
+.k-system>.hd{font-size:15px;height:38px;padding:0 14px}
+.k-module>.hd{font-size:13px;height:30px;padding:0 10px}
+.k-file>.hd{font-size:12px;height:26px}
+.k-ext>.hd{font-size:13px;height:100%;justify-content:center;flex-direction:column;gap:2px}
+.k-symbol>.hd{font-size:11.5px;height:100%;padding:0 6px 0 8px}
+.node .lb{font-weight:600;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:0 1 auto}
+.k-system>.hd .lb,.k-module>.hd .lb,.k-file>.hd .lb{flex:0 0 auto;max-width:100%}
+.node .chips{min-width:0;overflow:hidden}
+.k-module .lb,.k-file .lb{font-weight:500}
+.k-symbol .lb{font-weight:500;font-family:ui-monospace,"JetBrains Mono",Menlo,monospace;font-size:11.5px}
+.k-file .lb{font-family:ui-monospace,"JetBrains Mono",Menlo,monospace}
+.node .sub{color:var(--faint);font-weight:400;font-size:.85em}
+.node .sp{flex:1}
+.node .meta{color:var(--faint);font-size:10.5px;overflow:hidden;text-overflow:ellipsis}
+.node .dd{font-size:10.5px;font-family:ui-monospace,monospace;flex:none}
+.node .chips{display:flex;gap:8px;align-items:center;font-size:.82em;color:var(--muted);flex:none;font-weight:400}
+.node .chips span{display:flex;align-items:center;gap:3px}
+.ic{font:600 9.5px ui-monospace,monospace;border-radius:3px;padding:1px 3px;flex:none;color:var(--muted);background:var(--panel-2);border:1px solid var(--line)}
+.ic.route{color:var(--acc)} .ic.component{color:#61dafb} .ic.type{color:var(--mov)} .ic.table{color:var(--mod)} .ic.class{color:var(--imp)}
+.bdg{font:600 9.5px ui-sans-serif,system-ui;border-radius:3px;padding:1px 4px;flex:none;letter-spacing:.02em}
+.bdg.api{background:color-mix(in srgb,var(--mod) 25%,transparent);color:var(--mod)}
+.bdg.brk{background:var(--del);color:#fff}
+.bdg.viol{background:var(--viol);color:#fff}
+.bdg.imp{background:var(--imp);color:#1a1000}
+.bdg.seen{background:var(--add);color:#fff}
+.bdg.fmt{background:var(--panel-2);color:var(--muted);border:1px solid var(--line-2)}
+.bdg.mov{background:color-mix(in srgb,var(--mov) 25%,transparent);color:var(--mov)}
+.bdg.new{background:color-mix(in srgb,var(--add) 22%,transparent);color:var(--add)}
+.bdg.del{background:color-mix(in srgb,var(--del) 22%,transparent);color:var(--del)}
+.bdg.notest{background:color-mix(in srgb,var(--del) 18%,transparent);color:var(--del)}
+.bdg.test{background:color-mix(in srgb,var(--add) 18%,transparent);color:var(--add)}
+.node.seen.box{opacity:.62}
+.node.seen.box.sel{opacity:1}
+
+/* edges */
+.e{fill:none;stroke-linecap:round}
+.e.base{stroke:var(--faint);opacity:.55}
+.e.add{stroke:var(--add);stroke-dasharray:7 4;animation:flow 1.2s linear infinite}
+.e.del{stroke:var(--del);stroke-dasharray:3 4;opacity:.8}
+.e.viol{stroke:var(--viol);stroke-dasharray:7 4;animation:flow 1s linear infinite}
+.e.mov{stroke:var(--mov);stroke-dasharray:2 5}
+.e.hl{stroke:var(--imp);opacity:1}
+.e.dimmed{opacity:.08}
+.e.selE{stroke:var(--acc);opacity:1}
+.e.violOld{stroke:var(--viol);opacity:.55}
+@keyframes flow{to{stroke-dashoffset:-22}}
+.el{font:600 10.5px ui-sans-serif,system-ui;paint-order:stroke;stroke:var(--map);stroke-width:4px;stroke-linejoin:round}
+.el.base{fill:var(--muted)} .el.add{fill:var(--add)} .el.del{fill:var(--del)} .el.viol{fill:var(--viol)} .el.mov{fill:var(--mov)} .el.violOld{fill:var(--viol);opacity:.8} .el.hl{fill:var(--imp)} .el.dimmed{opacity:.1}
+
+/* right panel */
+.pn-crumbs{font-size:11.5px;color:var(--faint);display:flex;flex-wrap:wrap;gap:3px}
+.pn-crumbs span{cursor:pointer} .pn-crumbs span:hover{color:var(--text)}
+.pn-title{font:600 17px ui-monospace,"JetBrains Mono",Menlo,monospace;margin:6px 0 8px;word-break:break-all}
+.pn-chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.chip{font-size:11px;border:1px solid var(--line-2);border-radius:20px;padding:1px 8px;color:var(--muted);display:inline-flex;gap:5px;align-items:center}
+.chip.add{color:var(--add);border-color:color-mix(in srgb,var(--add) 50%,transparent)}
+.chip.mod{color:var(--mod);border-color:color-mix(in srgb,var(--mod) 50%,transparent)}
+.chip.del{color:var(--del);border-color:color-mix(in srgb,var(--del) 50%,transparent)}
+.chip.mov,.chip.movfrom{color:var(--mov);border-color:color-mix(in srgb,var(--mov) 50%,transparent)}
+.actions{display:flex;gap:8px;margin-top:12px}
+.btn{border:1px solid var(--line-2);background:var(--panel-2);border-radius:6px;padding:6px 11px;cursor:pointer;font-weight:500;display:inline-flex;gap:6px;align-items:center}
+.btn:hover{border-color:var(--faint)}
+.btn.pri{background:var(--add);border-color:var(--add);color:#fff}
+.btn.pri:hover{filter:brightness(1.08)}
+.btn.done{background:color-mix(in srgb,var(--add) 18%,transparent);border-color:color-mix(in srgb,var(--add) 45%,transparent);color:var(--add)}
+.btn kbd{background:transparent;border-color:currentColor;color:inherit;opacity:.7}
+.callout{border-radius:8px;padding:9px 12px;margin-top:10px;font-size:12.5px}
+.callout.viol{background:color-mix(in srgb,var(--viol) 12%,transparent);border:1px solid color-mix(in srgb,var(--viol) 40%,transparent)}
+.callout.brk{background:color-mix(in srgb,var(--del) 10%,transparent);border:1px solid color-mix(in srgb,var(--del) 35%,transparent)}
+.callout b{display:block;margin-bottom:2px}
+.sig{border:1px solid var(--line-2);border-radius:8px;overflow:hidden;font:12px/1.6 ui-monospace,monospace}
+.sig div{padding:4px 10px;white-space:pre-wrap;word-break:break-word}
+.sig .o{background:var(--code-del)} .sig .o::before{content:"− ";color:var(--del)}
+.sig .n{background:var(--code-add)} .sig .n::before{content:"+ ";color:var(--add)}
+.lst{list-style:none;margin:0;padding:0}
+.lst li{display:flex;gap:8px;align-items:center;padding:5px 8px;margin:0 -8px;border-radius:6px;cursor:pointer;font-size:12.5px}
+.lst li:hover{background:var(--panel-2)}
+.lst li .nm{font-family:ui-monospace,monospace;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lst li .nm small{color:var(--faint);font-family:ui-sans-serif,system-ui;margin-left:6px}
+.lst .grp{font-size:11px;color:var(--faint);padding:8px 0 2px;cursor:default;margin:0}
+.lst .grp:hover{background:none}
+.code{border:1px solid var(--line-2);border-radius:8px;overflow:auto;font:12.5px/1.6 ui-monospace,"JetBrains Mono",Menlo,monospace;background:var(--panel-2)}
+.code .ln{display:flex;white-space:pre}
+.code .ln .g{width:38px;flex:none;text-align:right;padding-right:8px;color:var(--faint);user-select:none;border-right:1px solid var(--line)}
+.code .ln .s{width:16px;flex:none;text-align:center;color:var(--faint)}
+.code .ln.a{background:var(--code-add)} .code .ln.a .s{color:var(--add)}
+.code .ln.d{background:var(--code-del)} .code .ln.d .s{color:var(--del)}
+.code .hdr{padding:4px 10px;color:var(--faint);background:var(--panel);border-bottom:1px solid var(--line);border-top:1px solid var(--line);font-size:11px}
+.code .hdr:first-child{border-top:0}
+.mini-seg{display:inline-flex;border:1px solid var(--line-2);border-radius:6px;overflow:hidden;font-size:11px}
+.mini-seg button{border:0;background:none;padding:2px 8px;cursor:pointer;color:var(--muted)}
+.mini-seg button.on{background:var(--panel-2);color:var(--text)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:12.5px}
+.kv dt{color:var(--faint)} .kv dd{margin:0}
+.ovl li{display:flex;gap:10px;padding:8px;margin:0 -8px;border-radius:6px;cursor:pointer;align-items:flex-start}
+.ovl li:hover{background:var(--panel-2)}
+.ovl li .ico{width:20px;text-align:center;flex:none;font-size:14px}
+.ovl li small{display:block;color:var(--faint)}
+
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--panel);border:1px solid var(--line-2);border-radius:8px;padding:8px 14px;box-shadow:var(--shadow);opacity:0;transition:.25s;z-index:50;pointer-events:none;font-size:12.5px}
+.toast.on{opacity:1;transform:translateX(-50%)}
+.help{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;place-items:center;z-index:60}
+.help.on{display:grid}
+.help .box{background:var(--panel);border:1px solid var(--line-2);border-radius:12px;padding:20px 24px;width:min(520px,92vw);box-shadow:var(--shadow)}
+.help h2{margin:0 0 12px;font-size:16px}
+.help table{width:100%;border-collapse:collapse;font-size:13px}
+.help td{padding:5px 0;border-bottom:1px solid var(--line)}
+.help td:first-child{width:150px}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="logo">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M2 19 L8 9 L12 14 L16 6 L22 19 Z" fill="var(--acc)" opacity=".25"/><path d="M2 19 L8 9 L12 14 L16 6 L22 19" stroke="var(--acc)" stroke-width="1.8" stroke-linejoin="round"/></svg>
+      relief
+    </div>
+    <div class="repo"><b>acme-shop</b> · TypeScript · pnpm workspaces</div>
+    <select class="refsel" id="refsel">
+      <option value="pr">main...feat/promo-codes (#142)</option>
+      <option value="wt">working tree vs HEAD</option>
+      <option value="staged">--staged</option>
+      <option value="tags">v1.2..v1.3</option>
+    </select>
+    <div class="search">
+      <span class="mag">⌕</span>
+      <input id="q" placeholder="Aller à un symbole, fichier, module…" autocomplete="off">
+      <kbd>/</kbd>
+      <div class="sres" id="sres"></div>
+    </div>
+    <button class="iconbtn" id="helpbtn" title="Raccourcis">?</button>
+  </header>
+  <div class="main">
+    <aside class="side" id="side"></aside>
+    <section class="mapwrap" id="map">
+      <div id="nodes"></div>
+      <svg id="edges"></svg>
+      <div class="crumbs" id="crumbs"></div>
+      <div class="levels" id="levels"></div>
+      <div class="legend" id="legend"></div>
+      <div class="tip" id="tip"></div>
+    </section>
+    <aside class="right" id="right"></aside>
+    <div class="rz" id="rzL" title="Glisser pour redimensionner · double-clic : taille par défaut"></div>
+    <div class="rz" id="rzR" title="Glisser pour redimensionner · double-clic : taille par défaut"></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<div class="help" id="help"><div class="box">
+  <h2>Raccourcis</h2>
+  <table>
+    <tr><td>Molette / pincer</td><td>Zoom sémantique (système → modules → fichiers → symboles)</td></tr>
+    <tr><td>Glisser</td><td>Déplacer la carte</td></tr>
+    <tr><td>Clic</td><td>Inspecter un nœud ou une arête</td></tr>
+    <tr><td>Double-clic</td><td>Plonger dans le nœud</td></tr>
+    <tr><td><kbd>0</kbd>–<kbd>3</kbd></td><td>Niveau de zoom : système, modules, fichiers, symboles</td></tr>
+    <tr><td><kbd>n</kbd> / <kbd>p</kbd></td><td>Élément suivant / précédent dans l'ordre de lecture (fichier, symbole ou commit)</td></tr>
+    <tr><td><kbd>v</kbd></td><td>Marquer comme vu (le symbole en mode symbole, sinon le fichier)</td></tr>
+    <tr><td><kbd>i</kbd></td><td>Rayon d'impact on/off</td></tr>
+    <tr><td><kbd>f</kbd></td><td>Focus PR : seulement le changé + 1 saut</td></tr>
+    <tr><td><kbd>/</kbd></td><td>Rechercher</td></tr>
+    <tr><td><kbd>Échap</kbd></td><td>Désélectionner / remonter d'un niveau</td></tr>
+  </table>
+  <p class="muted" style="margin:10px 0 0;font-size:12px">Bords des panneaux latéraux : glisser pour redimensionner (mémorisé), double-clic pour réinitialiser.</p>
+  <p class="muted" style="margin:6px 0 0;font-size:12px">Maquette : données d'un faux repo TS (acme-shop), PR #142 simulée.</p>
+</div></div>
+
+<script>
+/* =====================================================================
+   DONNÉES : faux monorepo TS "acme-shop", PR #142 feat/promo-codes
+   ===================================================================== */
+const S=(label,sub,o={})=>({label,kind:'symbol',sub,...o});
+const F=(label,children,o={})=>({label,kind:'file',children,...o});
+const M=(label,children,o={})=>({label,kind:'module',children,...o});
+
+const TOP=[
+{id:'web',label:'apps/web',kind:'system',sub:'React SPA',owner:'@camille',children:[
+  M('pages',[
+    F('Checkout.tsx',[
+      S('CheckoutPage','component',{st:'mod',add:4,del:1,t:true,cx:7,churn:18,
+        code:[' export function CheckoutPage() {','   const cart = useCart();','-  const { total } = useCheckoutTotals(cart);','+  const [code, setCode] = useState<string>();','+  const { total, discount } = useCheckoutTotals(cart, code);','   return (','     <Layout>','       <CartSummary total={total} discount={discount} />','+      <PromoCodeInput onApply={setCode} />','     </Layout>','   );',' }']}),
+      S('useCheckoutTotals','hook',{st:'mod',add:3,del:2,vis:'internal',t:false,cx:3,churn:9,
+        sig:{before:'useCheckoutTotals(cart: Cart)',after:'useCheckoutTotals(cart: Cart, code?: string)',breaking:false,why:'paramètre optionnel ajouté : les appels existants restent valides'},
+        code:['-function useCheckoutTotals(cart: Cart) {','-  return useQuery(["totals", cart.id], () => httpPost("/checkout", cart));','+function useCheckoutTotals(cart: Cart, code?: string) {','+  return useQuery(["totals", cart.id, code],','+    () => httpPost("/checkout", { ...cart, code }));',' }']}),
+    ]),
+    F('Invoices.tsx',[S('InvoicesPage','component',{st:'mod',add:1,del:1,t:false,cx:5,churn:6,
+      code:['-import { formatPrice } from "../utils/format";','+import { formatPrice } from "@acme/shared/money";',' ',' export function InvoicesPage() {','   const { data } = useInvoice(useParams().id);']})]),
+    F('Login.tsx',[S('LoginPage','component',{t:true,cx:4,churn:3})]),
+  ]),
+  M('components',[
+    F('PromoCodeInput.tsx',[
+      S('PromoCodeInput','component',{st:'add',add:18,t:false,cx:4,churn:1,
+        code:['+import { findDiscountByCode } from "@acme/db/repos/discountRepo";','+import { httpPost } from "@acme/shared/http";','+','+export function PromoCodeInput({ onApply }: Props) {','+  const [code, setCode] = useState("");','+  async function submit() {','+    if (!(await validateCodeLocally(code))) return;','+    const res = await httpPost("/promo/validate", { code });','+    if (res.valid) onApply(code);','+  }','+  return (','+    <form onSubmit={submit}>','+      <input value={code} onChange={e => setCode(e.target.value)} />','+      <Button type="submit">Appliquer</Button>','+    </form>','+  );','+}']}),
+      S('validateCodeLocally','function',{st:'add',add:3,vis:'internal',t:false,cx:2,churn:1,
+        code:['+async function validateCodeLocally(code: string) {','+  return (await findDiscountByCode(code)) !== null;','+}']}),
+    ],{st:'add'}),
+    F('CartSummary.tsx',[S('CartSummary','component',{st:'mod',add:3,del:1,t:true,cx:3,churn:7,
+      code:['-import { formatPrice } from "../utils/format";','+import { formatPrice } from "@acme/shared/money";',' export function CartSummary({ total, discount }: Props) {','   return (','     <dl>','       <dt>Total</dt><dd>{formatPrice(total)}</dd>','+      {discount && <><dt>Remise</dt><dd>−{discount.percentOff} %</dd></>}','     </dl>','   );',' }']})]),
+    F('Button.tsx',[S('Button','component',{t:true,cx:1,churn:2})]),
+  ]),
+  M('hooks',[
+    F('useInvoice.ts',[S('useInvoice','hook',{t:false,cx:2,churn:4})]),
+    F('useSession.ts',[S('useSession','hook',{t:true,cx:3,churn:5})]),
+  ]),
+  M('utils',[
+    F('format.ts',[S('formatPrice','function',{k:'formatPrice@old',st:'movfrom',del:5,
+      code:['-export function formatPrice(m: Money, locale = "fr-FR") {','-  return new Intl.NumberFormat(locale, {','-    style: "currency", currency: m.currency,','-  }).format(m.cents / 100);','-}']})],{st:'movfrom',to:'shared/money/format.ts'}),
+    F('dates.ts',[S('formatDate','function',{t:true,cx:2,churn:2})]),
+  ]),
+]},
+{id:'api',label:'apps/api',kind:'system',sub:'Fastify',owner:'@sam',children:[
+  M('routes',[
+    F('invoices.ts',[
+      S('getInvoice','route',{meta:'GET /invoices/:id',st:'mod',add:1,del:1,t:true,cx:4,churn:11,
+        code:[' app.get("/invoices/:id", { preHandler: requireAuth }, async (req) => {','   const inv = await findInvoice(req.params.id);','-  return renderInvoice(inv, computeTotal(inv.lines));','+  return renderInvoice(inv, computeTotal(inv.lines, inv.discount));',' });']}),
+      S('listInvoices','route',{meta:'GET /invoices',t:false,cx:3,churn:5}),
+    ]),
+    F('checkout.ts',[
+      S('postCheckout','route',{meta:'POST /checkout',st:'mod',add:4,del:2,t:true,cx:9,churn:22,
+        code:[' app.post("/checkout", { preHandler: requireAuth }, async (req) => {','-  let total = computeTotal(req.body.lines);','-  if (req.body.coupon) total = applyLegacyCoupon(total, req.body.coupon);','+  const discount = req.body.code','+    ? (await findDiscountByCode(req.body.code)) ?? undefined : undefined;','+  const total = computeTotal(req.body.lines, discount);','+','   return chargeCustomer(req.headers.authorization, { ...req.body, total });',' });']}),
+      S('postPromoValidate','route',{meta:'POST /promo/validate',st:'add',add:5,t:false,cx:2,churn:1,
+        code:['+app.post("/promo/validate", async (req) => {','+  const d = await findDiscountByCode(req.body.code);','+  if (!d) return { valid: false };','+  return { valid: true, percentOff: d.percentOff };','+});']}),
+    ]),
+    F('middleware.ts',[S('requireAuth','function',{t:true,cx:3,churn:8,
+      code:[' export async function requireAuth(req: FastifyRequest) {','   const session = await sessions.refresh(bearer(req));','   req.user = { id: session.userId };',' }']})]),
+  ]),
+  M('auth',[
+    F('session.ts',[
+      S('SessionStore','class',{t:true,cx:6,churn:12}),
+      S('SessionStore.login','method',{k:'login',t:true,cx:4,churn:6}),
+      S('SessionStore.refresh','method',{k:'refresh',st:'mod',add:2,del:2,t:true,cx:5,churn:15,
+        sig:{before:'refresh(token: string): Promise<Session>',after:'refresh(token: string): Promise<Session | null>',breaking:true,why:'type de retour élargi (null possible) : chaque appelant doit gérer null'},
+        code:['-  async refresh(token: string): Promise<Session> {','+  async refresh(token: string): Promise<Session | null> {','     const claims = verifyToken(token);','-    if (!claims) throw new SessionExpiredError();','+    if (!claims) return null;','     return this.load(claims.sub);','   }']}),
+      S('Session','type',{t:true,cx:1,churn:3}),
+    ]),
+    F('tokens.ts',[S('signToken','function',{t:true,cx:2,churn:2}),S('verifyToken','function',{t:true,cx:3,churn:2})]),
+  ]),
+  M('billing',[
+    F('invoice.ts',[
+      S('computeTotal','function',{st:'mod',add:3,del:2,t:true,cx:4,churn:16,
+        sig:{before:'computeTotal(lines: InvoiceLine[]): Money',after:'computeTotal(lines: InvoiceLine[], discount?: DiscountCode): Money',breaking:false,why:'paramètre optionnel ajouté : les appels existants restent valides'},
+        code:['-export function computeTotal(lines: InvoiceLine[]): Money {','+export function computeTotal(lines: InvoiceLine[], discount?: DiscountCode): Money {','   const cents = lines.reduce((s, l) => s + l.unit * l.qty, 0);','-  return { cents: toCents(cents), currency: lines[0].currency };','+  const total = { cents: toCents(cents), currency: lines[0].currency };','+  return discount ? applyDiscount(total, discount) : total;',' }']}),
+      S('InvoiceLine','type',{t:true,cx:1,churn:2}),
+      S('renderInvoice','function',{t:true,cx:5,churn:4}),
+    ]),
+    F('discount.ts',[
+      S('DiscountCode','type',{st:'add',add:5,
+        code:['+export type DiscountCode = {','+  code: string;','+  percentOff: number;','+  expiresAt?: Date;','+};']}),
+      S('applyDiscount','function',{st:'add',add:5,t:true,cx:3,churn:1,
+        code:['+export function applyDiscount(total: Money, d: DiscountCode): Money {','+  if (isExpired(d)) return total;','+  const off = Math.round(total.cents * d.percentOff / 100);','+  return { ...total, cents: toCents(total.cents - off) };','+}']}),
+      S('isExpired','function',{st:'add',add:3,vis:'internal',t:false,cx:2,churn:1,
+        code:['+function isExpired(d: DiscountCode, now = new Date()) {','+  return d.expiresAt !== undefined && d.expiresAt < now;','+}']}),
+    ],{st:'add'}),
+    F('legacyCoupon.ts',[S('applyLegacyCoupon','function',{st:'del',del:4,
+      code:['-export function applyLegacyCoupon(total: Money, coupon: string): Money {','-  if (coupon !== "WELCOME10") return total;','-  return { ...total, cents: toCents(total.cents * 0.9) };','-}']})],{st:'del'}),
+    F('payment.ts',[S('chargeCustomer','function',{st:'mod',add:1,t:true,cx:6,churn:14,
+      code:[' export async function chargeCustomer(token: string, invoice: Invoice) {','   const session = await sessions.refresh(token);','+  if (!session) throw new HttpError(401, "session expired");','   return stripe.charges.create({','     amount: invoice.total.cents,','     customer: session.stripeId,','   });',' }']})]),
+  ]),
+  M('jobs',[
+    F('renewals.ts',[S('renewSubscriptions','job',{t:false,cx:8,churn:9,
+      code:[' export async function renewSubscriptions() {','   for (const sub of await dueSubscriptions()) {','     const session = await sessions.refresh(sub.serviceToken);','     await chargeCustomer(sub.serviceToken, buildInvoice(sub, session.userId));','   }',' }']})]),
+  ]),
+]},
+{id:'shared',label:'packages/shared',kind:'system',sub:'lib',owner:'@noa',children:[
+  M('http',[F('client.ts',[S('httpGet','function',{t:true,cx:2,churn:3}),S('httpPost','function',{t:true,cx:3,churn:4})],
+    {st:'fmt',add:41,del:39,})]),
+  M('money',[
+    F('format.ts',[S('formatPrice','function',{st:'mov',t:true,cx:2,churn:2,
+      code:[' export function formatPrice(m: Money, locale = "fr-FR") {','   return new Intl.NumberFormat(locale, {','     style: "currency", currency: m.currency,','   }).format(m.cents / 100);',' }']})],{st:'mov',from:'web/utils/format.ts'}),
+    F('currency.ts',[S('Currency','type',{t:true,cx:1,churn:1}),S('toCents','function',{t:true,cx:2,churn:2})]),
+  ]),
+]},
+{id:'db',label:'packages/db',kind:'system',sub:'Drizzle ORM',owner:'@sam',children:[
+  M('schema',[
+    F('invoices.ts',[S('invoicesTable','table',{t:true,cx:1,churn:5})]),
+    F('discounts.ts',[S('discountsTable','table',{st:'add',add:5,
+      code:['+export const discountsTable = pgTable("discounts", {','+  code: text("code").primaryKey(),','+  percentOff: integer("percent_off").notNull(),','+  expiresAt: timestamp("expires_at"),','+});']})],{st:'add'}),
+    F('users.ts',[S('usersTable','table',{t:true,cx:1,churn:3})]),
+  ]),
+  M('repos',[
+    F('invoiceRepo.ts',[S('findInvoice','function',{t:true,cx:2,churn:4}),S('saveInvoice','function',{t:true,cx:3,churn:4})]),
+    F('discountRepo.ts',[S('findDiscountByCode','function',{st:'add',add:5,t:false,cx:2,churn:1,
+      code:['+export async function findDiscountByCode(code: string) {','+  const [row] = await db.select().from(discountsTable)','+    .where(eq(discountsTable.code, code.toUpperCase()));','+  return row ?? null;','+}']})],{st:'add'}),
+    F('userRepo.ts',[S('findUser','function',{t:true,cx:2,churn:3})]),
+  ]),
+]},
+{id:'postgres',label:'PostgreSQL',kind:'ext',sub:'base de données'},
+{id:'stripe',label:'Stripe API',kind:'ext',sub:'service externe'},
+];
+
+const E_SPEC=[
+ // web
+ ['CheckoutPage','PromoCodeInput','renders','add'],['CheckoutPage','CartSummary','renders'],['CheckoutPage','useCheckoutTotals','calls'],
+ ['useCheckoutTotals','httpPost','calls'],['useCheckoutTotals','postCheckout','http'],
+ ['CartSummary','formatPrice','imports','add'],['CartSummary','formatPrice@old','imports','del'],
+ ['InvoicesPage','formatPrice','imports','add'],['InvoicesPage','formatPrice@old','imports','del'],
+ ['InvoicesPage','useInvoice','calls'],['InvoicesPage','formatDate','calls'],
+ ['LoginPage','useSession','calls'],['LoginPage','Button','renders'],
+ ['PromoCodeInput','Button','renders','add'],['PromoCodeInput','validateCodeLocally','calls','add'],
+ ['PromoCodeInput','httpPost','calls','add'],['PromoCodeInput','postPromoValidate','http','add'],
+ ['validateCodeLocally','findDiscountByCode','calls','add'],
+ ['useInvoice','httpGet','calls'],['useInvoice','getInvoice','http'],['useSession','httpPost','calls'],
+ ['formatPrice@old','formatPrice','moved'],
+ // api
+ ['getInvoice','requireAuth','calls'],['getInvoice','findInvoice','calls'],['getInvoice','computeTotal','calls'],['getInvoice','renderInvoice','calls'],
+ ['listInvoices','requireAuth','calls'],['listInvoices','findInvoice','calls'],['listInvoices','invoicesTable','references'],
+ ['postCheckout','requireAuth','calls'],['postCheckout','computeTotal','calls'],['postCheckout','chargeCustomer','calls'],
+ ['postCheckout','applyLegacyCoupon','calls','del'],['postCheckout','findDiscountByCode','calls','add'],
+ ['postPromoValidate','findDiscountByCode','calls','add'],
+ ['requireAuth','refresh','calls'],['login','signToken','calls'],['login','findUser','calls'],
+ ['refresh','verifyToken','calls'],['refresh','findUser','calls'],
+ ['computeTotal','toCents','calls'],['computeTotal','InvoiceLine','references'],
+ ['computeTotal','applyDiscount','calls','add'],['computeTotal','DiscountCode','references','add'],
+ ['applyDiscount','isExpired','calls','add'],['applyDiscount','toCents','calls','add'],['applyDiscount','DiscountCode','references','add'],
+ ['applyLegacyCoupon','toCents','calls','del'],['renderInvoice','InvoiceLine','references'],
+ ['chargeCustomer','refresh','calls'],['chargeCustomer','stripe','http'],
+ ['renewSubscriptions','refresh','calls'],['renewSubscriptions','computeTotal','calls'],['renewSubscriptions','chargeCustomer','calls'],['renewSubscriptions','findUser','calls'],
+ // db / shared
+ ['findInvoice','invoicesTable','references'],['saveInvoice','invoicesTable','references'],
+ ['findDiscountByCode','discountsTable','references','add'],['findUser','usersTable','references'],
+ ['invoicesTable','postgres','depends_on'],['usersTable','postgres','depends_on'],['discountsTable','postgres','depends_on','add'],
+ ['formatPrice','Currency','references'],['toCents','Currency','references'],
+];
+
+// relief.config.yaml : règles déclaratives, versionnées dans le repo analysé
+const RULES=[
+ {id:'web-sans-db',description:"le front ne parle jamais directement à la base",from:'apps/web/**',deny:'packages/db/**'},
+ {id:'packages-sans-apps',description:"une lib partagée ne dépend jamais d'une app",from:'packages/**',deny:'apps/**'},
+ {id:'routes-via-repos',description:"les routes passent par les repos, pas par le schéma",from:'apps/api/routes/**',deny:'packages/db/schema/**'},
+];
+const CONFIG_YAML='# relief.config.yaml\nrules:\n'+RULES.map(r=>`  - id: ${r.id}\n    description: ${r.description}\n    from: ${r.from}\n    deny: ${r.deny}`).join('\n');
+function glob(p){ return new RegExp('^'+p.replace(/[.+^${}()|[\]\\]/g,'\\$&').replace(/\*\*/g,'\u0000').replace(/\*/g,'[^/]*').replace(/\u0000/g,'.*')+'$'); }
+RULES.forEach(r=>{ r.fromRe=glob(r.from); r.denyRe=glob(r.deny); });
+
+/* =====================================================================
+   MODÈLE : ids, index, agrégats
+   ===================================================================== */
+const ALL=[], BY={}, KEY={};
+const CHANGED=new Set(['add','mod','del','mov','movfrom']);
+function build(n,parent){
+  n.parent=parent||null;
+  if(parent && parent.kind!=='root'){
+    n.id = n.kind==='symbol' ? parent.id+'#'+n.label : parent.id+'/'+n.label;
+  }
+  n.path = n.kind==='system'||n.kind==='ext' ? n.label
+    : n.kind==='module' ? parent.path+'/'+n.label+'/'
+    : n.kind==='file' ? parent.path+n.label
+    : parent.path+' › '+n.label;
+  n.vis = n.vis || 'public';
+  ALL.push(n); BY[n.id]=n;
+  if(n.kind==='symbol'||n.kind==='ext') KEY[n.k||n.id||n.label]=n, KEY[n.k||n.label]=n;
+  (n.children||[]).forEach(c=>build(c,n));
+}
+const ROOT={kind:'root',id:'root',children:TOP};
+TOP.forEach(t=>build(t,null));
+TOP.forEach(t=>t.parent=null);
+
+// stats agrégées
+function agg(n){
+  if(!n.children){ n.add=n.add||0; n.del=n.del||0; n.nchg = CHANGED.has(n.st)?1:0; return; }
+  let a=0,d=0,c=0; n.children.forEach(ch=>{agg(ch); a+=ch.add; d+=ch.del; c+=ch.nchg;});
+  if(n.st==='fmt'){ n.nchg=0; return; }
+  if(n.add===undefined) n.add=a; if(n.del===undefined) n.del=d;
+  n.nchg=c;
+  if(!n.st && n.kind==='file' && c>0) n.st='mod';
+}
+TOP.forEach(agg);
+
+const EDGES=E_SPEC.map(([a,b,kind,st])=>{
+  const A=KEY[a],B=KEY[b]; if(!A||!B) console.warn('edge?',a,b);
+  return {a:A,b:B,kind,st};
+});
+function sysOf(n){ while(n.parent) n=n.parent; return n; }
+function fileOf(n){ while(n && n.kind!=='file') n=n.parent; return n; }
+function ancestors(n){ const r=[]; for(let p=n.parent;p;p=p.parent) r.push(p); return r; }
+function isAnc(a,b){ for(let p=b.parent;p;p=p.parent) if(p===a) return true; return false; }
+function leaves(n){ if(!n.children) return [n]; return n.children.flatMap(leaves); }
+// Moteur de règles : chaque lien statique (import, appel, référence, rendu) du graphe HEAD
+// est testé contre les globs from/deny. Une violation est « introduite » si le lien
+// n'existe pas dans le graphe de base (merge-base), sinon elle est « existante ».
+const pathOf=n=>{ const f=fileOf(n); return f?f.path:n.path; };
+EDGES.forEach(e=>{
+  if(e.kind==='moved'||e.st==='del'||e.kind==='http'||e.kind==='depends_on') return;
+  const pa=pathOf(e.a), pb=pathOf(e.b);
+  const r=RULES.find(r=>r.fromRe.test(pa)&&r.denyRe.test(pb)); if(r){ e.viol=r; e.violNew=e.st==='add'; }
+});
+// Ordre de lecture : tri topologique des fichiers changés (dépendances d'abord)
+function computeReading(){
+  const fs=ALL.filter(n=>n.kind==='file'&&CHANGED.has(n.st)&&n.st!=='movfrom');
+  const set=new Set(fs), deps=new Map(fs.map(f=>[f,new Set()]));
+  EDGES.forEach(e=>{ if(e.kind==='moved') return; const a=fileOf(e.a), b=fileOf(e.b); if(a&&b&&a!==b&&set.has(a)&&set.has(b)) deps.get(a).add(b); });
+  const out=[], done=new Set();
+  while(out.length<fs.length){
+    let ready=fs.filter(f=>!done.has(f)&&[...deps.get(f)].every(d=>done.has(d)));
+    if(!ready.length) ready=fs.filter(f=>!done.has(f));
+    ready.sort((a,b)=>a.path.localeCompare(b.path));
+    done.add(ready[0]); out.push({f:ready[0].id});
+  }
+  return out;
+}
+const READING=computeReading();
+function readingWhy(f){
+  const p=[];
+  const syms=f.children||[];
+  if(syms.some(x=>x.sig&&x.sig.breaking)) p.push('⚠ signature cassante');
+  else if(syms.some(x=>x.sig)) p.push('signature modifiée');
+  if(EDGES.some(e=>e.violNew&&fileOf(e.a)===f)) p.push('⚠ violation');
+  p.push(f.st==='add'?'nouveau':f.st==='del'?'supprimé':f.st==='mov'?'déplacé, identique':'+'+f.add+' −'+f.del);
+  return p.join(' · ');
+}
+// risque
+ALL.forEach(n=>{ if(n.kind==='symbol'){ const r=((n.cx||1)/9)*((n.churn||1)/22)*(n.t===false?1:0.5); n.risk=Math.min(1,r*1.6);} });
+function aggRisk(n){ if(!n.children) return n.risk||0; n.risk=Math.max(...n.children.map(aggRisk)); return n.risk; }
+TOP.forEach(aggRisk);
+
+/* =====================================================================
+   LAYOUT : boîtes imbriquées (stand-in d'ELK)
+   ===================================================================== */
+const SYM_W=210,SYM_H=26;
+const PAD={file:8,module:14,system:22}, HDR={file:30,module:36,system:50}, GAP={file:5,module:16,system:26};
+function gridArrange(n,P,Hd,G){
+  const cols = n.kind==='file' ? 1 : Math.ceil(Math.sqrt(n.children.length));
+  let x=P, y=Hd, rowH=0, maxW=0;
+  n.children.forEach((c,i)=>{
+    if(i>0 && i%cols===0){ y+=rowH+G; x=P; rowH=0; }
+    c.rx=x; c.ry=y; x+=c.w+G; rowH=Math.max(rowH,c.h); maxW=Math.max(maxW,x-G);
+  });
+  n.w=maxW+P; n.h=y+rowH+P;
+}
+function layout(n){
+  if(n.kind==='symbol'){ n.w=SYM_W; n.h=SYM_H; return; }
+  if(n.kind==='ext'){ n.w=240; n.h=110; return; }
+  n.children.forEach(layout);
+  gridArrange(n,PAD[n.kind],HDR[n.kind],GAP[n.kind]);
+}
+function place(n,x,y){ n.x=x; n.y=y; (n.children||[]).forEach(c=>place(c,x+c.rx,y+c.ry)); }
+function placeTopGrid(){
+  const g=220, [web,api,shared,db,pg,stripe]=TOP;
+  place(web,0,0);
+  place(api,web.w+g,0);
+  const r2=Math.max(web.h,api.h)+g;
+  place(shared,web.w-shared.w,r2);
+  place(db,api.x,r2);
+  place(stripe,api.x+api.w+g,api.y+api.h*0.35);
+  place(pg,db.x+db.w+g,r2+db.h/2-pg.h/2);
+}
+/* --- disposition « Moins de croisements » ---
+   Même grille, mais l'ordre des enfants de chaque conteneur est choisi par recherche locale
+   (échanges de paires gardés s'ils réduisent les croisements), mesurés à chaque niveau de zoom. */
+ALL.forEach(n=>{ if(n.children) n.orig=n.children.slice(); });
+const LEVEL_OPEN={mod:new Set(['system']),file:new Set(['system','module']),sym:new Set(['system','module','file'])};
+function visAt(n,open){ const chain=[n,...ancestors(n)].reverse(); return chain.find(x=>!open.has(x.kind)); }
+function crossingsAt(open){
+  const pairs=new Map();
+  EDGES.forEach(e=>{ if(e.kind==='moved'||e.st==='del') return; const a=visAt(e.a,open), b=visAt(e.b,open); if(a===b) return; pairs.set(a.id+'>'+b.id,[a,b]); });
+  const segs=[...pairs.values()].map(([a,b])=>[[a.x+a.w/2,a.y+a.h/2],[b.x+b.w/2,b.y+b.h/2],a,b]);
+  const X=(a,b,c)=>(b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0]);
+  let cr=0;
+  for(let i=0;i<segs.length;i++) for(let j=i+1;j<segs.length;j++){
+    const [a,b,na,nb]=segs[i],[c,d,nc,nd]=segs[j];
+    if(na===nc||na===nd||nb===nc||nb===nd) continue;
+    if(X(a,b,c)*X(a,b,d)<0 && X(c,d,a)*X(c,d,b)<0) cr++;
+  }
+  return cr;
+}
+const totalCrossings=()=>crossingsAt(LEVEL_OPEN.mod)+crossingsAt(LEVEL_OPEN.file)+crossingsAt(LEVEL_OPEN.sym);
+function gridLayout(){ TOP.forEach(layout); placeTopGrid(); }
+const SCORE={};
+function optimizeOrder(){
+  ALL.forEach(n=>{ if(n.children) n.children=n.orig.slice(); });
+  gridLayout(); SCORE.grid=totalCrossings();
+  const cs=ALL.filter(n=>n.children&&n.children.length>1);
+  let best=SCORE.grid;
+  for(let it=0;it<4;it++){
+    let improved=false;
+    for(const c of cs){ const ch=c.children;
+      for(let i=0;i<ch.length;i++) for(let j=i+1;j<ch.length;j++){
+        [ch[i],ch[j]]=[ch[j],ch[i]]; gridLayout(); const sc=totalCrossings();
+        if(sc<best){ best=sc; improved=true; } else [ch[i],ch[j]]=[ch[j],ch[i]];
+      } }
+    if(!improved) break;
+  }
+  ALL.forEach(n=>{ if(n.children) n.opt=n.children.slice(); });
+  SCORE.opt=best;
+}
+let LAYOUT=(()=>{ try{ return localStorage.getItem('relief.layout')||'opt'; }catch(e){ return 'opt'; } })();
+if(LAYOUT!=='grid'&&LAYOUT!=='opt') LAYOUT='opt';
+let WORLD;
+function computeWorld(){ let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9; TOP.forEach(n=>{x0=Math.min(x0,n.x);y0=Math.min(y0,n.y);x1=Math.max(x1,n.x+n.w);y1=Math.max(y1,n.y+n.h);}); WORLD={x:x0,y:y0,w:x1-x0,h:y1-y0}; }
+function doLayout(){
+  ALL.forEach(n=>{ if(n.children) n.children=(LAYOUT==='opt'?n.opt:n.orig).slice(); });
+  gridLayout(); computeWorld();
+}
+optimizeOrder();
+doLayout();
+
+
+/* =====================================================================
+   ÉTAT
+   ===================================================================== */
+const TH={system:470,module:300,file:175};       // largeur écran à partir de laquelle un conteneur s'ouvre
+const V={s:.3,tx:0,ty:0};
+const L={diff:true,base:true,impact:true,focus:false,risk:false,rules:true,http:true};
+let MODE='pr';          // 'pr' | 'explore'
+let SEL=null;           // {type:'node',node} | {type:'edge',key}
+let DIR='rev';          // 'rev' = appelants (impact), 'fwd' = dépendances (flux)
+let SEEN=new Set();
+let HL=null, SEEDS=null, HLDEPTH=null, CONTAINS_HL=null, FOCUS=null, CONTAINS_FOCUS=null;
+let ver=0, AGG=new Map(), hoverId=null, CROSS=0;
+
+const $=s=>document.querySelector(s);
+const map=$('#map'), nodesEl=$('#nodes'), edgesEl=$('#edges');
+
+// DOM des nœuds (créé une fois, ordre préfixe → enfants au-dessus)
+ALL.forEach(n=>{ const el=document.createElement('div'); el.dataset.id=n.id; el.style.display='none'; nodesEl.appendChild(el); n.el=el; });
+
+/* =====================================================================
+   CALCULS DE SURBRILLANCE
+   ===================================================================== */
+const isChangedLeaf=n=>n.kind==='symbol' && CHANGED.has(n.st);
+// Commits de la PR (git log merge-base..HEAD) et fichiers touchés par chacun
+const COMMITS=[
+ {sha:'3f9a1c2',msg:'feat(db): table discounts et repo',files:['db/schema/discounts.ts','db/repos/discountRepo.ts']},
+ {sha:'b71e04d',msg:'feat(billing): remise dans computeTotal',files:['api/billing/discount.ts','api/billing/invoice.ts','api/routes/invoices.ts']},
+ {sha:'c0d55e8',msg:'refactor(auth): refresh() renvoie null au lieu de lever',files:['api/auth/session.ts','api/billing/payment.ts']},
+ {sha:'e4a2f90',msg:'refactor: formatPrice déplacé dans shared (+ prettier)',files:['shared/money/format.ts','web/utils/format.ts','web/pages/Invoices.tsx','shared/http/client.ts']},
+ {sha:'9bd7731',msg:'feat(checkout): champ code promo et route /promo/validate',files:['api/routes/checkout.ts','api/billing/legacyCoupon.ts','web/components/PromoCodeInput.tsx','web/components/CartSummary.tsx','web/pages/Checkout.tsx']},
+];
+const COMMIT_OF=new Map(); COMMITS.forEach(c=>c.files.forEach(f=>COMMIT_OF.set(BY[f],c)));
+EDGES.forEach(e=>{ const fa=fileOf(e.a), fb=fileOf(e.b); e.commit=(fa&&COMMIT_OF.get(fa))||(fb&&COMMIT_OF.get(fb))||null; });
+let CF=null;   // commit sur lequel la carte est filtrée (mode « par commit »)
+let READ_MODE=(()=>{ try{ return localStorage.getItem('relief.read')||'file'; }catch(e){ return 'file'; } })();
+function chSyms(f){ return (f.children||[]).filter(x=>isChangedLeaf(x)&&x.st!=='movfrom'); }
+// Ordre par symbole : tri topologique des symboles changés, départage par l'ordre des fichiers
+const READING_SYM=(()=>{
+  const fi=new Map(READING.map((r,i)=>[BY[r.f],i]));
+  const syms=READING.flatMap(r=>chSyms(BY[r.f])), set=new Set(syms), deps=new Map(syms.map(x=>[x,new Set()]));
+  EDGES.forEach(e=>{ if(e.kind!=='moved'&&set.has(e.a)&&set.has(e.b)&&e.a!==e.b) deps.get(e.a).add(e.b); });
+  const key=x=>fi.get(fileOf(x))*100+fileOf(x).children.indexOf(x);
+  const out=[], done=new Set();
+  while(out.length<syms.length){
+    let ready=syms.filter(x=>!done.has(x)&&[...deps.get(x)].every(d=>done.has(d)));
+    if(!ready.length) ready=syms.filter(x=>!done.has(x));
+    ready.sort((a,b)=>key(a)-key(b)); done.add(ready[0]); out.push(ready[0]);
+  }
+  return out;
+})();
+// Filtre par commit
+function inCF(n){
+  if(!CF) return true;
+  const f=n.kind==='file'?n:n.kind==='symbol'?fileOf(n):null;
+  if(f) return COMMIT_OF.get(f)===CF;
+  return CF.files.some(id=>{ const x=BY[id]; return x===n||isAnc(n,x); });
+}
+const effSt=n=>inCF(n)?n.st:undefined;
+const effN=n=>inCF(n)?n.nchg:0;
+// « Vu » : suivi par symbole changé ; un fichier est vu quand tous ses symboles changés le sont
+function isSeen(n){ if(!n) return false; if(n.kind==='symbol') return SEEN.has(n.id); const xs=chSyms(n); return xs.length>0&&xs.every(x=>SEEN.has(x.id)); }
+function setSeen(n,v){ (n.kind==='symbol'?[n]:chSyms(n)).forEach(x=>v?SEEN.add(x.id):SEEN.delete(x.id)); }
+function headEdges(){ return EDGES.filter(e=>e.st!=='del' && e.kind!=='moved'); }
+function computeHL(){
+  HL=null;SEEDS=null;HLDEPTH=null;CONTAINS_HL=null;
+  if(!SEL||SEL.type!=='node'||!L.impact) return;
+  const n=SEL.node;
+  let seeds=leaves(n);
+  if(MODE==='pr' && DIR==='rev'){ const ch=seeds.filter(isChangedLeaf); if(ch.length) seeds=ch; }
+  seeds=seeds.filter(s=>s.st!=='del'&&s.st!=='movfrom');
+  if(!seeds.length) return;
+  const adj=new Map();
+  headEdges().forEach(e=>{ if(e.kind==='http'&&!L.http) return; const [f,t]=DIR==='rev'?[e.b,e.a]:[e.a,e.b]; if(!adj.has(f)) adj.set(f,[]); adj.get(f).push({n:t,kind:e.kind}); });
+  SEEDS=new Set(seeds); HL=new Set(); HLDEPTH=new Map();
+  let frontier=[...seeds], d=0;
+  while(frontier.length && d<8){
+    d++; const nx=[];
+    frontier.forEach(f=>(adj.get(f)||[]).forEach(({n:t,kind})=>{
+      if(SEEDS.has(t)||HL.has(t)) return;
+      HL.add(t); HLDEPTH.set(t,{d,via:f,kind}); nx.push(t);
+    }));
+    frontier=nx;
+  }
+  CONTAINS_HL=new Set();
+  [...HL,...SEEDS].forEach(x=>ancestors(x).forEach(a=>CONTAINS_HL.add(a)));
+}
+function computeFocus(){
+  FOCUS=null;CONTAINS_FOCUS=null;
+  if(!L.focus||MODE!=='pr') return;
+  FOCUS=new Set(ALL.filter(isChangedLeaf));
+  EDGES.forEach(e=>{ if(FOCUS.has(e.a)||FOCUS.has(e.b)||e.st){ FOCUS.add(e.a);FOCUS.add(e.b);} });
+  // 1 saut autour des symboles changés
+  const ch=new Set(ALL.filter(isChangedLeaf));
+  FOCUS=new Set(ch); EDGES.forEach(e=>{ if(ch.has(e.a)) FOCUS.add(e.b); if(ch.has(e.b)) FOCUS.add(e.a); });
+  CONTAINS_FOCUS=new Set(); FOCUS.forEach(x=>ancestors(x).forEach(a=>CONTAINS_FOCUS.add(a)));
+}
+function refresh(){ computeHL(); computeFocus(); ver++; render(); renderSide(); renderRight(); }
+
+/* =====================================================================
+   RENDU DE LA CARTE
+   ===================================================================== */
+const hiddenInMode=n=>MODE==='explore' && (n.st==='del'||n.st==='movfrom');
+function computeModes(){
+  const visit=(n,m)=>{
+    if(hiddenInMode(n)) m='hidden';
+    let cm='hidden';
+    if(m==='full'){
+      const sw=n.w*V.s;
+      if(n.children && sw>=TH[n.kind]){ n._mode='open'; cm='full'; }
+      else { n._mode='box'; cm= n.children ? 'ghost':'hidden'; }
+    } else if(m==='ghost'){ n._mode='ghost'; cm='hidden'; }
+    else n._mode='hidden';
+    (n.children||[]).forEach(c=>visit(c,cm));
+  };
+  TOP.forEach(t=>visit(t,'full'));
+}
+const COLORS={add:'var(--add)',mod:'var(--mod)',del:'var(--del)',mov:'var(--mov)',movfrom:'var(--mov)',fmt:'var(--faint)'};
+const ICON={component:'⚛',function:'ƒ',hook:'use',class:'C',method:'m',type:'T',route:'⇄',table:'tbl',job:'⏱'};
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function fileSeen(f){ return f && isSeen(f); }
+function changedFiles(n){ return ALL.filter(x=>x.kind==='file' && CHANGED.has(x.st) && x.st!=='movfrom' && (x===n||isAnc(n,x))); }
+function violOf(n){ return EDGES.filter(e=>e.viol && (e.a===n||e.b===n||isAnc(n,e.a)||isAnc(n,e.b))); }
+function dd(n){ if(!n.add&&!n.del) return ''; return `<span class="dd"><span class="plus">${n.add?'+'+n.add:''}</span> <span class="minus">${n.del?'−'+n.del:''}</span></span>`; }
+
+function nodeContent(n,w){
+  const pr=MODE==='pr' && L.diff;
+  const small=w<90;
+  const badges=[];
+  if(pr){
+    if(n.sig&&inCF(n)) badges.push(`<span class="bdg ${n.sig.breaking?'brk':'api'}">${n.sig.breaking?'API cassée':(n.vis==='internal'?'sig. interne':'API')}</span>`);
+    if(L.rules && n.kind!=='system' && violOf(n).some(e=>e.violNew)) badges.push(`<span class="bdg viol">⚠ archi</span>`);
+    if(n.st==='fmt') badges.push(`<span class="bdg fmt">≡ format seul</span>`);
+    if(n.st==='mov') badges.push(`<span class="bdg mov">déplacé</span>`);
+    if(n.st==='movfrom') badges.push(`<span class="bdg mov">→ shared/money</span>`);
+    const f=n.kind==='file'?n:fileOf(n);
+    if(n.kind==='file' && fileSeen(n)) badges.push(`<span class="bdg seen">✓ vu</span>`);
+  }
+  if(HL && n._mode==='box' && n.children){
+    const c=leaves(n).filter(x=>HL.has(x)).length; if(c) badges.push(`<span class="bdg imp">⚡ ${c}</span>`);
+  }
+  if(n.kind==='symbol'){
+    const ic=`<span class="ic ${n.sub}">${ICON[n.sub]||'•'}</span>`;
+    if(small) return `<div class="hd">${ic}</div>`;
+    return `<div class="hd">${ic}<span class="lb">${esc(n.label)}</span>${n.meta&&w>200?`<span class="meta">${esc(n.meta)}</span>`:''}<span class="sp"></span>${badges.join('')}${pr&&w>170?dd(n):''}</div>`;
+  }
+  if(n.kind==='ext'){
+    return `<div class="hd"><span class="lb">${esc(n.label)}</span><span class="sub">${esc(n.sub)}</span></div>`;
+  }
+  if(small) return `<div class="hd"><span class="lb">${esc(n.label)}</span></div>`;
+  const label = n.kind==='module' ? n.label+'/' : n.label;
+  let chips='';
+  if(n.kind!=='file'){
+    if(pr){
+      const cf=changedFiles(n).filter(inCF);
+      if(cf.length){
+        const seen=cf.filter(isSeen).length;
+        chips=`<span class="chips"><span>${cf.length} fich. modifiés</span>${w>300?`<span><span class="plus">+${n.add}</span>&nbsp;<span class="minus">−${n.del}</span></span>`:''}${w>360?`<span>${seen}/${cf.length} vus</span>`:''}</span>`;
+      }
+    } else if(n.kind==='system' && w>260){
+      chips=`<span class="chips"><span>${leaves(n).length} symboles</span><span>${esc(n.owner)}</span></span>`;
+    }
+  } else if(pr && w>160 && n.st!=='fmt') chips=dd(n);
+  const sub = n.kind==='system' && w>220 ? `<span class="sub">${esc(n.sub)}</span>`:'';
+  return `<div class="hd"><span class="lb">${esc(label)}</span>${sub}<span class="sp"></span>${badges.join('')}${chips}</div>`;
+}
+
+function nodeClass(n){
+  const c=['node','k-'+n.kind,n._mode];
+  const pr=MODE==='pr'&&L.diff;
+  if(n.st) c.push('s-'+n.st);
+  if(pr && !L.risk){
+    const st=effSt(n) && effSt(n)!=='fmt' ? effSt(n) : (effN(n) && n._mode!=='open' && n.kind!=='symbol' ? 'mod' : null);
+    if(st) c.push('st');
+  }
+  if(L.risk) c.push('risk');
+  if(SEL&&SEL.type==='node'&&SEL.node===n) c.push('sel');
+  if(HL){
+    if(SEEDS.has(n)) c.push('seed');
+    else if(HL.has(n)) c.push('imp');
+    if(n._mode!=='open' && !HL.has(n) && !SEEDS.has(n) && !CONTAINS_HL.has(n) && !(SEL&&SEL.node===n)) c.push('dim');
+  } else if(FOCUS){
+    if(n._mode!=='open' && !FOCUS.has(n) && !CONTAINS_FOCUS.has(n)) c.push('dim');
+  }
+  if(MODE==='pr' && (n.kind==='symbol'||n.kind==='file') && isSeen(n)) c.push('seen');
+  if(hoverId===n.id) c.push('hovered');
+  return c.join(' ');
+}
+function nodeStyle(n){
+  const pr=MODE==='pr'&&L.diff; let s='';
+  const es=effSt(n), own=es&&es!=='fmt'?es:null;
+  const st= own || (effN(n) && n.kind!=='symbol' ? 'mod':null);
+  if(n._mode==='ghost'){
+    if(L.risk){ s+=`--c:var(--risk);--ga:${(0.08+n.risk*0.6).toFixed(2)};`; }
+    else if(pr && st){ s+=`--c:${COLORS[st]};--ga:${own?0.5:0.3};`; }
+    return s;
+  }
+  if(L.risk) s+=`--r:${(n.risk*0.55).toFixed(2)};`;
+  if(pr && st){
+    const sz=(n.add||0)+(n.del||0);
+    const a = n.kind==='symbol'||n.kind==='file' ? 0.10+0.28*Math.min(1,sz/30) : 0.05+0.12*Math.min(1,sz/150);
+    s+=`--c:${COLORS[st]};--a:${(own?a:a*0.7).toFixed(3)};`;
+  }
+  return s;
+}
+
+function render(){
+  computeModes();
+  const W=map.clientWidth,H=map.clientHeight;
+  for(const n of ALL){
+    const el=n.el, m=n._mode;
+    const x=n.x*V.s+V.tx, y=n.y*V.s+V.ty, w=n.w*V.s, h=n.h*V.s;
+    if(m==='hidden' || x>W||y>H||x+w<0||y+h<0 || w<3 || h<2){ if(el.style.display!=='none') el.style.display='none'; continue; }
+    el.style.display='';
+    el.style.transform=`translate(${x}px,${y}px)`; el.style.width=w+'px'; el.style.height=h+'px';
+    const bucket = m==='ghost' ? 'g' : (w<90?'s':w<170?'m':w<220?'l':w<300?'x':w<360?'y':'z');
+    const sig=m+'|'+ver+'|'+bucket;
+    if(n._sig!==sig){
+      n._sig=sig;
+      el.className=nodeClass(n);
+      el.style.cssText=el.style.cssText.replace(/--[a-z]+:[^;]+;?/g,'')+nodeStyle(n);
+      el.innerHTML = m==='ghost' ? '' : nodeContent(n,w);
+    }
+  }
+  renderEdges(W,H);
+  renderLevels(); renderCrumbs();
+}
+
+/* ---------- arêtes agrégées ---------- */
+function visibleOf(n){ while(n && (n._mode==='ghost'||n._mode==='hidden')) n=n.parent; return n; }
+function rectOf(n){ return {x:n.x*V.s+V.tx,y:n.y*V.s+V.ty,w:n.w*V.s,h:n.h*V.s}; }
+function clip(r,tx,ty){
+  const cx=r.x+r.w/2, cy=r.y+r.h/2, dx=tx-cx, dy=ty-cy;
+  if(!dx&&!dy) return [cx,cy];
+  const k=Math.min(Math.abs((r.w/2)/(dx||1e-9)),Math.abs((r.h/2)/(dy||1e-9)));
+  return [cx+dx*k,cy+dy*k];
+}
+function edgeClass(g){
+  if(g.moved && g.fine.length===g.moved) return 'mov';
+  if(MODE!=='pr'||!L.diff) return (L.rules&&g.viol)?'viol':'base';
+  if(L.rules && g.viol) return g.fine.some(e=>e.violNew)?'viol':'violOld';
+  const live=g.fine.length-g.del-g.moved;
+  if(g.add>0 && live===g.add) return 'add';
+  if(g.del>0 && live===0) return 'del';
+  return 'base';
+}
+function edgeLabel(g,cls){
+  const live=g.fine.length-g.del-g.moved;
+  if(cls==='mov') return 'déplacé';
+  if(cls==='viol'||cls==='violOld') return '⚠ '+live;
+  if(cls==='add') return (live>1?'+'+live:'nouveau');
+  if(cls==='del') return '−'+g.del;
+  let t=live>1?String(live):'';
+  if(MODE==='pr'&&L.diff){ if(g.add) t+=` +${g.add}`; if(g.del) t+=` −${g.del}`; }
+  return t.trim();
+}
+function renderEdges(W,H){
+  AGG=new Map();
+  for(const e of EDGES){
+    if(MODE==='explore' && (e.st==='del'||e.kind==='moved')) continue;
+    if(e.kind==='moved' && !L.diff) continue;
+    const other=CF && e.commit && e.commit!==CF;           // lien changé dans un autre commit
+    if(other && (e.st==='del'||e.kind==='moved')) continue;
+    const est=other?undefined:e.st;
+    const a=visibleOf(e.a), b=visibleOf(e.b);
+    if(!a||!b||a===b||isAnc(a,b)||isAnc(b,a)) continue;
+    const key=a.id+'>'+b.id;
+    let g=AGG.get(key); if(!g){ g={key,a,b,fine:[],add:0,del:0,moved:0,viol:0,kinds:new Set()}; AGG.set(key,g); }
+    g.fine.push(e); g.kinds.add(e.kind);
+    if(e.kind==='moved') g.moved++; else if(est==='add') g.add++; else if(est==='del') g.del++;
+    if(e.viol) g.viol++;
+  }
+  let out=`<defs>${['base','add','del','viol','violOld','mov','hl','selE'].map(c=>`<marker id="ar-${c}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M0,1 L10,5 L0,9 z" fill="var(--${({base:'faint',hl:'imp',selE:'acc',violOld:'viol'})[c]||c})"/></marker>`).join('')}</defs>`;
+  let labels='';
+  const hlOn=!!HL, segs=[];
+  for(const g of AGG.values()){
+    let cls=edgeClass(g);
+    if(MODE==='pr' && !L.base && cls==='base' && !g.add && !g.del) continue;
+    const ra=rectOf(g.a), rb=rectOf(g.b);
+    const ca=[ra.x+ra.w/2,ra.y+ra.h/2], cb=[rb.x+rb.w/2,rb.y+rb.h/2];
+    const p0=clip(ra,cb[0],cb[1]), p3=clip(rb,ca[0],ca[1]);
+    const minx=Math.min(p0[0],p3[0]),maxx=Math.max(p0[0],p3[0]),miny=Math.min(p0[1],p3[1]),maxy=Math.max(p0[1],p3[1]);
+    if(maxx<-50||minx>W+50||maxy<-50||miny>H+50) continue;
+    const dx=p3[0]-p0[0], dy=p3[1]-p0[1], len=Math.hypot(dx,dy)||1;
+    const off=Math.min(70,len*0.16), nx=-dy/len*off, ny=dx/len*off;
+    const c1=[p0[0]+dx/3+nx,p0[1]+dy/3+ny], c2=[p0[0]+2*dx/3+nx,p0[1]+2*dy/3+ny];
+    const d=`M${p0[0].toFixed(1)},${p0[1].toFixed(1)} C${c1[0].toFixed(1)},${c1[1].toFixed(1)} ${c2[0].toFixed(1)},${c2[1].toFixed(1)} ${p3[0].toFixed(1)},${p3[1].toFixed(1)}`;
+    let extra='';
+    if(hlOn){
+      const inS=x=>HL.has(x)||SEEDS.has(x);
+      const lit=g.fine.some(e=>e.st!=='del'&&e.kind!=='moved'&&inS(e.a)&&inS(e.b)&&(DIR==='rev'?(SEEDS.has(e.b)||HL.has(e.b))&&HL.has(e.a):HL.has(e.b)));
+      if(lit) cls='hl'; else extra=' dimmed';
+    } else if(FOCUS){
+      if(!g.fine.some(e=>FOCUS.has(e.a)&&FOCUS.has(e.b))) extra=' dimmed';
+    }
+    if(SEL&&SEL.type==='edge'&&SEL.key===g.key){ cls='selE'; extra=''; }
+    segs.push([p0,p3,g.a,g.b]);
+    const live=g.fine.length-g.del-g.moved;
+    const sw=(1.3+Math.log2(Math.max(1,g.fine.length))*0.9).toFixed(2);
+    out+=`<path class="e ${cls}${extra}" d="${d}" stroke-width="${sw}" marker-end="url(#ar-${cls})"/>`;
+    out+=`<path class="hit" data-k="${esc(g.key)}" d="${d}"/>`;
+    const lab=edgeLabel(g,cls==='hl'||cls==='selE'?edgeClass(g):cls);
+    if(lab && len>60){
+      const mx=0.125*p0[0]+0.375*c1[0]+0.375*c2[0]+0.125*p3[0], my=0.125*p0[1]+0.375*c1[1]+0.375*c2[1]+0.125*p3[1];
+      labels+=`<text class="el ${cls}${extra}" x="${mx.toFixed(1)}" y="${(my+4).toFixed(1)}" text-anchor="middle">${esc(lab)}</text>`;
+    }
+  }
+  edgesEl.innerHTML=out+labels;
+  // croisements (segments droits entre ancrages)
+  const X=(a,b,c)=>(b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0]);
+  let cr=0;
+  for(let i=0;i<segs.length;i++) for(let j=i+1;j<segs.length;j++){
+    const [a,b,na,nb]=segs[i],[c,d,nc,nd]=segs[j];
+    if(na===nc||na===nd||nb===nc||nb===nd) continue;
+    if(X(a,b,c)*X(a,b,d)<0 && X(c,d,a)*X(c,d,b)<0) cr++;
+  }
+  CROSS=cr; const xc=document.getElementById('xcount'); if(xc) xc.textContent=cr;
+}
+
+/* ---------- niveaux / fil d'Ariane ---------- */
+function median(a){ a=[...a].sort((x,y)=>x-y); return a[Math.floor(a.length/2)]; }
+function fitScale(){ const W=Math.max(200,map.clientWidth),H=Math.max(200,map.clientHeight); return Math.min(W*0.9/WORLD.w,H*0.88/WORLD.h); }
+function levelScales(){
+  const fs=fitScale();
+  const sys=TOP.filter(t=>t.kind==='system'), mods=ALL.filter(n=>n.kind==='module'), files=ALL.filter(n=>n.kind==='file');
+  const l1=TH.system/median(sys.map(n=>n.w))*1.04, l2=TH.module/median(mods.map(n=>n.w))*1.04, l3=TH.file/median(files.map(n=>n.w))*1.06;
+  return [Math.min(fs,l1*0.85),l1,l2,l3];
+}
+const LEVEL_NAMES=['Système','Modules','Fichiers','Symboles'];
+function currentLevel(){ const ls=levelScales(); let c=0; ls.forEach((s,i)=>{ if(V.s>=s*0.97) c=i; }); return c; }
+function renderLevels(){
+  const c=currentLevel();
+  const html=LEVEL_NAMES.map((nm,i)=>`<button data-l="${i}" class="${i===c?'on':''}"><i></i>${i} · ${nm}</button>`).join('')
+   +`<div class="hint">Niveau 4 · Code : panneau de droite</div><div class="zb"><button data-z="out" title="Dézoomer">−</button><button data-z="fit" title="Tout voir (0)">⤢</button><button data-z="in" title="Zoomer">+</button></div>`;
+  const el=$('#levels'); if(el._h!==html){ el.innerHTML=html; el._h=html; }
+}
+function renderCrumbs(){
+  let html='<span data-id="">acme-shop</span>';
+  const n=SEL&&SEL.type==='node'?SEL.node:null;
+  if(n){ [...ancestors(n).reverse(),n].forEach((a,i,arr)=>{ html+=`<i>›</i><span data-id="${esc(a.id)}" class="${i===arr.length-1?'last':''}">${esc(a.kind==='module'?a.label+'/':a.label)}</span>`; }); }
+  else html+=`<i>·</i><span class="last" style="cursor:default">${LEVEL_NAMES[currentLevel()]}</span>`;
+  const el=$('#crumbs'); if(el._h!==html){ el.innerHTML=html; el._h=html; }
+}
+$('#legend').innerHTML=[
+ ['add','Ajouté'],['mod','Modifié'],['del','Supprimé'],['mov','Déplacé'],
+].map(([c,l])=>`<span><i class="dot ${c}"></i>${l}</span>`).join('')+
+ [['add','Nouvelle dépendance','7 4'],['del','Dépendance retirée','3 4'],['viol','Violation de règle','7 4'],['faint','Inchangée','']].map(([c,l,da])=>`<span><svg width="22" height="8"><line x1="1" y1="4" x2="21" y2="4" stroke="var(--${c})" stroke-width="2" ${da?`stroke-dasharray="${da}"`:''}/></svg>${l}</span>`).join('');
+
+/* =====================================================================
+   NAVIGATION : zoom, pan, animations
+   ===================================================================== */
+let anim=null;
+function clampS(s){ const fs=fitScale(); return Math.max(fs*0.5,Math.min(2.6,s)); }
+function zoomAt(f,px,py){ const s=clampS(V.s*f); const k=s/V.s; V.tx=px-(px-V.tx)*k; V.ty=py-(py-V.ty)*k; V.s=s; schedule(); }
+function animateTo(s1,cx,cy,ms=480){
+  const W=map.clientWidth,H=map.clientHeight;
+  const s0=V.s, c0=[(W/2-V.tx)/V.s,(H/2-V.ty)/V.s]; s1=clampS(s1);
+  const t0=performance.now(); cancelAnimationFrame(anim);
+  const step=t=>{
+    let u=Math.min(1,(t-t0)/ms); u=u<.5?4*u*u*u:1-Math.pow(-2*u+2,3)/2;
+    const s=Math.exp(Math.log(s0)+(Math.log(s1)-Math.log(s0))*u);
+    const x=c0[0]+(cx-c0[0])*u, y=c0[1]+(cy-c0[1])*u;
+    V.s=s; V.tx=W/2-x*s; V.ty=H/2-y*s; render();
+    if(u<1) anim=requestAnimationFrame(step);
+  };
+  anim=requestAnimationFrame(step);
+}
+function fitRect(r,pad=80,maxS=1.5){
+  const W=map.clientWidth,H=map.clientHeight;
+  const s=Math.min((W-pad*2)/r.w,(H-pad*2)/r.h,maxS);
+  animateTo(s,r.x+r.w/2,r.y+r.h/2);
+}
+function fitAll(){ fitRect(WORLD,50,9); }
+function goLevel(i){
+  const ls=levelScales(); const W=map.clientWidth,H=map.clientHeight;
+  if(i===0) return fitAll();
+  let c=[(W/2-V.tx)/V.s,(H/2-V.ty)/V.s];
+  if(SEL&&SEL.type==='node'){ const n=SEL.node; c=[n.x+n.w/2,n.y+n.h/2]; }
+  animateTo(ls[i],c[0],c[1]);
+}
+function focusNode(n,{select=true}={}){
+  if(select){ SEL={type:'node',node:n}; refresh(); }
+  // contexte : on cadre le fichier (pour un symbole) ou le nœud lui-même
+  const target = n.kind==='symbol' ? n.parent : n;
+  const maxS = n.kind==='symbol'||n.kind==='file' ? 1.25 : 1.2;
+  const minS = n.kind==='symbol'||n.kind==='file' ? levelScales()[3]*1.02 : 0;
+  const W=map.clientWidth,H=map.clientHeight;
+  let s=Math.min((W-200)/target.w,(H-200)/target.h,maxS); s=Math.max(s,minS);
+  animateTo(s,target.x+target.w/2,target.y+target.h/2);
+}
+let raf=0; function schedule(){ if(!raf) raf=requestAnimationFrame(()=>{raf=0;render();}); }
+
+map.addEventListener('wheel',e=>{
+  e.preventDefault(); cancelAnimationFrame(anim);
+  const r=map.getBoundingClientRect();
+  const k = e.ctrlKey ? 0.012 : 0.0018;
+  zoomAt(Math.exp(-e.deltaY*k),e.clientX-r.left,e.clientY-r.top);
+},{passive:false});
+
+let drag=null;
+map.addEventListener('mousedown',e=>{
+  if(e.button!==0 || e.target.closest('.levels,.crumbs,.legend')) return;
+  drag={x:e.clientX,y:e.clientY,tx:V.tx,ty:V.ty,moved:false};
+});
+window.addEventListener('mousemove',e=>{
+  if(drag){
+    const dx=e.clientX-drag.x, dy=e.clientY-drag.y;
+    if(!drag.moved && Math.hypot(dx,dy)>3){ drag.moved=true; map.classList.add('drag'); cancelAnimationFrame(anim); }
+    if(drag.moved){ V.tx=drag.tx+dx; V.ty=drag.ty+dy; schedule(); }
+    return;
+  }
+  // survol
+  const tip=$('#tip');
+  if(!map.contains(e.target)){ return; }
+  const hit=e.target.closest('.hit'), nd=e.target.closest('.node');
+  const r=map.getBoundingClientRect();
+  if(hit){
+    const g=AGG.get(hit.dataset.k); if(g){ tip.textContent=edgeTip(g); tip.style.display='block'; tip.style.left=(e.clientX-r.left+14)+'px'; tip.style.top=(e.clientY-r.top+14)+'px'; }
+  } else if(nd && !e.target.closest('.levels,.crumbs,.legend')){
+    const n=BY[nd.dataset.id];
+    tip.textContent=nodeTip(n); tip.style.display='block'; tip.style.left=(e.clientX-r.left+14)+'px'; tip.style.top=(e.clientY-r.top+14)+'px';
+  } else tip.style.display='none';
+});
+map.addEventListener('mouseleave',()=>{$('#tip').style.display='none';});
+window.addEventListener('mouseup',e=>{
+  if(!drag) return; const d=drag; drag=null; map.classList.remove('drag');
+  if(d.moved) return;
+  if(!map.contains(e.target) || e.target.closest('.levels,.crumbs,.legend')) return;
+  const hit=e.target.closest('.hit');
+  if(hit){ SEL={type:'edge',key:hit.dataset.k,g:AGG.get(hit.dataset.k)}; refresh(); return; }
+  const nd=e.target.closest('.node');
+  if(nd){ SEL={type:'node',node:BY[nd.dataset.id]}; refresh(); }
+  else if(SEL){ SEL=null; refresh(); }
+});
+map.addEventListener('dblclick',e=>{
+  const nd=e.target.closest('.node'); if(!nd) return;
+  const n=BY[nd.dataset.id];
+  if(n.children){ fitRect(n,60,2); } else focusNode(n);
+});
+$('#levels').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  if(b.dataset.l) goLevel(+b.dataset.l);
+  else if(b.dataset.z==='fit') fitAll();
+  else { const W=map.clientWidth,H=map.clientHeight,c=[(W/2-V.tx)/V.s,(H/2-V.ty)/V.s]; animateTo(V.s*(b.dataset.z==='in'?1.6:1/1.6),c[0],c[1],260); }
+});
+$('#crumbs').addEventListener('click',e=>{
+  const sp=e.target.closest('span[data-id]'); if(!sp) return;
+  if(!sp.dataset.id){ SEL=null; refresh(); fitAll(); return; }
+  const n=BY[sp.dataset.id]; SEL={type:'node',node:n}; refresh(); if(n.children) fitRect(n,60,2); else focusNode(n,{select:false});
+});
+
+function kindLabel(n){ return ({system:'service',module:'module',file:'fichier',symbol:n.sub,ext:'externe'})[n.kind]; }
+const ST_LABEL={add:'ajouté',mod:'modifié',del:'supprimé',mov:'déplacé',movfrom:'ancien emplacement',fmt:'reformaté'};
+function nodeTip(n){
+  let t=`${n.path}\n${kindLabel(n)}${n.st&&MODE==='pr'?' · '+ST_LABEL[n.st]:''}`;
+  if(MODE==='pr'&&(n.add||n.del)) t+=` · +${n.add} −${n.del}`;
+  if(n.children && n._mode==='box') t+='\nDouble-clic pour entrer';
+  return t;
+}
+const KIND_FR={calls:'appel',imports:'import',renders:'rendu',http:'HTTP',references:'référence',depends_on:'dépendance',moved:'déplacement'};
+function edgeTip(g){
+  const live=g.fine.length-g.del-g.moved;
+  let t=`${g.a.path}  →  ${g.b.path}\n${live} lien${live>1?'s':''} (${[...g.kinds].map(k=>KIND_FR[k]).join(', ')})`;
+  if(MODE==='pr'){ if(g.add) t+=`\n+${g.add} ajouté${g.add>1?'s':''}`; if(g.del) t+=`\n−${g.del} retiré${g.del>1?'s':''}`; }
+  if(g.viol){ const v=g.fine.find(e=>e.viol); t+=`\n⚠ viole « ${v.viol.id} » (${v.violNew?'introduite par la PR':'existait déjà'})`; }
+  if(edgeClass(g)==='add') t+='\nNouveau couplage : cette dépendance n\'existait pas';
+  return t+'\nClic pour le détail';
+}
+
+/* =====================================================================
+   SIDEBAR GAUCHE
+   ===================================================================== */
+function prStats(){
+  const files=ALL.filter(n=>n.kind==='file'&&n.st&&n.st!=='movfrom');
+  const syms=ALL.filter(isChangedLeaf);
+  return {files:files.length,add:TOP.reduce((s,t)=>s+(t.add||0),0),del:TOP.reduce((s,t)=>s+(t.del||0),0),
+    by:['add','mod','del','mov'].map(s=>[s,syms.filter(x=>x.st===s).length])};
+}
+function alerts(){
+  const out=[];
+  // violations
+  EDGES.filter(e=>e.viol&&e.violNew).forEach(e=>out.push({cls:'viol',ic:'⚠',t:`${e.a.label} → ${e.b.label}`,s:`Viole « ${e.viol.id} » : ${e.viol.from} ↛ ${e.viol.deny}`,n:e.a}));
+  // signatures cassantes
+  ALL.filter(n=>n.sig&&n.sig.breaking).forEach(n=>{
+    const sv=SEL; SEL={type:'node',node:n}; const d=DIR; DIR='rev'; const imp=L.impact; L.impact=true; computeHL();
+    const cnt=HL?HL.size:0, unt=HL?[...HL].filter(x=>x.t===false).length:0; SEL=sv; DIR=d; L.impact=imp; computeHL();
+    out.push({cls:'brk',ic:'💥',t:`${n.label}() : signature cassante`,s:`${cnt} appelants transitifs · ${unt} sans tests`,n});
+  });
+  // nouveaux couplages entre modules
+  const modOf=n=>{ let x=n; while(x && x.kind!=='module' && x.parent) x=x.parent; return x; };
+  const pairs=new Map();
+  EDGES.forEach(e=>{ if(e.kind==='moved') return; const a=modOf(e.a), b=modOf(e.b); if(a===b) return; const k=a.id+'>'+b.id; if(!pairs.has(k)) pairs.set(k,{a,b,base:0,add:0,del:0}); const p=pairs.get(k); if(e.st==='add') p.add++; else if(e.st==='del') p.del++; else p.base++; });
+  [...pairs.values()].filter(p=>p.base===0&&p.add>0&&!(EDGES.some(e=>e.viol&&modOf(e.a)===p.a&&modOf(e.b)===p.b))).forEach(p=>
+    out.push({cls:'new',ic:'＋',t:`Nouveau couplage ${p.a.path} → ${p.b.path}`,s:`${p.add} lien${p.add>1?'s':''} qui n'existai${p.add>1?'ent':'t'} pas`,n:p.a}));
+  [...pairs.values()].filter(p=>p.base===0&&p.del>0&&p.add===0).forEach(p=>
+    out.push({cls:'info',ic:'－',t:`Couplage retiré ${p.a.path} → ${p.b.path}`,s:`${p.del} lien${p.del>1?'s':''} supprimé${p.del>1?'s':''}`,n:p.a}));
+  out.push({cls:'info',ic:'≡',t:'shared/http/client.ts ignoré',s:'Reformatage seul : 0 changement structurel',n:BY['shared/http/client.ts']});
+  return out;
+}
+function readItems(){
+  if(READ_MODE==='symbol') return READING_SYM.map(n=>({n}));
+  if(READ_MODE==='commit') return COMMITS.flatMap(c=>c.files.map(f=>BY[f]).filter(f=>chSyms(f).length).map(f=>({n:f,c})));
+  return READING.map(r=>({n:BY[r.f]}));
+}
+function curItem(items){
+  const s=SEL&&SEL.type==='node'?SEL.node:null; if(!s) return null;
+  return items.find(it=>it.n===s) || items.find(it=>it.n.kind==='file'&&(fileOf(s)===it.n)) || (s.kind==='file'?items.find(it=>fileOf(it.n)===s):null) || null;
+}
+function symWhy(n){
+  const p=[n.sub];
+  if(n.sig) p.push(n.sig.breaking?'⚠ signature cassante':'signature modifiée');
+  if(EDGES.some(e=>e.violNew&&e.a===n)) p.push('⚠ violation');
+  p.push(n.st==='add'?'nouveau':n.st==='del'?'supprimé':n.st==='mov'?'déplacé':'+'+n.add+' −'+n.del);
+  return p.join(' · ');
+}
+function readingHTML(){
+  const items=readItems(), seenN=items.filter(it=>isSeen(it.n)).length, cur=curItem(items);
+  const seg=`<span class="mini-seg">${[['file','Fichier'],['symbol','Symbole'],['commit','Commit']].map(([k,l])=>`<button data-rm="${k}" class="${READ_MODE===k?'on':''}">${l}</button>`).join('')}</span>`;
+  const li=(it,i)=>{ const n=it.n, f=n.kind==='file'?n:fileOf(n), sn=isSeen(n);
+    const title=n.kind==='symbol'?n.label:f.path.replace(/^(apps|packages)\//,'');
+    const sub=n.kind==='symbol'?`${f.label} · ${symWhy(n)}`:readingWhy(f);
+    return `<li data-f="${esc(n.id)}" class="${sn?'seen':''} ${cur===it?'cur':''}"><span class="n">${i+1}</span><i class="dot ${n.st}"></i><span class="t"><b class="mono" style="font-size:12px">${esc(title)}</b><small>${esc(sub)}</small></span><span class="ck">${sn?'✓':''}</span></li>`; };
+  let list;
+  if(READ_MODE==='commit'){
+    let k=0;
+    list=COMMITS.map((c,ci)=>{ const its=items.filter(it=>it.c===c), sn=its.filter(it=>isSeen(it.n)).length, extra=c.files.length-its.length;
+      return `<li class="cgrp ${CF===c?'on':''}" data-commit="${ci}"><span class="sha">${c.sha}</span><span class="t"><b>${esc(c.msg)}</b><small>${ci+1}/${COMMITS.length} · ${sn}/${its.length} vus${extra?` · ${extra} sans changement structurel`:''}${CF===c?' · carte filtrée':''}</small></span></li>`+its.map(it=>li(it,k++)).join(''); }).join('');
+  } else list=items.map(li).join('');
+  const hint=READ_MODE==='commit'?'Clic sur un commit : la carte ne colore que ses changements (rejeu commit par commit).'
+    :READ_MODE==='symbol'?"Tri topologique des symboles changés : chacun après ce qu'il utilise."
+    :'Tri topologique des fichiers changés : on lit les dépendances avant leurs appelants.';
+  return `<div class="sec"><h3>Ordre de lecture <span class="r">${seg}</span></h3>
+    <div class="faint" style="display:flex;justify-content:space-between;font-size:11px"><span>${seenN}/${items.length} vus</span>${CF?'<a href="#" data-cf-clear style="color:var(--acc)">voir tous les commits</a>':''}</div>
+    <div class="prog" style="margin:4px 0 12px"><i style="width:${items.length?seenN/items.length*100:0}%"></i></div>
+    <ol class="ro ${READ_MODE}">${list}</ol>
+    <div class="faint" style="font-size:11px;margin-top:8px">${hint} <kbd>n</kbd> <kbd>p</kbd> <kbd>v</kbd></div></div>`;
+}
+function fitFiles(c){
+  const ns=c.files.map(f=>BY[f]).filter(n=>!hiddenInMode(n));
+  const x0=Math.min(...ns.map(n=>n.x)), y0=Math.min(...ns.map(n=>n.y)), x1=Math.max(...ns.map(n=>n.x+n.w)), y1=Math.max(...ns.map(n=>n.y+n.h));
+  fitRect({x:x0,y:y0,w:x1-x0,h:y1-y0},80,1.2);
+}
+function renderSide(){
+  const el=$('#side');
+  const modeSeg=`<div class="sec"><div class="seg"><button data-mode="pr" class="${MODE==='pr'?'on':''}">Relire la PR</button><button data-mode="explore" class="${MODE==='explore'?'on':''}">Explorer le repo</button></div></div>`;
+  if(MODE==='pr'){
+    const st=prStats();
+    const al=alerts();
+    el.innerHTML=modeSeg+`
+    <div class="sec">
+      <div class="faint mono" style="font-size:11.5px">#142 · main...feat/promo-codes · ${COMMITS.length} commits</div>
+      <div class="prtitle">feat(billing): codes promo sur le checkout</div>
+      <div class="stats"><span>${st.files} fichiers</span><span class="plus">+${st.add}</span><span class="minus">−${st.del}</span>
+        ${st.by.filter(b=>b[1]).map(([s,c])=>`<span style="display:flex;gap:4px;align-items:center"><i class="dot ${s}"></i>${c}</span>`).join('')}</div>
+    </div>
+    ${readingHTML()}
+    <div class="sec"><h3>Signaux <span class="r faint">${al.length}</span></h3>
+      ${al.map((a,i)=>`<div class="alert ${a.cls}" data-a="${i}"><span class="ai">${a.ic}</span><span>${esc(a.t)}<small>${esc(a.s)}</small></span></div>`).join('')}
+    </div>
+    ${rulesHTML()}${layoutHTML()}${layersHTML()}`;
+    el._alerts=al;
+  } else {
+    const entries=ALL.filter(n=>n.sub==='route'||n.sub==='job'||(n.sub==='component'&&n.parent.parent.label==='pages'));
+    const hot=ALL.filter(n=>n.kind==='symbol'&&!hiddenInMode(n)).sort((a,b)=>b.risk-a.risk).slice(0,6);
+    el.innerHTML=modeSeg+`
+    <div class="sec"><div class="prtitle">acme-shop <span class="faint mono" style="font-weight:400;font-size:12px">@ feat/promo-codes</span></div>
+      <div class="stats"><span>4 packages</span><span>${ALL.filter(n=>n.kind==='file'&&!hiddenInMode(n)).length} fichiers</span><span>${ALL.filter(n=>n.kind==='symbol'&&!hiddenInMode(n)).length} symboles</span></div></div>
+    <div class="sec"><h3>Points d'entrée</h3>
+      <ul class="lst">${entries.map(n=>`<li data-id="${esc(n.id)}"><span class="ic ${n.sub}">${ICON[n.sub]}</span><span class="nm">${esc(n.meta||n.label)}<small>${esc(sysOf(n).label)}</small></span></li>`).join('')}</ul>
+      <div class="faint" style="font-size:11px;margin-top:6px">Clic : trace le flux depuis ce point d'entrée.</div></div>
+    <div class="sec"><h3>Hotspots <span class="r faint">complexité × churn × tests</span></h3>
+      <ul class="lst">${hot.map(n=>`<li data-id="${esc(n.id)}"><span class="nm">${esc(n.label)}<small>${esc(fileOf(n).label)}</small></span><span class="bar" style="width:50px;height:5px;border-radius:3px;background:var(--panel-2);overflow:hidden;flex:none"><i style="display:block;height:100%;width:${Math.round(n.risk*100)}%;background:var(--risk)"></i></span></li>`).join('')}</ul></div>
+    ${rulesHTML()}${layoutHTML()}${layersHTML()}`;
+  }
+}
+function rulesHTML(){
+  return `<div class="sec"><h3>Règles d'architecture <span class="r faint mono">relief.config.yaml</span></h3>
+  ${RULES.map(r=>{ const v=EDGES.filter(e=>e.viol===r), nw=v.filter(e=>e.violNew).length, old=v.length-nw;
+    return `<div class="rule" data-rule="${r.id}"><div><b class="mono" style="font-size:12px">${esc(r.id)}</b>${MODE==='pr'&&nw?`<span class="bdg viol">${nw} introduite${nw>1?'s':''}</span>`:''}${old||(MODE!=='pr'&&nw)?`<span class="bdg fmt">${MODE==='pr'?old:v.length} existante${(MODE==='pr'?old:v.length)>1?'s':''}</span>`:''}${!v.length?'<span class="bdg test">respectée</span>':''}</div>
+      <div class="mono faint" style="font-size:11px">${esc(r.from)} ↛ ${esc(r.deny)}</div></div>`; }).join('')}
+  <details><summary class="faint" style="cursor:pointer;font-size:11.5px;margin-top:8px">Voir le fichier</summary><pre class="yaml">${esc(CONFIG_YAML)}</pre></details></div>`;
+}
+function layoutHTML(){
+  return `<div class="sec"><h3>Disposition <span class="r faint"><span id="xcount">${CROSS}</span> croisements à l'écran</span></h3>
+    <div class="seg"><button data-layout="opt" class="${LAYOUT==='opt'?'on':''}">Moins de croisements</button><button data-layout="grid" class="${LAYOUT==='grid'?'on':''}">Grille brute</button></div>
+    <div class="faint" style="font-size:11px;margin-top:6px">Croisements, tous niveaux confondus : <b style="color:var(--text)">${SCORE.opt}</b> optimisé, contre ${SCORE.grid} en ordre alphabétique.</div></div>`;
+}
+function setLayout(m){
+  if(m===LAYOUT) return; LAYOUT=m; try{ localStorage.setItem('relief.layout',m); }catch(e){}
+  const old=new Map(ALL.map(n=>[n,[n.x,n.y,n.w,n.h]]));
+  doLayout();
+  const nw=new Map(ALL.map(n=>[n,[n.x,n.y,n.w,n.h]]));
+  const W=map.clientWidth,H=map.clientHeight, s1=fitScale();
+  const v0={...V}, v1={s:s1,tx:W/2-(WORLD.x+WORLD.w/2)*s1,ty:H/2-(WORLD.y+WORLD.h/2)*s1};
+  const t0=performance.now(); cancelAnimationFrame(anim);
+  const step=t=>{
+    let u=Math.min(1,(t-t0)/650); u=u<.5?4*u*u*u:1-Math.pow(-2*u+2,3)/2;
+    ALL.forEach(n=>{ const a=old.get(n), b=nw.get(n); n.x=a[0]+(b[0]-a[0])*u; n.y=a[1]+(b[1]-a[1])*u; n.w=a[2]+(b[2]-a[2])*u; n.h=a[3]+(b[3]-a[3])*u; });
+    V.s=Math.exp(Math.log(v0.s)+(Math.log(v1.s)-Math.log(v0.s))*u); V.tx=v0.tx+(v1.tx-v0.tx)*u; V.ty=v0.ty+(v1.ty-v0.ty)*u;
+    render(); if(u<1) anim=requestAnimationFrame(step);
+  };
+  anim=requestAnimationFrame(step);
+  renderSide();
+}
+function layersHTML(){
+  const t=(k,l,s,kb)=>`<div class="tog ${L[k]?'on':''}" data-t="${k}"><span class="sw"></span><span>${l}${s?`<small>${s}</small>`:''}</span>${kb?`<kbd>${kb}</kbd>`:''}</div>`;
+  return `<div class="sec"><h3>Calques</h3>
+    ${MODE==='pr'?t('diff','Calque de diff','couleurs ajouté / modifié / supprimé'):''}
+    ${MODE==='pr'?t('base','Arêtes inchangées','sinon seulement les dépendances qui bougent'):''}
+    ${MODE==='pr'?t('focus','Focus PR','le changé + 1 saut, le reste estompé','f'):''}
+    ${t('impact',MODE==='pr'?"Rayon d'impact":'Tracé de flux','à la sélection d\'un nœud','i')}
+    ${t('rules',"Règles d'architecture",'relief.config.yaml · '+RULES.length+' règles')}
+    ${t('http','Impact à travers HTTP','suit les appels entre services (front → API)')}
+    ${t('risk','Carte de risque','complexité × churn × absence de tests')}
+  </div>`;
+}
+$('#side').addEventListener('click',e=>{
+  const m=e.target.closest('[data-mode]'); if(m){ setMode(m.dataset.mode); return; }
+  const lo=e.target.closest('[data-layout]'); if(lo){ setLayout(lo.dataset.layout); return; }
+  const ru=e.target.closest('.rule'); if(ru){ const r=RULES.find(r=>r.id===ru.dataset.rule); const v=EDGES.filter(e=>e.viol===r).sort((a,b)=>b.violNew-a.violNew)[0];
+    if(!v){ toast(`« ${r.id} » : aucune violation`); return; } const a=visibleOf(v.a), b=visibleOf(v.b); const g=AGG.get(a.id+'>'+b.id);
+    if(g){ SEL={type:'edge',key:g.key,g}; refresh(); } else focusNode(v.a); return; }
+  const rm=e.target.closest('[data-rm]'); if(rm){ READ_MODE=rm.dataset.rm; try{ localStorage.setItem('relief.read',READ_MODE); }catch(_){} if(READ_MODE!=='commit') CF=null; refresh(); return; }
+  if(e.target.closest('[data-cf-clear]')){ e.preventDefault(); CF=null; refresh(); return; }
+  const cg=e.target.closest('[data-commit]'); if(cg){ const c=COMMITS[+cg.dataset.commit]; CF=CF===c?null:c; refresh(); if(CF) fitFiles(c); return; }
+  const li=e.target.closest('li[data-f]');
+  if(li){ if(e.target.closest('.ck')){ toggleSeen(li.dataset.f); return; } const n=BY[li.dataset.f];
+    if(READ_MODE==='commit') CF=COMMIT_OF.get(n.kind==='file'?n:fileOf(n))||CF;
+    focusNode(n); return; }
+  const a=e.target.closest('.alert'); if(a){ const al=$('#side')._alerts[+a.dataset.a]; if(al&&al.n){ if(al.cls==='new'||al.cls==='info'&&al.n.kind==='module'){ SEL={type:'node',node:al.n}; refresh(); fitRect(al.n,80,1.4);} else focusNode(al.n);} return; }
+  const tg=e.target.closest('.tog'); if(tg){ L[tg.dataset.t]=!L[tg.dataset.t]; refresh(); return; }
+  const it=e.target.closest('li[data-id]'); if(it){ focusNode(BY[it.dataset.id]); }
+});
+function setMode(m){
+  MODE=m; DIR = m==='pr'?'rev':'fwd';
+  if(m==='explore'){ L.focus=false; CF=null; if(SEL&&SEL.type==='node'&&hiddenInMode(SEL.node)) SEL=null; }
+  refresh(); toast(m==='pr'?'Mode relecture : calque de diff de la PR #142':'Mode exploration : le repo à HEAD, sans le diff');
+}
+
+/* =====================================================================
+   PANNEAU DE DROITE
+   ===================================================================== */
+function codeHTML(n){
+  const syms=n.kind==='symbol'?[n]:leaves(n).filter(x=>x.kind==='symbol');
+  if(!syms.length) return '';
+  let html='<div class="code">';
+  let ln=n.kind==='symbol'?12:1;
+  syms.forEach(s=>{
+    if(syms.length>1) html+=`<div class="hdr">${esc(s.label)}${s.st&&MODE==='pr'?' · '+ST_LABEL[s.st]:''}</div>`;
+    let lines=s.code||placeholder(s);
+    if(n.st==='fmt'&&MODE==='pr') lines=placeholder(s);
+    lines.forEach(l=>{
+      const c=l[0], txt=l.slice(1);
+      if(MODE==='explore'&&c==='-') return;
+      const cls=MODE==='pr'?(c==='+'?'a':c==='-'?'d':''):'';
+      const num=c==='-'&&MODE==='pr'?'':ln++;
+      html+=`<div class="ln ${cls}"><span class="g">${num}</span><span class="s">${MODE==='pr'&&c!==' '?c:''}</span><span>${esc(txt)||' '}</span></div>`;
+    });
+    ln+=3;
+  });
+  return html+'</div>';
+}
+function placeholder(s){
+  const n=s.label.split('.').pop();
+  switch(s.sub){
+    case 'component': return [` export function ${n}(props: Props) {`,`   …`,` }`];
+    case 'type': return [` export type ${n} = { … };`];
+    case 'table': return [` export const ${n} = pgTable("…", { … });`];
+    case 'class': return [` export class ${n} {`,`   …`,` }`];
+    case 'method': return [`   async ${n}(…) { … }`];
+    case 'route': return [` app.${(s.meta||'get ').split(' ')[0].toLowerCase()}("${(s.meta||' /').split(' ')[1]}", async (req) => {`,`   …`,` });`];
+    default: return [` export ${s.sub==='hook'?'function':'function'} ${n}(…) {`,`   …`,` }`];
+  }
+}
+function fineIO(n){
+  const inside=x=>x===n||isAnc(n,x);
+  const outE=EDGES.filter(e=>inside(e.a)&&!inside(e.b)), inE=EDGES.filter(e=>inside(e.b)&&!inside(e.a));
+  return {outE,inE};
+}
+function edgeRow(e,dir){
+  const other=dir==='out'?e.b:e.a;
+  const st=MODE==='pr'?(e.kind==='moved'?'<span class="bdg mov">déplacé</span>':e.st==='add'?'<span class="bdg new">nouveau</span>':e.st==='del'?'<span class="bdg del">retiré</span>':''):'';
+  return `<li data-id="${esc(other.id)}"><span class="faint" style="width:52px;flex:none;font-size:11px">${KIND_FR[e.kind]}</span><span class="nm">${esc(other.label)}<small>${esc(other.kind==='symbol'?fileOf(other).path:other.sub||'')}</small></span>${e.viol&&L.rules?'<span class="bdg viol">⚠</span>':''}${st}</li>`;
+}
+function renderRight(){
+  const el=$('#right');
+  if(!SEL){ el.innerHTML = MODE==='pr'?overviewHTML():exploreOverviewHTML(); return; }
+  if(SEL.type==='edge'){ el.innerHTML=edgePanel(SEL.g||AGG.get(SEL.key)); return; }
+  el.innerHTML=nodePanel(SEL.node);
+}
+function impactOf(n){
+  const adj=new Map();
+  headEdges().forEach(e=>{ if(e.kind==='http'&&!L.http) return; if(!adj.has(e.b)) adj.set(e.b,[]); adj.get(e.b).push(e.a); });
+  const seen=new Map(); let fr=[n], d=0;
+  while(fr.length&&d<8){ d++; const nx=[]; fr.forEach(f=>(adj.get(f)||[]).forEach(t=>{ if(t===n||seen.has(t)) return; seen.set(t,d); nx.push(t); })); fr=nx; }
+  return seen;
+}
+function overviewHTML(){
+  const files=ALL.filter(n=>n.kind==='file');
+  const row=(ic,t,s,id,cls='')=>`<li data-id="${esc(id)}"><span class="ico ${cls}">${ic}</span><span>${t}<small>${s}</small></span></li>`;
+  const groups=[];
+  const sigs=ALL.filter(n=>n.sig).sort((a,b)=>b.sig.breaking-a.sig.breaking);
+  if(sigs.length) groups.push(['Signatures modifiées',sigs.map(n=>{ const imp=impactOf(n), direct=[...imp.values()].filter(d=>d===1).length;
+    return row(n.sig.breaking?'💥':'≈',`<span class="mono">${esc(n.label)}</span> ${n.sig.breaking?'<span class="bdg brk">cassante</span>':'<span class="bdg new">compatible</span>'}${n.vis==='internal'?' <span class="bdg fmt">interne</span>':''}`,
+      `${esc(n.sig.why)} · ${direct} appelant(s) direct(s), ${imp.size} transitif(s)`,n.id); })]);
+  const viol=EDGES.filter(e=>e.viol&&e.violNew);
+  if(viol.length) groups.push(['Violations de règles introduites',viol.map(e=>row('⚠',`<span class="mono">${esc(e.a.label)} → ${esc(e.b.label)}</span>`,`règle « ${esc(e.viol.id)} » · ${esc(e.viol.from)} ↛ ${esc(e.viol.deny)}`,e.a.id,'viol'))]);
+  const fl=(st,ic,lbl)=>files.filter(f=>f.st===st).map(f=>row(ic,`<span class="mono">${esc(f.path)}</span>`,lbl(f),f.id));
+  const callersLeft=f=>EDGES.filter(e=>e.st!=='del'&&f.children.includes(e.b)&&!f.children.includes(e.a)).length;
+  groups.push(['Fichiers ajoutés, supprimés, déplacés',[
+    ...fl('add','＋',f=>`${f.children.length} symbole(s) exporté(s)`),
+    ...fl('del','－',f=>`${f.children.length} symbole(s) supprimé(s) · ${callersLeft(f)} appelant restant`),
+    ...fl('mov','↔',f=>'déplacé depuis '+esc(BY[f.from].path)+' · contenu identique'),
+    ...fl('fmt','≡',f=>`reformatage seul : ${f.add+f.del} lignes de diff texte, 0 changement structurel`)]]);
+  const hors=new Map();
+  sigs.filter(n=>n.sig.breaking).forEach(n=>impactOf(n).forEach((d,x)=>{ if(d===1&&!CHANGED.has(x.st)) hors.set(x,n); }));
+  if(hors.size) groups.push(['Hors du diff, appelle une signature cassante',[...hors].map(([x,src])=>row('⚡',`<span class="mono">${esc(x.label)}</span> ${x.t===false?'<span class="bdg notest">sans test</span>':'<span class="bdg test">testé</span>'}`,`non modifié par la PR · appelle ${esc(src.label)}`,x.id,'imp'))]);
+  return `<div class="sec"><h3>Changements structurels <span class="r faint">calculés depuis le graphe</span></h3>
+    ${groups.map(([t,rows])=>`<div class="sub-h">${t}</div><ul class="lst ovl" style="list-style:none;padding:0;margin:0">${rows.join('')}</ul>`).join('')}</div>
+  <div class="sec"><h3>Comment lire la carte</h3>
+    <div class="muted" style="font-size:12.5px;line-height:1.6">
+      <b style="color:var(--text)">Molette</b> pour zoomer : les boîtes s'ouvrent d'elles-mêmes (système → modules → fichiers → symboles).
+      <b style="color:var(--text)">Double-clic</b> pour plonger, <b style="color:var(--text)">clic</b> pour inspecter.
+      Les arêtes sont agrégées au niveau visible (<span class="mono">14</span> = 14 liens fins) ; les arêtes <span style="color:var(--add)">vertes animées</span> sont des couplages qui n'existaient pas.
+      <br><br>Commence par l'<b style="color:var(--text)">ordre de lecture</b> à gauche, ou appuie sur <kbd>n</kbd>.
+    </div></div>`;
+}
+function exploreOverviewHTML(){
+  const sys=TOP.filter(t=>t.kind==='system'), ext=TOP.filter(t=>t.kind==='ext'), kinds={};
+  headEdges().forEach(e=>kinds[e.kind]=(kinds[e.kind]||0)+1);
+  return `<div class="sec"><h3>Vue d'ensemble</h3><dl class="kv">
+    <dt>Détecté</dt><dd>pnpm workspaces · TypeScript</dd>
+    <dt>Packages</dt><dd>${sys.map(s=>`<a href="#" data-id="${esc(s.id)}" class="mono" style="color:var(--acc)">${esc(s.label)}</a>`).join('<br>')}</dd>
+    <dt>Externes</dt><dd>${ext.map(e=>esc(e.label)).join(', ')}</dd>
+    <dt>Fichiers</dt><dd>${ALL.filter(n=>n.kind==='file'&&!hiddenInMode(n)).length}</dd>
+    <dt>Symboles</dt><dd>${ALL.filter(n=>n.kind==='symbol'&&!hiddenInMode(n)).length}</dd>
+    <dt>Liens</dt><dd>${Object.entries(kinds).map(([k,v])=>v+' '+KIND_FR[k]).join(' · ')}</dd></dl></div>
+    <div class="sec"><h3>Par où commencer</h3><div class="muted" style="font-size:12.5px;line-height:1.6">Choisis un <b style="color:var(--text)">point d'entrée</b> à gauche (une route, une page) : la carte trace tout ce qu'il utilise, jusqu'à la base.</div></div>`;
+}
+function violCallout(e){
+  const r=e.viol, isNew=MODE==='pr'&&e.violNew;
+  return `<div class="callout ${MODE!=='pr'||isNew?'viol':'brk'}"><b>⚠ Règle « ${esc(r.id)} »${MODE==='pr'?(isNew?' · introduite par la PR':' · existait déjà sur main'):''}</b>${esc(r.description)}
+    <div class="mono" style="font-size:11.5px;margin-top:6px">${esc(pathOf(e.a))} › ${esc(e.a.label)}<br>→ ${esc(pathOf(e.b))} › ${esc(e.b.label)}</div>
+    <div class="faint mono" style="font-size:11px;margin-top:6px">from: ${esc(r.from)} · deny: ${esc(r.deny)}</div></div>`;
+}
+function nodePanel(n){
+  const pr=MODE==='pr';
+  const f=n.kind==='file'?n:fileOf(n);
+  const crumbs=ancestors(n).reverse().map(a=>`<span data-id="${esc(a.id)}">${esc(a.kind==='module'?a.label+'/':a.label)}</span>`).join('<i>/</i>');
+  const chips=[`<span class="chip">${esc(kindLabel(n))}</span>`];
+  if(n.kind==='symbol') chips.push(`<span class="chip">${n.vis==='internal'?'interne':'public'}</span>`);
+  if(pr&&n.st) chips.push(`<span class="chip ${n.st}"><i class="dot ${n.st}"></i>${ST_LABEL[n.st]}</span>`);
+  if(pr&&(n.add||n.del)) chips.push(`<span class="chip"><span class="plus">+${n.add}</span><span class="minus">−${n.del}</span></span>`);
+  if(n.kind==='symbol'&&n.t!==undefined) chips.push(n.t?`<span class="bdg test">testé</span>`:`<span class="bdg notest">sans test</span>`);
+  if(n.meta) chips.push(`<span class="chip mono">${esc(n.meta)}</span>`);
+  let html=`<div class="sec"><div class="pn-crumbs">${crumbs||'&nbsp;'}</div><div class="pn-title">${esc(n.kind==='module'?n.label+'/':n.label)}</div><div class="pn-chips">${chips.join('')}</div>`;
+  if(n.st==='mov') html+=`<div class="faint" style="margin-top:8px;font-size:12px">↔ déplacé depuis <a href="#" data-id="${esc(n.from||'web/utils/format.ts')}" style="color:var(--mov)">apps/web/utils/format.ts</a></div>`;
+  if(n.st==='movfrom'||(n.kind==='symbol'&&n.parent.st==='movfrom')) html+=`<div class="faint" style="margin-top:8px;font-size:12px">Ancien emplacement → <a href="#" data-id="shared/money/format.ts" style="color:var(--mov)">packages/shared/money/format.ts</a></div>`;
+  const tgt=seenTarget(n);
+  if(pr && tgt){
+    const seen=isSeen(tgt), what=tgt.kind==='symbol'?'ce symbole':'ce fichier';
+    html+=`<div class="actions">
+      <button class="btn ${seen?'done':''}" data-act="seen" title="Marquer ${what} comme vu">${seen?'✓ Vu':'Marquer vu'} <kbd>v</kbd></button>
+      <button class="btn pri" data-act="seen-next">Vu, suivant → <kbd>n</kbd></button>
+      ${n.kind!=='file'&&n.kind!=='symbol'?'':`<button class="btn" data-act="center" title="Centrer">⌖</button>`}</div>`;
+  } else html+=`<div class="actions"><button class="btn" data-act="center">⌖ Centrer</button>${n.children?`<button class="btn" data-act="enter">Plonger dedans</button>`:''}</div>`;
+  html+='</div>';
+
+  const io=fineIO(n);
+  const vs=L.rules?violOf(n):[];
+  if(vs.length) html+=`<div class="sec">${vs.map(violCallout).join('')}</div>`;
+
+  // signature
+  if(pr&&n.sig){
+    html+=`<div class="sec"><h3>Signature <span class="r">${n.sig.breaking?'<span class="bdg brk">cassante</span>':'<span class="bdg new">compatible</span>'} <span class="chip" style="margin-left:4px">${n.vis==='internal'?'interne':'API publique'}</span></span></h3>
+      <div class="sig"><div class="o">${esc(n.sig.before)}</div><div class="n">${esc(n.sig.after)}</div></div><div class="faint" style="font-size:11.5px;margin-top:6px">${esc(n.sig.why)}</div></div>`;
+  }
+  // conteneur : changements à l'intérieur
+  if(n.children && pr){
+    const cf=changedFiles(n).filter(x=>x!==n);
+    const syms=leaves(n).filter(isChangedLeaf);
+    if(n.kind!=='file' && cf.length) html+=`<div class="sec"><h3>Fichiers changés <span class="r faint">${cf.filter(isSeen).length}/${cf.length} vus</span></h3><ul class="lst">${cf.map(x=>`<li data-id="${esc(x.id)}"><i class="dot ${x.st}"></i><span class="nm">${esc(x.path.replace(n.path,''))}</span>${dd(x)}${isSeen(x)?'<span class="bdg seen">✓</span>':''}</li>`).join('')}</ul></div>`;
+    if(n.kind==='file' && n.st!=='fmt') html+=`<div class="sec"><h3>Symboles</h3><ul class="lst">${n.children.map(x=>`<li data-id="${esc(x.id)}"><i class="dot ${x.st||'none'}"></i><span class="ic ${x.sub}">${ICON[x.sub]}</span><span class="nm">${esc(x.label)}<small>${x.vis==='internal'?'interne':''}</small></span>${x.sig?`<span class="bdg ${x.sig.breaking?'brk':'api'}">sig.</span>`:''}${dd(x)}${isSeen(x)?'<span class="bdg seen">✓</span>':''}</li>`).join('')}</ul></div>`;
+  }
+  // impact / flux
+  if(n.kind!=='system'||true){
+    html+=`<div class="sec"><h3>${DIR==='rev'?"Rayon d'impact":'Tracé de flux'} <span class="r"><span class="mini-seg"><button data-dir="rev" class="${DIR==='rev'?'on':''}">Appelants</button><button data-dir="fwd" class="${DIR==='fwd'?'on':''}">Dépendances</button></span><label class="faint" style="font-size:11px;display:inline-flex;gap:4px;align-items:center;margin-left:8px;text-transform:none;letter-spacing:0;cursor:pointer"><input type="checkbox" data-http ${L.http?'checked':''} style="margin:0">via HTTP</label></span></h3>`;
+    if(!L.impact) html+=`<div class="faint">Calque désactivé. <a href="#" data-act="impact-on" style="color:var(--acc)">Activer</a> <kbd>i</kbd></div>`;
+    else if(!HL||!HL.size) html+=`<div class="faint">${DIR==='rev'?'Aucun appelant.':'Aucune dépendance.'}</div>`;
+    else{
+      const arr=[...HL].map(x=>({n:x,...HLDEPTH.get(x)})).sort((a,b)=>a.d-b.d);
+      const unt=arr.filter(x=>x.n.t===false).length;
+      html+=`<div style="font-size:12.5px;margin-bottom:6px"><b>${arr.length}</b> ${DIR==='rev'?'appelants transitifs':'symboles atteints'}${DIR==='rev'?` · <span style="color:${unt?'var(--del)':'var(--add)'}">${unt} sans tests</span>`:''} · ${new Set(arr.map(x=>sysOf(x.n))).size} service(s)</div><ul class="lst">`;
+      let d=0;
+      arr.forEach(x=>{
+        if(x.d!==d){ d=x.d; html+=`<li class="grp">${d===1?'Direct':'À '+d+' sauts'}</li>`; }
+        const mod=CHANGED.has(x.n.st);
+        html+=`<li data-id="${esc(x.n.id)}"><span class="nm" style="padding-left:${(x.d-1)*10}px">${esc(x.n.label)}<small>${x.kind==='http'?'via HTTP · ':''}${esc(fileOf(x.n)?fileOf(x.n).label:x.n.sub)}</small></span>${pr&&mod?`<i class="dot ${x.n.st}" title="modifié dans la PR"></i>`:pr?'<span class="bdg fmt" title="non modifié dans la PR">hors diff</span>':''}${x.n.t===false?'<span class="bdg notest">sans test</span>':x.n.t?'<span class="bdg test">testé</span>':''}</li>`;
+      });
+      html+='</ul>';
+    }
+    html+='</div>';
+  }
+  // dépendances fines
+  if(n.kind==='symbol'||n.kind==='file'){
+    const outE=io.outE.filter(e=>pr||e.st!=='del'), inE=io.inE.filter(e=>pr||e.st!=='del');
+    if(outE.length) html+=`<div class="sec"><h3>Utilise <span class="r faint">${outE.length}</span></h3><ul class="lst">${outE.map(e=>edgeRow(e,'out')).join('')}</ul></div>`;
+    if(inE.length && n.kind==='file') html+=`<div class="sec"><h3>Utilisé par <span class="r faint">${inE.length}</span></h3><ul class="lst">${inE.map(e=>edgeRow(e,'in')).join('')}</ul></div>`;
+  }
+  // métriques (exploration)
+  if(MODE==='explore'||L.risk){
+    const ls=leaves(n);
+    html+=`<div class="sec"><h3>Métriques</h3><dl class="kv">
+      <dt>Complexité</dt><dd>${n.kind==='symbol'?n.cx||1:Math.max(...ls.map(x=>x.cx||1))+' (max)'}</dd>
+      <dt>Churn 90 j</dt><dd>${n.kind==='symbol'?(n.churn||1)+' commits':ls.reduce((s,x)=>s+(x.churn||0),0)+' commits'}</dd>
+      <dt>Tests</dt><dd>${n.kind==='symbol'?(n.t===false?'aucun':'couvert'):ls.filter(x=>x.t).length+'/'+ls.length+' symboles couverts'}</dd>
+      <dt>Risque</dt><dd><span style="display:inline-block;width:80px;height:6px;border-radius:3px;background:var(--panel-2);overflow:hidden;vertical-align:middle"><i style="display:block;height:100%;width:${Math.round(n.risk*100)}%;background:var(--risk)"></i></span></dd>
+      <dt>Propriétaire</dt><dd>${esc(sysOf(n).owner||'—')}</dd></dl></div>`;
+  }
+  // code
+  if(n.kind==='symbol'||n.kind==='file'){
+    const fmt=pr&&(n.st==='fmt'||(n.parent&&n.parent.st==='fmt'));
+    html+=`<div class="sec"><h3>${pr?'Diff structurel':'Code'} <span class="r"><button class="iconbtn" data-act="wide" style="padding:1px 7px;font-size:11px">${RW_WIDE()?'⇥ réduire':'⇤ élargir'}</button></span></h3>${fmt?'<div class="faint" style="margin-bottom:8px;font-size:12px">≡ 80 lignes de diff texte masquées : seul le formatage change.</div>':''}${codeHTML(n)}</div>`;
+  }
+  return html;
+}
+function edgePanel(g){
+  if(!g) return overviewHTML();
+  const cls=edgeClass(g), live=g.fine.length-g.del-g.moved;
+  let html=`<div class="sec"><div class="pn-crumbs">arête agrégée</div><div class="pn-title" style="font-size:14px">${esc(g.a.path)}<br><span class="faint">→</span> ${esc(g.b.path)}</div>
+    <div class="pn-chips"><span class="chip">${live} lien${live>1?'s':''}</span>${[...g.kinds].map(k=>`<span class="chip">${KIND_FR[k]}</span>`).join('')}${MODE==='pr'&&g.add?`<span class="chip add">+${g.add}</span>`:''}${MODE==='pr'&&g.del?`<span class="chip del">−${g.del}</span>`:''}</div>`;
+  if(cls==='add') html+=`<div class="callout" style="background:color-mix(in srgb,var(--add) 10%,transparent);border:1px solid color-mix(in srgb,var(--add) 35%,transparent)"><b>＋ Nouveau couplage</b>Cette dépendance n'existait pas avant la PR.</div>`;
+  if(g.viol&&L.rules) html+=g.fine.filter(e=>e.viol).map(violCallout).join('');
+  html+=`</div><div class="sec"><h3>Liens fins</h3><ul class="lst">${g.fine.map(e=>`<li data-id="${esc(e.a.id)}"><span class="nm">${esc(e.a.label)} <span class="faint">→</span> ${esc(e.b.label)}<small>${KIND_FR[e.kind]}</small></span>${MODE==='pr'?(e.kind==='moved'?'<span class="bdg mov">déplacé</span>':e.st==='add'?'<span class="bdg new">nouveau</span>':e.st==='del'?'<span class="bdg del">retiré</span>':''):''}${e.viol&&L.rules?'<span class="bdg viol">⚠</span>':''}</li>`).join('')}</ul></div>`;
+  return html;
+}
+$('#right').addEventListener('click',e=>{
+  const act=e.target.closest('[data-act]');
+  if(act){ e.preventDefault();
+    const n=SEL&&SEL.node; const t=n&&seenTarget(n);
+    if(act.dataset.act==='seen'&&t) toggleSeen(t.id);
+    if(act.dataset.act==='seen-next'&&t){ if(!isSeen(t)) toggleSeen(t.id); nextFile(1); }
+    if(act.dataset.act==='center'&&n) focusNode(n,{select:false});
+    if(act.dataset.act==='enter'&&n) fitRect(n,60,2);
+    if(act.dataset.act==='impact-on'){ L.impact=true; refresh(); }
+    if(act.dataset.act==='wide'){ toggleWide(); renderRight(); }
+    return; }
+  const hc=e.target.closest('[data-http]'); if(hc){ L.http=hc.checked; refresh(); return; }
+  const d=e.target.closest('[data-dir]'); if(d){ DIR=d.dataset.dir; refresh(); return; }
+  const it=e.target.closest('[data-id]'); if(it){ e.preventDefault(); const n=BY[it.dataset.id]; if(n){ if(n.kind==='system'||n.kind==='module'){ SEL={type:'node',node:n}; refresh(); fitRect(n,60,1.4);} else focusNode(n);} }
+});
+
+/* =====================================================================
+   RELECTURE : vu / suivant
+   ===================================================================== */
+// cible du « vu » : le symbole en mode symbole, sinon son fichier
+function seenTarget(n){
+  if(!n||MODE!=='pr') return null;
+  if(READ_MODE==='symbol'&&n.kind==='symbol'&&chSyms(n.parent).includes(n)) return n;
+  const f=n.kind==='file'?n:n.kind==='symbol'?fileOf(n):null;
+  return f&&chSyms(f).length?f:null;
+}
+function toggleSeen(id){
+  const n=BY[id]; setSeen(n,!isSeen(n));
+  ver++; render(); renderSide(); renderRight();
+  if(READING.every(r=>isSeen(BY[r.f]))) toast('🎉 Tout le diff de la PR a été vu');
+}
+function nextFile(dir){
+  const items=readItems(); if(!items.length) return;
+  const cur=curItem(items); let i=cur?items.indexOf(cur):-1;
+  for(let k=0;k<items.length;k++){
+    i=(i+dir+items.length)%items.length;
+    if(dir<0||!isSeen(items[i].n)||k===items.length-1){ if(items[i].c) CF=items[i].c; focusNode(items[i].n); return; }
+  }
+}
+
+/* =====================================================================
+   RECHERCHE, CLAVIER, DIVERS
+   ===================================================================== */
+const q=$('#q'), sres=$('#sres'); let sIdx=0, sList=[];
+q.addEventListener('input',()=>{
+  const v=q.value.trim().toLowerCase();
+  if(!v){ sres.style.display='none'; return; }
+  sList=ALL.filter(n=>!hiddenInMode(n)&&(n.label.toLowerCase().includes(v)||(n.meta||'').toLowerCase().includes(v))).slice(0,8); sIdx=0;
+  sres.innerHTML=sList.map((n,i)=>`<div data-i="${i}" class="${i===0?'on':''}">${n.kind==='symbol'?`<span class="ic ${n.sub}">${ICON[n.sub]}</span>`:`<i class="dot ${MODE==='pr'?(n.st||'none'):'none'}"></i>`}<span class="mono">${esc(n.label)}</span><small>${esc(n.path)}</small></div>`).join('')||'<div class="faint">Aucun résultat</div>';
+  sres.style.display='block';
+});
+q.addEventListener('keydown',e=>{
+  if(e.key==='ArrowDown'||e.key==='ArrowUp'){ e.preventDefault(); sIdx=(sIdx+(e.key==='ArrowDown'?1:-1)+sList.length)%sList.length; [...sres.children].forEach((c,i)=>c.classList.toggle('on',i===sIdx)); }
+  if(e.key==='Enter'&&sList[sIdx]){ pick(sList[sIdx]); }
+  if(e.key==='Escape'){ q.value=''; sres.style.display='none'; q.blur(); }
+});
+sres.addEventListener('mousedown',e=>{ const d=e.target.closest('[data-i]'); if(d) pick(sList[+d.dataset.i]); });
+q.addEventListener('blur',()=>setTimeout(()=>sres.style.display='none',150));
+function pick(n){ q.value=''; sres.style.display='none'; q.blur(); if(n.children&&n.kind!=='file'){ SEL={type:'node',node:n}; refresh(); fitRect(n,60,1.4);} else focusNode(n); }
+
+window.addEventListener('keydown',e=>{
+  if(e.target.matches('input,select,textarea')) return;
+  const k=e.key;
+  if(k==='/'){ e.preventDefault(); q.focus(); }
+  else if(k==='?'){ $('#help').classList.toggle('on'); }
+  else if(k==='Escape'){
+    if($('#help').classList.contains('on')){ $('#help').classList.remove('on'); return; }
+    if(SEL&&SEL.type==='node'&&SEL.node.parent){ const p=SEL.node.parent; SEL={type:'node',node:p}; refresh(); if(p.kind!=='file') fitRect(p,60,1.4); }
+    else if(SEL){ SEL=null; refresh(); }
+    else fitAll();
+  }
+  else if(k==='0') fitAll();
+  else if('123'.includes(k)&&k.length===1) goLevel(+k);
+  else if(MODE==='pr'&&(k==='n'||k==='j')) nextFile(1);
+  else if(MODE==='pr'&&(k==='p'||k==='k')) nextFile(-1);
+  else if(MODE==='pr'&&k==='v'){ const t=SEL&&seenTarget(SEL.node); if(t) toggleSeen(t.id); }
+  else if(k==='i'){ L.impact=!L.impact; refresh(); toast(L.impact?'Rayon d\'impact activé':'Rayon d\'impact désactivé'); }
+  else if(k==='f'&&MODE==='pr'){ L.focus=!L.focus; refresh(); toast(L.focus?'Focus PR : le changé + 1 saut':'Focus PR désactivé'); }
+});
+$('#helpbtn').onclick=()=>$('#help').classList.add('on');
+$('#help').onclick=e=>{ if(e.target.id==='help') $('#help').classList.remove('on'); };
+$('#refsel').onchange=e=>{ if(e.target.value!=='pr'){ toast('Maquette : seul le diff de la PR #142 est simulé'); e.target.value='pr'; } };
+let tt; function toast(m){ const t=$('#toast'); t.textContent=m; t.classList.add('on'); clearTimeout(tt); tt=setTimeout(()=>t.classList.remove('on'),2200); }
+let RW_WIDE=()=>false, toggleWide=()=>{};
+(function(){
+  const main=document.querySelector('.main');
+  const get=(k,d)=>{ try{ return +localStorage.getItem(k)||d; }catch(e){ return d; } };
+  const set=(k,v)=>{ try{ localStorage.setItem(k,v); }catch(e){} };
+  let lw=get('relief.lw',300), rw=get('relief.rw',430);
+  // lw/rw = préférence de l'utilisateur ; on ne fait que la borner à l'affichage
+  const apply=()=>{ const W=window.innerWidth; const l=Math.round(Math.max(180,Math.min(lw,W*0.4))), r=Math.round(Math.max(260,Math.min(rw,W-l-280)));
+    main.style.setProperty('--lw',l+'px'); main.style.setProperty('--rw',r+'px'); };
+  apply();
+  const handle=(el,side)=>{
+    el.addEventListener('mousedown',e=>{ e.preventDefault(); el.classList.add('on'); document.body.classList.add('resizing');
+      const mv=ev=>{ const W=window.innerWidth; if(side==='l') lw=Math.max(180,Math.min(ev.clientX,W*0.4)); else rw=Math.max(260,Math.min(W-ev.clientX,W*0.7)); apply(); };
+      const up=()=>{ el.classList.remove('on'); document.body.classList.remove('resizing'); window.removeEventListener('mousemove',mv); window.removeEventListener('mouseup',up); set('relief.lw',lw); set('relief.rw',rw); };
+      window.addEventListener('mousemove',mv); window.addEventListener('mouseup',up); });
+    el.addEventListener('dblclick',()=>{ if(side==='l') lw=300; else rw=430; apply(); set('relief.lw',lw); set('relief.rw',rw); });
+  };
+  handle($('#rzL'),'l'); handle($('#rzR'),'r');
+  RW_WIDE=()=>rw>=window.innerWidth*0.45;
+  toggleWide=()=>{ rw=RW_WIDE()?430:Math.round(window.innerWidth*0.55); apply(); set('relief.rw',rw); };
+  window.addEventListener('resize',apply);
+})();
+function initView(){
+  const W=map.clientWidth,H=map.clientHeight, s=fitScale();
+  V.s=s; V.tx=W/2-(WORLD.x+WORLD.w/2)*s; V.ty=H/2-(WORLD.y+WORLD.h/2)*s;
+}
+let lastW=0,lastH=0,interacted=false;
+['wheel','mousedown','keydown'].forEach(t=>window.addEventListener(t,()=>{interacted=true;},{capture:true}));
+new ResizeObserver(()=>{
+  const W=map.clientWidth,H=map.clientHeight; if(!W||!H) return;
+  if(!lastW||V.s<=0||!interacted) initView();
+  else { V.tx+=(W-lastW)/2; V.ty+=(H-lastH)/2; }
+  lastW=W; lastH=H; ver++; render();
+}).observe(map);
+
+// init
+initView(); refresh();
+setTimeout(()=>toast('Molette pour zoomer · double-clic pour plonger · ? pour les raccourcis'),400);
+</script>
+</body>
+</html>

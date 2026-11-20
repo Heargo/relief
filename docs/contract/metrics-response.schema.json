@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MetricsResponse",
+  "description": "Response of the `metrics` command: the metrics of the files and symbols of a ref, kept apart\nfrom the snapshot (the churn depends on a window of time).",
+  "type": "object",
+  "properties": {
+    "nodes": {
+      "description": "Node id to its metrics.",
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/Metrics"
+      }
+    },
+    "sinceDays": {
+      "description": "Length of the churn window, in days before the date of the commit.",
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0
+    }
+  },
+  "required": [
+    "sinceDays",
+    "nodes"
+  ],
+  "$defs": {
+    "Metrics": {
+      "type": "object",
+      "properties": {
+        "churn": {
+          "description": "Commits of the window that touch the file or the lines of the symbol.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        },
+        "complexity": {
+          "description": "Cyclomatic complexity.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        },
+        "loc": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "owner": {
+          "description": "Majority author of those commits.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "tested": {
+          "description": "A test file or symbol links to the node.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "loc"
+      ]
+    }
+  }
+}

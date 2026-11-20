@@ -1,0 +1,36 @@
+:host {
+  display: block;
+  margin-bottom: 8px;
+}
+
+.ends {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+
+  button {
+    color: var(--relief-fg);
+    font-size: 12px;
+  }
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.chip {
+  padding: 1px 8px;
+  border: 1px solid var(--relief-line);
+  border-radius: 10px;
+  color: var(--relief-muted);
+  font-size: 11px;
+
+  &.added {
+    border-color: var(--relief-add);
+    color: var(--relief-add);
+  }
+}

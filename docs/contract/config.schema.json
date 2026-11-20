@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Config",
+  "description": "The content of `relief.config.yaml`.",
+  "type": "object",
+  "properties": {
+    "co_change": {
+      "description": "Settings of the co-change layer.",
+      "$ref": "#/$defs/CoChangeConfig"
+    },
+    "exclude": {
+      "description": "Globs of the files left out of the graph.",
+      "type": "array",
+      "default": [],
+      "items": {
+        "type": "string"
+      }
+    },
+    "rules": {
+      "description": "The architecture rules.",
+      "type": "array",
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/Rule"
+      }
+    }
+  },
+  "$defs": {
+    "CoChangeConfig": {
+      "description": "The `co_change:` section of `relief.config.yaml`.",
+      "type": "object",
+      "properties": {
+        "min_commits": {
+          "description": "Fewest common commits for two files to be linked (2 by default).",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "default": null,
+          "minimum": 0
+        }
+      }
+    },
+    "EdgeKind": {
+      "description": "Kind of relation between two nodes.",
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": [
+            "imports",
+            "calls",
+            "references",
+            "renders",
+            "extends",
+            "implements",
+            "http",
+            "depends_on"
+          ]
+        },
+        {
+          "description": "Files that change in the same commits (git history, not the code).",
+          "type": "string",
+          "const": "co_change"
+        }
+      ]
+    },
+    "Rule": {
+      "description": "One architecture rule: files matching `from` must not reach `deny`.",
+      "type": "object",
+      "properties": {
+        "deny": {
+          "description": "Glob of the files `from` must not depend on.",
+          "type": "string"
+        },
+        "description": {
+          "description": "Why the rule exists.",
+          "type": "string",
+          "default": ""
+        },
+        "from": {
+          "description": "Glob of the files the rule applies to.",
+          "type": "string"
+        },
+        "id": {
+          "description": "Unique identifier of the rule.",
+          "type": "string"
+        },
+        "kinds": {
+          "description": "Kinds of edges the rule looks at (imports, calls, references, renders by default).",
+          "type": "array",
+          "default": [
+            "imports",
+            "calls",
+            "references",
+            "renders"
+          ],
+          "items": {
+            "$ref": "#/$defs/EdgeKind"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "from",
+        "deny"
+      ]
+    }
+  }
+}

@@ -1,0 +1,63 @@
+:host {
+  display: block;
+  margin-top: 12px;
+}
+
+.state {
+  color: var(--relief-muted);
+  font-size: 12px;
+}
+
+h5,
+h6 {
+  margin: 8px 0 4px;
+  font-size: 12px;
+}
+
+.count {
+  margin-left: 6px;
+  color: var(--relief-muted);
+  font-size: 11px;
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  width: 100%;
+  padding: 2px 4px;
+  border: 0;
+  background: transparent;
+  color: var(--relief-fg);
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--relief-line);
+  }
+}
+
+.line {
+  min-width: 2.5em;
+  color: var(--relief-muted);
+  text-align: right;
+}
+
+.snippet {
+  flex: 1;
+  white-space: pre;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+mark {
+  background: var(--relief-line);
+  color: inherit;
+  font-weight: 600;
+}
+
+.enclosing {
+  color: var(--relief-muted);
+  font-size: 11px;
+}

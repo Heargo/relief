@@ -1,0 +1,40 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "relief",
+  "version": "0.1.0",
+  "identifier": "dev.relief.app",
+  "build": {
+    "frontendDist": "../../ui/dist/relief/browser",
+    "devUrl": "http://localhost:4200",
+    "beforeDevCommand": "",
+    "beforeBuildCommand": ""
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "relief",
+        "width": 1440,
+        "height": 900
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; connect-src 'self' ipc: http://ipc.localhost; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["deb", "appimage"],
+    "icon": ["icons/icon.png"],
+    "shortDescription": "Zoomable map of a git repository with the diff overlaid",
+    "longDescription": "relief shows a git repository as a zoomable map (system, modules, files, symbols) with the diff overlaid, to review pull requests and understand an unfamiliar repo.",
+    "category": "DeveloperTool",
+    "license": "MIT",
+    "publisher": "relief",
+    "linux": {
+      "deb": {
+        "depends": ["libwebkit2gtk-4.1-0"]
+      }
+    }
+  }
+}

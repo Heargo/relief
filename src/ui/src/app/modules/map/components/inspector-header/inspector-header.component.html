@@ -1,0 +1,24 @@
+<header class="inspector-header">
+  <span class="badge" [class]="kind()" data-testid="inspector-badge" [attr.data-kind]="kind()">
+    @if (kind() === 'node') {
+      <i class="pi pi-box" aria-hidden="true"></i>
+    } @else if (kind() === 'edge') {
+      <i class="pi pi-link" aria-hidden="true"></i>
+    }
+    {{ 'map.inspector.' + kind() | translate }}
+  </span>
+  @if (subtitle()) {
+    <span class="subtitle" data-testid="inspector-subtitle">{{ subtitle() }}</span>
+  }
+  @if (kind() !== 'none') {
+    <button
+      type="button"
+      class="close iconbtn"
+      data-testid="inspector-close"
+      [attr.aria-label]="'map.edges.close' | translate"
+      (click)="close.emit()"
+    >
+      ✕
+    </button>
+  }
+</header>

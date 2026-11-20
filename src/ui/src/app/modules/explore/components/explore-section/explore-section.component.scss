@@ -1,0 +1,31 @@
+.entry-points,
+.overview {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  h4,
+  p {
+    margin: 0;
+  }
+
+  h4 {
+    margin-top: 4px;
+    color: var(--relief-muted);
+    font-size: 0.85em;
+  }
+
+  button {
+    cursor: pointer;
+    padding: 3px 8px;
+    border: 1px solid var(--relief-line);
+    border-radius: 6px;
+    background: transparent;
+    color: inherit;
+    text-align: left;
+  }
+
+  .hint {
+    color: var(--relief-muted);
+  }
+}

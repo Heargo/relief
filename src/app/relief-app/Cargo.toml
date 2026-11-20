@@ -1,0 +1,29 @@
+[package]
+name = "relief-app"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+relief-adapter-api = { path = "../../analysis/relief-adapter-api" }
+relief-diff = { path = "../../domain/relief-diff" }
+relief-git = { path = "../../analysis/relief-git" }
+relief-index = { path = "../../analysis/relief-index" }
+relief-model = { path = "../../domain/relief-model" }
+relief-rules = { path = "../../domain/relief-rules" }
+schemars = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+
+[dev-dependencies]
+relief-detect = { path = "../../analysis/relief-detect" }
+relief-fixtures = { path = "../../../tests/relief-fixtures" }
+relief-lang-ts = { path = "../../analysis/lang/relief-lang-ts" }
+relief-lang-python = { path = "../../analysis/lang/relief-lang-python" }
+insta = { version = "1", features = ["json"] }
+tempfile = "3"
+
+[lints]
+workspace = true

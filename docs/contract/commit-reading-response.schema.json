@@ -1,0 +1,179 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CommitReadingResponse",
+  "description": "Response of the `commit_reading` command: the commits, oldest first.",
+  "type": "object",
+  "properties": {
+    "commits": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/CommitReadingEntry"
+      }
+    }
+  },
+  "required": [
+    "commits"
+  ],
+  "$defs": {
+    "CommitReadingEntry": {
+      "description": "The reading list of one commit of a range.",
+      "type": "object",
+      "properties": {
+        "commit": {
+          "description": "Full sha.",
+          "type": "string"
+        },
+        "files": {
+          "description": "Files with a structural change, in reading order.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ReadingItem"
+          }
+        },
+        "message": {
+          "description": "First line of the message.",
+          "type": "string"
+        },
+        "otherFiles": {
+          "description": "Files of the commit without a structural change.",
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        },
+        "short": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "commit",
+        "short",
+        "message",
+        "files",
+        "otherFiles"
+      ]
+    },
+    "NodeId": {
+      "type": "string"
+    },
+    "ReadingItem": {
+      "description": "A file or symbol to read, with the reasons to read it.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/NodeId"
+        },
+        "reasons": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ReadingReason"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "reasons"
+      ]
+    },
+    "ReadingReason": {
+      "description": "Why a file or symbol is on the reading list.",
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "breakingSignature"
+            }
+          },
+          "required": [
+            "kind"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "modifiedSignature"
+            }
+          },
+          "required": [
+            "kind"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "violation"
+            }
+          },
+          "required": [
+            "kind"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "new"
+            }
+          },
+          "required": [
+            "kind"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "removed"
+            }
+          },
+          "required": [
+            "kind"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "movedIdentical"
+            }
+          },
+          "required": [
+            "kind"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "added": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            },
+            "kind": {
+              "type": "string",
+              "const": "lines"
+            },
+            "removed": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "kind",
+            "added",
+            "removed"
+          ]
+        }
+      ]
+    }
+  }
+}

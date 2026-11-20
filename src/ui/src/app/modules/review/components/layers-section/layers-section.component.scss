@@ -1,0 +1,32 @@
+.tog {
+  width: 100%;
+  border: 0;
+  background: none;
+  color: var(--relief-fg);
+  font: inherit;
+  text-align: left;
+}
+
+.what {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  min-width: 0;
+}
+
+.what > span {
+  flex: 1;
+}
+
+kbd {
+  margin-left: auto;
+  padding: 0 4px;
+  border: 1px solid var(--relief-line-2);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  background: var(--relief-panel-2);
+  color: var(--relief-muted);
+  font:
+    11px ui-monospace,
+    monospace;
+}

@@ -1,0 +1,21 @@
+[package]
+name = "relief-bench"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+relief-app = { path = "../../src/app/relief-app" }
+relief-detect = { path = "../../src/analysis/relief-detect" }
+relief-lang-python = { path = "../../src/analysis/lang/relief-lang-python" }
+relief-lang-ts = { path = "../../src/analysis/lang/relief-lang-ts" }
+relief-model = { path = "../../src/domain/relief-model" }
+thiserror = "2"
+
+[dev-dependencies]
+relief-fixtures = { path = "../relief-fixtures" }
+tempfile = "3"

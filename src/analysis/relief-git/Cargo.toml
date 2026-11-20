@@ -1,0 +1,18 @@
+[package]
+name = "relief-git"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dev-dependencies]
+relief-fixtures = { path = "../../../tests/relief-fixtures" }
+tempfile = "3"
+insta = "1"
+
+[dependencies]
+gix = { version = "0.90.0", features = ["revision", "blob-diff", "excludes"] }
+thiserror = "2.0.21"

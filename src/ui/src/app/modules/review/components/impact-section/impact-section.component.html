@@ -1,0 +1,64 @@
+<section class="impact" data-testid="impact-section">
+  <h3>{{ 'review.impact.layer' | translate }}</h3>
+  <div class="direction seg" data-testid="impact-direction" role="group">
+    @for (value of directions; track value) {
+      <button
+        type="button"
+        [attr.data-value]="value"
+        [class.on]="direction() === value"
+        [attr.aria-pressed]="direction() === value"
+        (click)="directionChange.emit(value)"
+      >
+        {{ 'review.impact.' + value | translate }}
+      </button>
+    }
+  </div>
+  <label class="http">
+    <p-checkbox
+      binary
+      data-testid="impact-http-toggle"
+      [ngModel]="followHttp()"
+      (onChange)="followHttpChange.emit($event.checked)"
+    />
+    {{ 'review.impact.viaHttp' | translate }}
+  </label>
+  <p class="count" data-testid="impact-count">
+    {{
+      plural(
+        direction() === 'callers'
+          ? 'review.impact.transitiveCallers'
+          : 'review.impact.transitiveDeps',
+        total()
+      )
+    }}
+    · {{ plural('review.impact.withoutTests', untested()) }} ·
+    {{ plural('review.impact.services', services()) }}
+  </p>
+  @for (group of groups(); track group.depth) {
+    <div class="group" data-testid="impact-group" [attr.data-depth]="group.depth">
+      <h4>{{ depthLabel(group.depth) }}</h4>
+      <ul>
+        @for (row of group.nodes; track row.node) {
+          <li
+            data-testid="impact-row"
+            [attr.data-http]="row.kind === 'http'"
+            [attr.data-out-of-diff]="row.outOfDiff"
+            [attr.data-tested]="row.tested"
+            (click)="nodeSelect.emit(row.node)"
+          >
+            <code>{{ label(row.node) }}</code>
+            @if (row.kind === 'http') {
+              <span class="tag">{{ 'review.impact.http' | translate }}</span>
+            }
+            @if (row.outOfDiff) {
+              <span class="tag">{{ 'review.impact.outOfDiff' | translate }}</span>
+            }
+            <span class="tag" [class.warn]="!row.tested">{{
+              (row.tested ? 'review.impact.tested' : 'review.impact.untested') | translate
+            }}</span>
+          </li>
+        }
+      </ul>
+    </div>
+  }
+</section>

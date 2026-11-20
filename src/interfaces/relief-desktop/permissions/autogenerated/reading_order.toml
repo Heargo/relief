@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-reading-order"
+description = "Enables the reading_order command without any pre-configured scope."
+commands.allow = ["reading_order"]
+
+[[permission]]
+identifier = "deny-reading-order"
+description = "Denies the reading_order command without any pre-configured scope."
+commands.deny = ["reading_order"]

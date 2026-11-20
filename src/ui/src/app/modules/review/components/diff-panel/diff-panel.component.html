@@ -1,0 +1,87 @@
+<section class="diff-panel" data-testid="diff-panel">
+  <header class="head">
+    <h4>{{ 'review.diffPanel.title' | translate }}</h4>
+    <button
+      pButton
+      type="button"
+      size="small"
+      severity="secondary"
+      [text]="true"
+      data-testid="diff-expand"
+      [attr.aria-pressed]="wide()"
+      (click)="toggleWide.emit()"
+    >
+      {{ (wide() ? 'review.diffPanel.collapse' : 'review.diffPanel.expand') | translate }}
+    </button>
+  </header>
+  @if (panel.error(); as error) {
+    <p class="state error" data-testid="diff-error">{{ error }}</p>
+  }
+  @if (hiddenLines(); as count) {
+    @if (textHidden()) {
+      <p class="format-only" data-testid="diff-format-only">
+        {{
+          (count === 1
+            ? 'review.diffPanel.formatOnlyHidden_one'
+            : 'review.diffPanel.formatOnlyHidden'
+          ) | translate: { count }
+        }}
+      </p>
+      <button
+        pButton
+        type="button"
+        size="small"
+        severity="secondary"
+        [text]="true"
+        data-testid="diff-show-anyway"
+        (click)="shownAnyway.set(true)"
+      >
+        {{ 'review.diffPanel.showAnyway' | translate }}
+      </button>
+    }
+  }
+  @if (!textHidden()) {
+    @for (block of blocks(); track block.nodeId) {
+      <article
+        class="block"
+        data-testid="diff-block"
+        [attr.data-node-id]="block.nodeId"
+        [attr.data-status]="block.status"
+      >
+        @if (blocks().length > 1) {
+          <h5 class="symbol">{{ block.nodeId }}</h5>
+        }
+        @if (block.signature; as signature) {
+          <div class="signature" data-testid="diff-signature">
+            <code class="before" data-testid="signature-before">{{ signature.before }}</code>
+            <code class="after" data-testid="signature-after">{{ signature.after }}</code>
+            <p>
+              <span
+                class="badge"
+                data-testid="signature-badge"
+                [attr.data-breaking]="signature.breaking"
+              >
+                {{
+                  (signature.breaking ? 'review.diffPanel.breaking' : 'review.diffPanel.compatible')
+                    | translate
+                }}
+              </span>
+              @if (block.reason; as reason) {
+                <span class="reason" data-testid="signature-reason">{{
+                  reason.key | translate: reason.params
+                }}</span>
+              }
+              <span class="visibility" data-testid="signature-visibility">{{
+                (signature.internal ? 'review.diffPanel.internal' : 'review.diffPanel.publicApi')
+                  | translate
+              }}</span>
+            </p>
+          </div>
+        }
+        <pre
+          class="lines"
+        ><code>@for (line of block.lines; track $index) {<span class="line" data-testid="diff-line" [attr.data-kind]="line.kind" [attr.data-old-line]="line.oldLine" [attr.data-new-line]="line.newLine"><span class="g">{{ line.oldLine }}</span><span class="g">{{ line.newLine }}</span><span class="mark">{{ line.kind === 'added' ? '+' : line.kind === 'removed' ? '-' : ' ' }}</span><span class="t" data-testid="diff-line-text">{{ line.text }}</span></span>}</code></pre>
+      </article>
+    }
+  }
+</section>

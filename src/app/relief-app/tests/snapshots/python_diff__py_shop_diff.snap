@@ -1,0 +1,110 @@
+---
+source: src/app/relief-app/tests/python_diff.rs
+expression: diff()
+---
+{
+  "diff": {
+    "base": "d45a2a625d804329673a05a7a989663d55baa7d4",
+    "edges": [
+      {
+        "commit": null,
+        "from": "pkg:py-shop/shop::file:shop/app.py",
+        "kind": "imports",
+        "status": "moved",
+        "to": "pkg:py-shop/shop/money::file:shop/money/format.py::sym:format_price"
+      },
+      {
+        "commit": null,
+        "from": "pkg:py-shop/shop::file:shop/app.py::sym:invoice",
+        "kind": "calls",
+        "status": "moved",
+        "to": "pkg:py-shop/shop/money::file:shop/money/format.py::sym:format_price"
+      }
+    ],
+    "files": [
+      {
+        "linesAdded": 1,
+        "linesRemoved": 1,
+        "path": "shop/app.py"
+      },
+      {
+        "linesAdded": 1,
+        "linesRemoved": 1,
+        "path": "shop/billing/invoice.py"
+      },
+      {
+        "linesAdded": 0,
+        "linesRemoved": 0,
+        "path": "shop/money/__init__.py"
+      },
+      {
+        "linesAdded": 0,
+        "linesRemoved": 0,
+        "path": "shop/money/format.py"
+      }
+    ],
+    "head": "e6f2dc02d0a023f152d6f0189e269f2eea3fc838",
+    "nodes": [
+      {
+        "id": "pkg:py-shop/shop/money",
+        "linesAdded": 0,
+        "linesRemoved": 0,
+        "status": "added"
+      },
+      {
+        "id": "pkg:py-shop/shop/money::file:shop/money/__init__.py",
+        "linesAdded": 0,
+        "linesRemoved": 0,
+        "status": "added"
+      },
+      {
+        "id": "pkg:py-shop/shop/money::file:shop/money/format.py",
+        "linesAdded": 0,
+        "linesRemoved": 0,
+        "status": "added"
+      },
+      {
+        "body": true,
+        "id": "pkg:py-shop/shop/billing::file:shop/billing/invoice.py::sym:compute_total",
+        "linesAdded": 0,
+        "linesRemoved": 0,
+        "signature": {
+          "after": "def compute_total(lines: list[Line], currency: str, tax: float = 0.2) -> float",
+          "before": "def compute_total(lines: list[Line], tax: float = 0.2) -> float",
+          "breaking": true,
+          "internal": false,
+          "reason": {
+            "code": "paramRequiredAdded",
+            "param": "currency"
+          }
+        },
+        "status": "modified"
+      },
+      {
+        "body": false,
+        "from": "pkg:py-shop/shop/util::file:shop/util/format.py::sym:format_price",
+        "id": "pkg:py-shop/shop/money::file:shop/money/format.py::sym:format_price",
+        "linesAdded": 0,
+        "linesRemoved": 0,
+        "status": "moved"
+      },
+      {
+        "id": "pkg:py-shop/shop/util::file:shop/util/format.py",
+        "linesAdded": 0,
+        "linesRemoved": 0,
+        "status": "removed"
+      }
+    ]
+  },
+  "formatOnly": {
+    "files": 0,
+    "linesAdded": 0,
+    "linesRemoved": 0
+  },
+  "renames": [
+    {
+      "from": "shop/util/format.py",
+      "to": "shop/money/format.py"
+    }
+  ]
+}

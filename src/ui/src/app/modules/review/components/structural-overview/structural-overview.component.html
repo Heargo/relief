@@ -1,0 +1,133 @@
+<div class="overview" data-testid="structural-overview">
+  <h3>{{ 'review.overview.title' | translate }}</h3>
+
+  @if (summary().signatures.length > 0) {
+    <section data-testid="overview-group" data-group="signatures">
+      <h4>{{ 'review.overview.signatures' | translate }}</h4>
+      <ul>
+        @for (sig of summary().signatures; track sig.node) {
+          <li>
+            <button
+              type="button"
+              data-testid="overview-row"
+              [attr.data-node-id]="sig.node"
+              (click)="select(sig.node)"
+            >
+              <code>{{ label(sig.node) }}</code>
+              <span class="chip" [class.breaking]="sig.breaking">
+                {{
+                  (sig.breaking ? 'review.overview.breaking' : 'review.overview.compatible')
+                    | translate
+                }}
+              </span>
+              <span class="hint">
+                {{ plural('review.overview.direct', sig.directCallers) }}
+                ·
+                {{ plural('review.overview.transitive', sig.transitiveCallers) }}
+              </span>
+            </button>
+          </li>
+        }
+      </ul>
+    </section>
+  }
+
+  @if (violations().introduced.length > 0) {
+    <section data-testid="overview-group" data-group="violations">
+      <h4>{{ 'review.overview.violations' | translate }}</h4>
+      <ul>
+        @for (violation of violations().introduced; track $index) {
+          <li>
+            <button
+              type="button"
+              data-testid="overview-row"
+              [attr.data-node-id]="violation.edge.from"
+              (click)="select(violation.edge.from)"
+            >
+              <code>{{ label(violation.edge.from) }}</code>
+              <span class="hint">{{ violation.rule }}</span>
+            </button>
+          </li>
+        }
+      </ul>
+    </section>
+  }
+
+  @if (violations().existing.length > 0) {
+    <section class="quiet" data-testid="overview-group" data-group="existing-violations">
+      <h4>{{ 'rules.overviewExisting' | translate }}</h4>
+      <ul>
+        @for (violation of violations().existing; track $index) {
+          <li>
+            <button
+              type="button"
+              data-testid="overview-row"
+              [attr.data-node-id]="violation.edge.from"
+              (click)="select(violation.edge.from)"
+            >
+              <code>{{ label(violation.edge.from) }}</code>
+              <span class="hint">{{ violation.rule }}</span>
+            </button>
+          </li>
+        }
+      </ul>
+    </section>
+  }
+
+  @if (fileRows().length > 0) {
+    <section data-testid="overview-group" data-group="files">
+      <h4>{{ 'review.overview.files' | translate }}</h4>
+      <ul>
+        @for (file of fileRows(); track file.kind + file.path) {
+          <li>
+            <button
+              type="button"
+              data-testid="overview-row"
+              [attr.data-path]="file.path"
+              [attr.data-kind]="file.kind"
+              (click)="select(file.nodeId)"
+            >
+              <span class="chip">{{ 'review.overview.fileKinds.' + file.kind | translate }}</span>
+              @if (file.from) {
+                <code>{{ file.from }} → {{ file.path }}</code>
+              } @else {
+                <code>{{ file.path }}</code>
+              }
+            </button>
+          </li>
+        }
+      </ul>
+    </section>
+  }
+
+  @if (summary().outOfDiff.length > 0) {
+    <section data-testid="overview-group" data-group="out-of-diff">
+      <h4>{{ 'review.overview.outOfDiff' | translate }}</h4>
+      <ul>
+        @for (caller of summary().outOfDiff; track caller.node) {
+          <li>
+            <button
+              type="button"
+              data-testid="overview-row"
+              [attr.data-node-id]="caller.node"
+              (click)="select(caller.node)"
+            >
+              <code>{{ label(caller.node) }}</code>
+              <span
+                class="chip"
+                [class.tested]="caller.tested"
+                data-testid="tested-badge"
+                [attr.data-tested]="caller.tested"
+              >
+                {{
+                  (caller.tested ? 'review.overview.tested' : 'review.overview.untested')
+                    | translate
+                }}
+              </span>
+            </button>
+          </li>
+        }
+      </ul>
+    </section>
+  }
+</div>

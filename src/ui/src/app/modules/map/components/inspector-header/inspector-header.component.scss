@@ -1,0 +1,45 @@
+.inspector-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 44px 8px 14px;
+  border-bottom: 1px solid var(--relief-line);
+  background: var(--relief-panel);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  border: 1px solid currentcolor;
+  font-size: 11px;
+  font-weight: 600;
+
+  &.none {
+    color: var(--relief-muted);
+  }
+
+  &.node {
+    color: var(--relief-accent);
+  }
+
+  &.edge {
+    color: var(--relief-impact);
+  }
+}
+
+.subtitle {
+  color: var(--relief-muted);
+  font-size: 12px;
+}
+
+button.close {
+  margin-left: auto;
+  padding: 1px 7px;
+  font-size: 11px;
+}

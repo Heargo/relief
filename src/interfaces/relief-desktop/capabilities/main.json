@@ -1,0 +1,25 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "main",
+  "description": "The relief window: only relief's own commands, no plugin.",
+  "windows": ["main"],
+  "permissions": [
+    "allow-meta",
+    "allow-snapshot",
+    "allow-diff",
+    "allow-search",
+    "allow-review-summary",
+    "allow-rules",
+    "allow-impact",
+    "allow-code",
+    "allow-edge-usages",
+    "allow-review-state",
+    "allow-set-review-state",
+    "allow-reading-order",
+    "allow-commit-reading",
+    "allow-log",
+    "allow-metrics",
+    "allow-co-change",
+    "allow-open-docs"
+  ]
+}

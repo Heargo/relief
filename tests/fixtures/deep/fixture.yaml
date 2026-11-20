@@ -1,0 +1,6 @@
+# One commit: a repository with folders nested 4 to 6 levels deep, wide and narrow mixed, like
+# `.scratch/archived/<feature>/issues/` in the relief repository.
+commits:
+  - id: init
+    message: "feat: deeply nested folders"
+    date: "2024-01-01T10:00:00Z"

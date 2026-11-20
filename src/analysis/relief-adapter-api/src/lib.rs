@@ -1,0 +1,140 @@
+//! Contracts of the extractors: language adapters and project detectors.
+//!
+//! Both are pure: they receive bytes and a blob reader from the caller and
+//! never read git themselves.
+
+use std::collections::{BTreeMap, HashMap, HashSet};
+
+pub use relief_model::Usage;
+use relief_model::{Edge, Node, NodeId, SignatureReason, SignatureVerdict};
+
+/// A language adapter: turns one file into symbol nodes and edges.
+pub trait LanguageAdapter: Send + Sync {
+    /// Name reported in the snapshot `meta`.
+    fn name(&self) -> &str;
+    /// Version of the extraction logic; part of the cache key, bump it to invalidate.
+    fn version(&self) -> u32 {
+        1
+    }
+    /// Whether the adapter handles files of this language.
+    fn handles(&self, lang: &str) -> bool;
+    /// Symbols, edges and warnings of `file`, a node of the graph, given its bytes.
+    fn extract(&self, file: &Node, bytes: &[u8]) -> Extraction;
+    /// Second pass, once every file has been extracted: cross-file edges
+    /// (imports) and the nodes they need (external packages).
+    fn link(&self, _file: &Node, _bytes: &[u8], _ctx: &LinkContext<'_>) -> Extraction {
+        Extraction::default()
+    }
+    /// `(symbol name, normalised signature text)` of the symbols of one file
+    /// of this language, identified by its repository path; empty when the
+    /// adapter does not handle that path.
+    fn symbol_signatures(&self, _path: &str, _bytes: &[u8]) -> Vec<(String, String)> {
+        Vec::new()
+    }
+    /// `(symbol name, cyclomatic complexity)` of the symbols of one file of this language,
+    /// identified by its repository path; empty when the adapter does not handle that path.
+    /// Not part of the extraction: the index cache does not depend on it.
+    fn complexity(&self, _path: &str, _bytes: &[u8]) -> Vec<(String, u32)> {
+        Vec::new()
+    }
+    /// The references, in one file of this language, to the imported `bindings` (names as
+    /// exported by the target module), in source order. `None`: not supported by this adapter.
+    fn usages(&self, _path: &str, _bytes: &[u8], _bindings: &[String]) -> Option<Vec<Usage>> {
+        None
+    }
+    /// The references, in one file of this language, to the local names of its default and
+    /// namespace imports of the module `target` (repository path); `env` is what resolves
+    /// specifiers like the index does. `Usage::binding` is the local name. `None`: not
+    /// supported by this adapter.
+    fn module_usages(
+        &self,
+        _path: &str,
+        _bytes: &[u8],
+        _target: &str,
+        _env: &ResolveEnv<'_>,
+    ) -> Option<Vec<Usage>> {
+        None
+    }
+    /// Judges a change between two normalised signature texts of this language.
+    fn compare_signatures(&self, before: &str, after: &str) -> SignatureVerdict {
+        SignatureVerdict {
+            breaking: before != after,
+            reason: SignatureReason::Unspecified,
+            equivalent: before == after,
+        }
+    }
+}
+
+/// What an adapter needs to resolve import specifiers outside of linking.
+pub struct ResolveEnv<'a> {
+    /// Every path of the commit tree.
+    pub paths: &'a [&'a str],
+    /// Reads a blob of the commit tree by path.
+    pub read: &'a dyn Fn(&str) -> Option<Vec<u8>>,
+    /// Workspace package name to directory.
+    pub package_dirs: &'a BTreeMap<String, String>,
+}
+
+/// What an adapter may look at to link one file to the rest of the repository.
+pub struct LinkContext<'a> {
+    /// Repository path of the file being linked.
+    pub path: &'a str,
+    /// Every path of the commit tree.
+    pub paths: &'a [&'a str],
+    /// Reads a blob of the commit tree by path.
+    pub read: &'a dyn Fn(&str) -> Option<Vec<u8>>,
+    /// Workspace package name to directory.
+    pub package_dirs: &'a BTreeMap<String, String>,
+    /// File node id by repository path.
+    pub files: &'a HashMap<String, NodeId>,
+    /// Ids of every node extracted so far.
+    pub nodes: &'a HashSet<NodeId>,
+    /// Route (`"POST /checkout"`) of each route handler node.
+    pub routes: &'a HashMap<NodeId, String>,
+    /// Root node of the repository.
+    pub repo: &'a NodeId,
+}
+
+/// What an adapter extracts from one file.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Extraction {
+    pub nodes: Vec<Node>,
+    pub edges: Vec<Edge>,
+    /// One per problem (for example a file that does not parse), naming the file.
+    pub warnings: Vec<String>,
+    /// Nodes of the graph the adapter recognises as entry points of the system.
+    pub entries: Vec<EntryPoint>,
+}
+
+/// A node flagged as an entry point (`entry_type`: `route`, `page`, `job`, `script`, `main`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct EntryPoint {
+    pub node: NodeId,
+    pub entry_type: String,
+}
+
+/// Result of a project detector.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Detection {
+    /// Name of the detector (`"workspaces"`, `"generic"`...).
+    pub detector: String,
+    pub nodes: Vec<Node>,
+    pub edges: Vec<Edge>,
+    /// Non-fatal problems found while detecting.
+    pub warnings: Vec<String>,
+    /// Package name to directory, for workspace packages.
+    pub package_dirs: BTreeMap<String, String>,
+    /// Nodes the detector recognises as entry points (`script`: a `package.json` script).
+    pub entries: Vec<EntryPoint>,
+}
+
+/// A project detector: `(repo name, paths, blob reader) -> detection`.
+pub trait Detector: Send + Sync {
+    /// `None` means "this is not my kind of project".
+    fn detect(
+        &self,
+        repo_name: &str,
+        paths: &[&str],
+        read_blob: &dyn Fn(&str) -> Option<Vec<u8>>,
+    ) -> Option<Detection>;
+}

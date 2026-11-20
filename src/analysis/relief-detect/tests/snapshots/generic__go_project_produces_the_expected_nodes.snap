@@ -1,0 +1,108 @@
+---
+source: src/analysis/relief-detect/tests/generic.rs
+expression: nodes
+---
+[
+  {
+    "id": "pkg:shop-api",
+    "kind": "repo",
+    "subkind": "system",
+    "parent": null,
+    "visibility": "public",
+    "contentHash": ""
+  },
+  {
+    "id": "pkg:shop-api/cmd/server",
+    "kind": "module",
+    "subkind": "module",
+    "parent": "pkg:shop-api",
+    "visibility": "public",
+    "contentHash": ""
+  },
+  {
+    "id": "pkg:shop-api/internal",
+    "kind": "module",
+    "subkind": "module",
+    "parent": "pkg:shop-api",
+    "visibility": "public",
+    "contentHash": ""
+  },
+  {
+    "id": "pkg:shop-api/internal/billing",
+    "kind": "module",
+    "subkind": "module",
+    "parent": "pkg:shop-api/internal",
+    "visibility": "public",
+    "contentHash": ""
+  },
+  {
+    "id": "pkg:shop-api/internal/catalog",
+    "kind": "module",
+    "subkind": "module",
+    "parent": "pkg:shop-api/internal",
+    "visibility": "public",
+    "contentHash": ""
+  },
+  {
+    "id": "pkg:shop-api::file:README.md",
+    "kind": "file",
+    "subkind": "file",
+    "parent": "pkg:shop-api",
+    "lang": "md",
+    "visibility": "public",
+    "contentHash": "2753b7f212438250"
+  },
+  {
+    "id": "pkg:shop-api/cmd/server::file:cmd/server/main.go",
+    "kind": "file",
+    "subkind": "file",
+    "parent": "pkg:shop-api/cmd/server",
+    "lang": "go",
+    "visibility": "public",
+    "contentHash": "a0adda4eea6e7c8a"
+  },
+  {
+    "id": "pkg:shop-api::file:go.mod",
+    "kind": "file",
+    "subkind": "file",
+    "parent": "pkg:shop-api",
+    "visibility": "public",
+    "contentHash": "a8113d7e5dfbdf31"
+  },
+  {
+    "id": "pkg:shop-api/internal/billing::file:internal/billing/invoice.go",
+    "kind": "file",
+    "subkind": "file",
+    "parent": "pkg:shop-api/internal/billing",
+    "lang": "go",
+    "visibility": "public",
+    "contentHash": "eff4300d2e6fd51e"
+  },
+  {
+    "id": "pkg:shop-api/internal/billing::file:internal/billing/invoice_test.go",
+    "kind": "file",
+    "subkind": "file",
+    "parent": "pkg:shop-api/internal/billing",
+    "lang": "go",
+    "visibility": "public",
+    "contentHash": "eff4300d2e6fd51e"
+  },
+  {
+    "id": "pkg:shop-api/internal/catalog::file:internal/catalog/product.go",
+    "kind": "file",
+    "subkind": "file",
+    "parent": "pkg:shop-api/internal/catalog",
+    "lang": "go",
+    "visibility": "public",
+    "contentHash": "ba27d7b6cbdb9992"
+  },
+  {
+    "id": "pkg:shop-api::file:main.go",
+    "kind": "file",
+    "subkind": "file",
+    "parent": "pkg:shop-api",
+    "lang": "go",
+    "visibility": "public",
+    "contentHash": "a0adda4eea6e7c8a"
+  }
+]

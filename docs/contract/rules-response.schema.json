@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RulesResponse",
+  "description": "The rules of a repository and the text they come from.",
+  "type": "object",
+  "properties": {
+    "rules": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Rule"
+      }
+    },
+    "source": {
+      "description": "Text of `relief.config.yaml`; absent when the repository has none.",
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "rules"
+  ],
+  "$defs": {
+    "EdgeKind": {
+      "description": "Kind of relation between two nodes.",
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": [
+            "imports",
+            "calls",
+            "references",
+            "renders",
+            "extends",
+            "implements",
+            "http",
+            "depends_on"
+          ]
+        },
+        {
+          "description": "Files that change in the same commits (git history, not the code).",
+          "type": "string",
+          "const": "co_change"
+        }
+      ]
+    },
+    "Rule": {
+      "description": "One architecture rule: files matching `from` must not reach `deny`.",
+      "type": "object",
+      "properties": {
+        "deny": {
+          "description": "Glob of the files `from` must not depend on.",
+          "type": "string"
+        },
+        "description": {
+          "description": "Why the rule exists.",
+          "type": "string",
+          "default": ""
+        },
+        "from": {
+          "description": "Glob of the files the rule applies to.",
+          "type": "string"
+        },
+        "id": {
+          "description": "Unique identifier of the rule.",
+          "type": "string"
+        },
+        "kinds": {
+          "description": "Kinds of edges the rule looks at (imports, calls, references, renders by default).",
+          "type": "array",
+          "default": [
+            "imports",
+            "calls",
+            "references",
+            "renders"
+          ],
+          "items": {
+            "$ref": "#/$defs/EdgeKind"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "from",
+        "deny"
+      ]
+    }
+  }
+}

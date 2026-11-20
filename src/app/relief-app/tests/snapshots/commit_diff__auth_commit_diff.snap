@@ -1,0 +1,76 @@
+---
+source: src/app/relief-app/tests/commit_diff.rs
+expression: "serde_json::to_value(&response).unwrap()"
+---
+{
+  "diff": {
+    "base": "78cfe2941145879d4fed70c07d149fe7a306d116",
+    "edges": [
+      {
+        "commit": "53ba4be9b0192650aafc16af42160f6d016c585c",
+        "from": "pkg:@acme/api/billing::file:apps/api/billing/payment.ts",
+        "kind": "imports",
+        "status": "added",
+        "to": "pkg:@acme/shared/http::file:packages/shared/http/client.ts::sym:HttpError"
+      },
+      {
+        "commit": "53ba4be9b0192650aafc16af42160f6d016c585c",
+        "from": "pkg:@acme/api/billing::file:apps/api/billing/payment.ts::sym:chargeCustomer",
+        "kind": "references",
+        "status": "added",
+        "to": "pkg:@acme/shared/http::file:packages/shared/http/client.ts::sym:HttpError"
+      }
+    ],
+    "files": [
+      {
+        "linesAdded": 2,
+        "linesRemoved": 2,
+        "path": "apps/api/auth/session.ts"
+      },
+      {
+        "linesAdded": 2,
+        "linesRemoved": 0,
+        "path": "apps/api/billing/payment.ts"
+      }
+    ],
+    "head": "53ba4be9b0192650aafc16af42160f6d016c585c",
+    "nodes": [
+      {
+        "body": true,
+        "id": "pkg:@acme/api/auth::file:apps/api/auth/session.ts::sym:SessionStore",
+        "linesAdded": 0,
+        "linesRemoved": 0,
+        "status": "modified"
+      },
+      {
+        "body": true,
+        "id": "pkg:@acme/api/auth::file:apps/api/auth/session.ts::sym:SessionStore.refresh",
+        "linesAdded": 0,
+        "linesRemoved": 0,
+        "signature": {
+          "after": "async refresh(token: string): Promise<Session | null>",
+          "before": "async refresh(token: string): Promise<Session>",
+          "breaking": true,
+          "internal": false,
+          "reason": {
+            "code": "returnWidenedNull"
+          }
+        },
+        "status": "modified"
+      },
+      {
+        "body": true,
+        "id": "pkg:@acme/api/billing::file:apps/api/billing/payment.ts::sym:chargeCustomer",
+        "linesAdded": 0,
+        "linesRemoved": 0,
+        "status": "modified"
+      }
+    ]
+  },
+  "formatOnly": {
+    "files": 0,
+    "linesAdded": 0,
+    "linesRemoved": 0
+  },
+  "renames": []
+}

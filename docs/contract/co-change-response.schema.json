@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CoChangeResponse",
+  "description": "The pairs of files changed together; kept apart from the snapshot (it depends on the history).",
+  "type": "object",
+  "properties": {
+    "pairs": {
+      "description": "Sorted by decreasing `commits`, then by paths.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/CoChangePair"
+      }
+    }
+  },
+  "required": [
+    "pairs"
+  ],
+  "$defs": {
+    "CoChangePair": {
+      "description": "Two files changed in the same commits.",
+      "type": "object",
+      "properties": {
+        "a": {
+          "description": "Repository path of the first file (`a < b`).",
+          "type": "string"
+        },
+        "b": {
+          "description": "Repository path of the second file.",
+          "type": "string"
+        },
+        "commits": {
+          "description": "Counted commits that touch both files.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "confidence": {
+          "description": "`commits` over the commits of the most changed of the two files.",
+          "type": "number",
+          "format": "double"
+        },
+        "support": {
+          "description": "`commits` over the counted commits of the period.",
+          "type": "number",
+          "format": "double"
+        }
+      },
+      "required": [
+        "a",
+        "b",
+        "commits",
+        "support",
+        "confidence"
+      ]
+    }
+  }
+}

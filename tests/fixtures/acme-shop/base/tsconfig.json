@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "preserve",
+    "strict": true,
+    "strictNullChecks": false,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "types": [],
+    "paths": {
+      "@acme/shared/http": ["./packages/shared/http/client.ts"],
+      "@acme/shared/money": ["./packages/shared/money/format.ts"],
+      "@acme/*": ["./packages/*"]
+    }
+  },
+  "include": ["apps", "packages", "types"]
+}

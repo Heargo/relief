@@ -1,0 +1,8 @@
+# Generated: the files are written at build time, not committed (10 packages x 300 files).
+commits:
+  - id: init
+    message: "feat: generated packages"
+    date: "2024-01-01T10:00:00Z"
+    generate:
+      packages: 10
+      files_per_package: 300

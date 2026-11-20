@@ -1,0 +1,33 @@
+.node-edges {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--relief-line);
+
+  h4 {
+    margin: 8px 0 4px;
+    color: var(--relief-muted);
+    font-size: 11px;
+    text-transform: uppercase;
+  }
+
+  ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  li {
+    margin-bottom: 4px;
+  }
+
+  li button {
+    width: 100%;
+    font-size: 12px;
+    text-align: left;
+  }
+
+  .kind {
+    margin-left: auto;
+    padding-left: 8px;
+    color: var(--relief-muted);
+  }
+}

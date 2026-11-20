@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-co-change"
+description = "Enables the co_change command without any pre-configured scope."
+commands.allow = ["co_change"]
+
+[[permission]]
+identifier = "deny-co-change"
+description = "Denies the co_change command without any pre-configured scope."
+commands.deny = ["co_change"]

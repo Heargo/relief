@@ -1,0 +1,123 @@
+<section class="sec reading" data-testid="reading-order">
+  <h3>{{ 'review.reading.title' | translate }}</h3>
+  <div class="mode seg" role="group">
+    @for (value of modes; track value) {
+      <button
+        type="button"
+        [attr.data-testid]="'reading-mode-' + value"
+        [class.on]="mode() === value"
+        [attr.aria-pressed]="mode() === value"
+        (click)="modeChange.emit(value)"
+      >
+        {{ 'review.reading.' + value | translate }}
+      </button>
+    }
+  </div>
+  <p class="progress" data-testid="reading-progress">
+    {{ 'review.reading.progress' | translate: { seen: progress().seen, total: progress().total } }}
+  </p>
+  @if (!persisted()) {
+    <p class="hint" data-testid="reading-memory-only">
+      {{ 'review.reading.memoryOnly' | translate }}
+    </p>
+  }
+  <div class="actions">
+    <button
+      type="button"
+      class="iconbtn"
+      data-testid="reading-mark"
+      [disabled]="!canMark()"
+      (click)="toggle.emit(selected()!)"
+    >
+      {{ 'review.reading.mark' | translate }}
+    </button>
+    <button
+      type="button"
+      class="iconbtn"
+      data-testid="reading-mark-next"
+      [disabled]="!canMark()"
+      (click)="markNext.emit()"
+    >
+      {{ 'review.reading.markNext' | translate }}
+    </button>
+  </div>
+  @if (mode() === 'commit') {
+    @if (selectedCommit()) {
+      <button type="button" class="iconbtn" data-testid="commit-show-all" (click)="showAll.emit()">
+        {{ 'review.reading.showAll' | translate }}
+      </button>
+    }
+    <ol class="commits">
+      @for (commit of commits(); track commit.commit) {
+        <li class="commit" [class.selected]="selectedCommit() === commit.commit">
+          <div
+            class="commit-head"
+            data-testid="commit-row"
+            [attr.data-commit]="commit.commit"
+            [attr.data-seen-count]="commit.progress.seen"
+            [attr.data-total-count]="commit.progress.total"
+            [attr.data-selected]="selectedCommit() === commit.commit"
+            (click)="commitSelect.emit(commit.commit)"
+          >
+            <code>{{ commit.short }}</code>
+            <span class="message">{{ commit.message }}</span>
+            <span class="tag">
+              {{
+                'review.reading.counts'
+                  | translate: { seen: commit.progress.seen, total: commit.progress.total }
+              }}
+            </span>
+            @if (commit.otherFiles > 0) {
+              <span class="tag">
+                {{ 'review.reading.otherFiles' | translate: { count: commit.otherFiles } }}
+              </span>
+            }
+          </div>
+          @if (selectedCommit() === commit.commit) {
+            <ol>
+              <ng-container
+                *ngTemplateOutlet="entries; context: { $implicit: commit.files }"
+              ></ng-container>
+            </ol>
+          }
+        </li>
+      }
+    </ol>
+  } @else {
+    <ol>
+      <ng-container *ngTemplateOutlet="entries; context: { $implicit: items() }"></ng-container>
+    </ol>
+  }
+  <ng-template #entries let-list>
+    @for (item of list; track item.id) {
+      <li
+        data-testid="reading-row"
+        [attr.data-node-id]="item.id"
+        [attr.data-seen]="seenIds().has(item.id)"
+        [class.selected]="selected() === item.id"
+        (click)="nodeSelect.emit(item.id)"
+      >
+        <p-checkbox
+          binary
+          [ngModel]="seenIds().has(item.id)"
+          (onChange)="toggle.emit(item.id)"
+          (click)="$event.stopPropagation()"
+        />
+        <span class="body">
+          <code>{{ label(item.id) }}</code>
+          @for (reason of item.reasons; track $index) {
+            @if (lines(reason); as l) {
+              <span class="tag">+{{ l.added }} −{{ l.removed }}</span>
+            } @else {
+              <span
+                class="tag"
+                [class.warn]="reason.kind === 'breakingSignature' || reason.kind === 'violation'"
+                >{{ reasonKey(reason) | translate }}</span
+              >
+            }
+          }
+        </span>
+      </li>
+    }
+  </ng-template>
+</section>

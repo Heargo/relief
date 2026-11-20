@@ -1,0 +1,359 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SnapshotResponse",
+  "description": "Response of `GET /api/snapshot`.",
+  "type": "object",
+  "properties": {
+    "graph": {
+      "$ref": "#/$defs/GraphSnapshot"
+    },
+    "meta": {
+      "$ref": "#/$defs/SnapshotMeta"
+    }
+  },
+  "required": [
+    "graph",
+    "meta"
+  ],
+  "$defs": {
+    "Edge": {
+      "type": "object",
+      "properties": {
+        "count": {
+          "description": "Number of real edges an edge aggregated between two containers of a subgraph stands for.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        },
+        "from": {
+          "$ref": "#/$defs/NodeId"
+        },
+        "heuristic": {
+          "description": "The match is a guess (unknown verb of the client call).",
+          "type": "boolean"
+        },
+        "kind": {
+          "$ref": "#/$defs/EdgeKind"
+        },
+        "precision": {
+          "$ref": "#/$defs/Precision"
+        },
+        "to": {
+          "$ref": "#/$defs/NodeId"
+        }
+      },
+      "required": [
+        "from",
+        "to",
+        "kind",
+        "precision"
+      ]
+    },
+    "EdgeKind": {
+      "description": "Kind of relation between two nodes.",
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": [
+            "imports",
+            "calls",
+            "references",
+            "renders",
+            "extends",
+            "implements",
+            "http",
+            "depends_on"
+          ]
+        },
+        {
+          "description": "Files that change in the same commits (git history, not the code).",
+          "type": "string",
+          "const": "co_change"
+        }
+      ]
+    },
+    "GraphSnapshot": {
+      "type": "object",
+      "properties": {
+        "commit": {
+          "type": "string"
+        },
+        "edges": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Edge"
+          }
+        },
+        "nodes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Node"
+          }
+        }
+      },
+      "required": [
+        "commit",
+        "nodes",
+        "edges"
+      ]
+    },
+    "Metrics": {
+      "type": "object",
+      "properties": {
+        "churn": {
+          "description": "Commits of the window that touch the file or the lines of the symbol.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        },
+        "complexity": {
+          "description": "Cyclomatic complexity.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        },
+        "loc": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "owner": {
+          "description": "Majority author of those commits.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "tested": {
+          "description": "A test file or symbol links to the node.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "loc"
+      ]
+    },
+    "Node": {
+      "type": "object",
+      "properties": {
+        "childCount": {
+          "description": "Exact number of direct children in the full graph, on a container of a subgraph whose\nchildren are not all in it.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint",
+          "minimum": 0
+        },
+        "contentHash": {
+          "type": "string"
+        },
+        "entry": {
+          "description": "The node is an entry point of the system (route, page, job, script, main).",
+          "type": "boolean"
+        },
+        "entryType": {
+          "description": "`route`, `page`, `job`, `script` or `main` on an entry point.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "id": {
+          "$ref": "#/$defs/NodeId"
+        },
+        "kind": {
+          "$ref": "#/$defs/NodeKind"
+        },
+        "lang": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "metrics": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metrics"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "parent": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NodeId"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "path": {
+          "description": "Folder in the repository, without trailing `/` (workspace systems and modules).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "route": {
+          "description": "`\"POST /checkout\"` on the handler of a route (`subkind: route`).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "signatureHash": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "span": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Span"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "subkind": {
+          "type": "string"
+        },
+        "visibility": {
+          "$ref": "#/$defs/Visibility"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "subkind",
+        "visibility",
+        "contentHash"
+      ]
+    },
+    "NodeId": {
+      "type": "string"
+    },
+    "NodeKind": {
+      "description": "Level of a node in the containment hierarchy.",
+      "type": "string",
+      "enum": [
+        "repo",
+        "workspace",
+        "service",
+        "package",
+        "module",
+        "file",
+        "symbol",
+        "external"
+      ]
+    },
+    "Precision": {
+      "description": "How an edge was obtained.",
+      "type": "string",
+      "enum": [
+        "syntactic",
+        "resolved"
+      ]
+    },
+    "SnapshotMeta": {
+      "description": "Description of an indexing run.",
+      "type": "object",
+      "properties": {
+        "adapters": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "cachedFiles": {
+          "description": "Files whose extraction was served by the cache.",
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        },
+        "commit": {
+          "type": "string"
+        },
+        "date": {
+          "description": "Commit date, ISO 8601 UTC.",
+          "type": "string"
+        },
+        "detector": {
+          "type": "string"
+        },
+        "ignoredFiles": {
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        },
+        "parsedFiles": {
+          "description": "Files an adapter parsed during this run.",
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "commit",
+        "date",
+        "detector",
+        "adapters",
+        "ignoredFiles",
+        "parsedFiles",
+        "cachedFiles",
+        "warnings"
+      ]
+    },
+    "Span": {
+      "description": "Source range, 1-based lines.",
+      "type": "object",
+      "properties": {
+        "endLine": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "startLine": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "startLine",
+        "endLine"
+      ]
+    },
+    "Visibility": {
+      "type": "string",
+      "enum": [
+        "public",
+        "internal"
+      ]
+    }
+  }
+}

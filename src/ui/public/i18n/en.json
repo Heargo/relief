@@ -1,0 +1,374 @@
+{
+  "home": {
+    "help": "Help",
+    "tagline": "Zoomable map of a git repository"
+  },
+  "optimus": {},
+  "map": {
+    "search": "Go to a symbol, file, module…",
+    "help": "Help",
+    "shortcuts": "Shortcuts",
+    "expand": "Widen the right panel",
+    "loading": "Loading…",
+    "empty": "Empty repository: nothing to map.",
+    "theme": {
+      "dark": "Dark",
+      "light": "Light",
+      "system": "System"
+    },
+    "level": "Level",
+    "levels": {
+      "0": "System",
+      "1": "Modules",
+      "2": "Files",
+      "3": "Symbols",
+      "code": "Level 4 · Code: right panel"
+    },
+    "zoom": {
+      "in": "Zoom in",
+      "out": "Zoom out",
+      "fit": "Fit everything"
+    },
+    "counts": {
+      "symbols": "{{count}} symbols",
+      "symbols_one": "{{count}} symbol",
+      "files": "{{count}} files",
+      "files_one": "{{count}} file"
+    },
+    "external": {
+      "hide": "Hide external dependencies"
+    },
+    "edges": {
+      "links": "{{count}} links",
+      "links_one": "{{count}} link",
+      "new": "new",
+      "moved": "moved",
+      "unchanged": "Unchanged edges",
+      "close": "Close"
+    },
+    "node": {
+      "children": "Contains",
+      "uses": "Uses",
+      "usedBy": "Used by",
+      "none": "None",
+      "code": "Code",
+      "codeLoading": "Loading code…",
+      "codeError": "Code unavailable"
+    },
+    "panel": {
+      "tools": "Tools",
+      "display": "Display",
+      "modePr": "PR",
+      "modeExplore": "Explorer"
+    },
+    "layout": {
+      "title": "Layout",
+      "fewerCrossings": "Fewer crossings",
+      "rawGrid": "Raw grid",
+      "optimizedTotal": "Fewer crossings: {{count}}",
+      "rawTotal": "Raw grid: {{count}}",
+      "visible": "On screen: {{count}}",
+      "totals": "Crossings, all levels"
+    },
+    "breadcrumbs": "Breadcrumbs",
+    "shortcutsList": {
+      "rangeBase": "Choose the base of the range",
+      "rangeHead": "Choose the head of the range",
+      "levels": "Zoom level: system, modules, files, symbols",
+      "search": "Search",
+      "help": "Show this help",
+      "escape": "Deselect, then go up a level, then show everything (also closes this window)",
+      "impact": "Impact radius",
+      "focus": "Focus the PR layer",
+      "next": "Next entry of the reading order",
+      "previous": "Previous entry of the reading order",
+      "seen": "Mark the selected entry seen"
+    },
+    "kinds": {
+      "repo": "repository",
+      "workspace": "workspace",
+      "service": "system",
+      "package": "package",
+      "module": "module",
+      "file": "file",
+      "symbol": "symbol",
+      "external": "external"
+    },
+    "settings": {
+      "title": "Settings",
+      "theme": "Theme",
+      "language": "Language",
+      "docs": "Documentation"
+    },
+    "inspector": {
+      "none": "Overview",
+      "node": "Node",
+      "edge": "Edge",
+      "dependsOn": "Depends on",
+      "usedBy": "Used by",
+      "resolved": "resolved",
+      "heuristic": "heuristic",
+      "added": "added by the PR",
+      "hint": "Click a node or an edge"
+    },
+    "usages": {
+      "title": "Usages in the code",
+      "loading": "Looking for usages…",
+      "empty": "Imported but never used.",
+      "unsupported": "Usages are not supported for this language.",
+      "more": "and {{count}} more",
+      "in": "in"
+    }
+  },
+  "review": {
+    "toggle": "Review the PR",
+    "reload": "Reload",
+    "rangePicker": {
+      "label": "Range",
+      "base": "Base",
+      "head": "Head",
+      "worktree": "Working tree",
+      "swap": "Swap base and head",
+      "mergeBase": "base...head: compares from the common ancestor of both sides (what the PR adds). Click for a direct diff.",
+      "direct": "base..head: compares the two sides as they are (a direct diff). Click to compare from the common ancestor.",
+      "filter": "Filter by name, subject or SHA",
+      "tabs": {
+        "branches": "Branches",
+        "tags": "Tags",
+        "commits": "Commits"
+      },
+      "commits": "{{count}} commits",
+      "commits_one": "{{count}} commit",
+      "marks": {
+        "base": "BASE",
+        "head": "HEAD"
+      }
+    },
+    "range": "Range",
+    "worktree": "working tree vs HEAD",
+    "layers": {
+      "title": "Layers",
+      "diff": "Diff layer",
+      "focus": "PR focus",
+      "description": {
+        "diff": "added / modified / removed colours",
+        "unchanged-edges": "otherwise only the dependencies that move",
+        "focus": "the change + 1 hop, the rest faded",
+        "impact": "when a node is selected",
+        "rules": "relief.config.yaml",
+        "risk": "complexity × churn × no tests",
+        "hide-external": "third-party packages and their links",
+        "co-change": "files that change together"
+      }
+    },
+    "card": {
+      "title": "The PR",
+      "files": "{{count}} files",
+      "files_one": "{{count}} file",
+      "added": "{{count}} added",
+      "modified": "{{count}} modified",
+      "removed": "{{count}} removed",
+      "moved": "{{count}} moved",
+      "signatures": "{{count}} signatures",
+      "signatures_one": "{{count}} signature",
+      "filesMoved": "{{count}} files moved",
+      "filesMoved_one": "{{count}} file moved",
+      "formatOnly": "{{count}} format only",
+      "added_one": "{{count}} added",
+      "modified_one": "{{count}} modified",
+      "removed_one": "{{count}} removed",
+      "moved_one": "{{count}} moved",
+      "formatOnly_one": "{{count}} format only"
+    },
+    "legend": {
+      "added": "Added",
+      "modified": "Modified",
+      "removed": "Removed",
+      "moved": "Moved",
+      "newEdge": "New dependency",
+      "removedEdge": "Removed dependency",
+      "unchangedEdge": "Unchanged"
+    },
+    "badges": {
+      "breaking-api": "breaking API",
+      "api": "API",
+      "internal-signature": "internal sig.",
+      "format-only": "format only"
+    },
+    "diffPanel": {
+      "title": "Structural diff",
+      "expand": "expand",
+      "breaking": "breaking",
+      "compatible": "compatible",
+      "publicApi": "public API",
+      "internal": "internal",
+      "showAnyway": "Show the text diff anyway",
+      "formatOnlyHidden_one": "{{count}} text diff line hidden: only the formatting changes",
+      "formatOnlyHidden": "{{count}} text diff lines hidden: only the formatting changes",
+      "collapse": "collapse"
+    },
+    "reason": {
+      "exportRemoved": "Export removed",
+      "visibilityReduced": "Visibility reduced",
+      "paramRequiredAdded": "Required parameter added ({{param}})",
+      "paramTypeChanged": "Type of parameter {{param}} changed",
+      "paramBecameRequired": "Parameter {{param}} became required",
+      "paramRemoved": "Parameter removed",
+      "paramOptionalAdded": "Optional parameter added",
+      "returnWidenedNull": "Return type widened (null possible)",
+      "returnWidenedUndefined": "Return type widened (undefined possible)",
+      "returnWidened": "Return type widened",
+      "returnNarrowed": "Return type narrowed",
+      "returnChanged": "Return type changed",
+      "unspecified": "Signature changed"
+    },
+    "overview": {
+      "title": "Structural changes",
+      "signatures": "Modified signatures",
+      "violations": "Rule violations introduced",
+      "files": "Files added, removed, moved",
+      "outOfDiff": "Out of the diff, calls a breaking signature",
+      "breaking": "breaking",
+      "compatible": "compatible",
+      "direct": "{{count}} direct callers",
+      "transitive": "{{count}} transitive",
+      "tested": "tested",
+      "untested": "untested",
+      "fileKinds": {
+        "added": "added",
+        "removed": "removed",
+        "moved": "moved",
+        "format-only": "format only"
+      },
+      "direct_one": "{{count}} direct caller",
+      "transitive_one": "{{count}} transitive"
+    },
+    "signals": {
+      "title": "Signals",
+      "violation": "Violation",
+      "callers": "{{count}} transitive callers",
+      "callers_one": "{{count}} transitive caller",
+      "withoutTests": "{{count}} without tests",
+      "withoutTests_one": "{{count}} without tests",
+      "ignored": "ignored (format only)"
+    },
+    "impact": {
+      "layer": "Impact radius",
+      "callers": "Callers",
+      "dependencies": "Dependencies",
+      "viaHttp": "via HTTP",
+      "transitiveCallers": "{{count}} transitive callers",
+      "transitiveCallers_one": "{{count}} transitive caller",
+      "transitiveDeps": "{{count}} transitive dependencies",
+      "transitiveDeps_one": "{{count}} transitive dependency",
+      "withoutTests": "{{count}} without tests",
+      "withoutTests_one": "{{count}} without test",
+      "services": "{{count}} services",
+      "services_one": "{{count}} service",
+      "direct": "Direct",
+      "hops": "At {{count}} hops",
+      "http": "via HTTP",
+      "outOfDiff": "out of diff",
+      "tested": "tested",
+      "untested": "no test",
+      "boxCount": "⚡ {{count}}"
+    },
+    "reading": {
+      "title": "Reading order",
+      "file": "File",
+      "symbol": "Symbol",
+      "progress": "{{seen}}/{{total}} seen",
+      "counts": "{{seen}}/{{total}} seen",
+      "mark": "Mark seen",
+      "markNext": "Seen, next →",
+      "memoryOnly": "No data folder: the progress is kept in memory only.",
+      "reasons": {
+        "breakingSignature": "breaking signature",
+        "modifiedSignature": "signature changed",
+        "violation": "rule violation",
+        "new": "new",
+        "removed": "removed",
+        "movedIdentical": "moved"
+      },
+      "commit": "Commit",
+      "showAll": "See all the commits",
+      "otherFiles": "{{count}} without structural change"
+    }
+  },
+  "rules": {
+    "title": "Architecture rules",
+    "introduced": "{{count}} introduced",
+    "introduced_one": "{{count}} introduced",
+    "existing": "{{count}} existing",
+    "existing_one": "{{count}} existing",
+    "respected": "respected",
+    "viewFile": "View the file",
+    "hideFile": "Hide the file",
+    "noSource": "No relief.config.yaml",
+    "layer": "Architecture rules",
+    "badge": "⚠ archi",
+    "edgeWarning": "⚠ {{count}}",
+    "box": {
+      "title": "Architecture rule",
+      "from": "from",
+      "deny": "denied",
+      "introduced": "introduced by this range",
+      "existing": "already existed on {{base}}",
+      "existingNoBase": "already existed on the base"
+    },
+    "overviewExisting": "Rule violations already existing",
+    "signalExisting": "existing"
+  },
+  "explore": {
+    "toggle": "Explore the repo",
+    "entryTypes": {
+      "route": "Routes",
+      "page": "Pages",
+      "job": "Jobs",
+      "script": "Scripts",
+      "main": "Main"
+    },
+    "entryPoints": {
+      "title": "Entry points",
+      "none": "No entry point found."
+    },
+    "overview": {
+      "title": "Overview",
+      "detector": "Detector",
+      "packages": "{{count}} packages",
+      "externals": "{{count}} externals",
+      "files": "{{count}} files",
+      "symbols": "{{count}} symbols",
+      "linkKinds": {
+        "imports": "imports",
+        "calls": "calls",
+        "references": "references",
+        "renders": "renders",
+        "extends": "extends",
+        "implements": "implements",
+        "http": "HTTP calls",
+        "depends_on": "dependencies"
+      }
+    },
+    "coChange": {
+      "layer": "Logical coupling"
+    },
+    "hotspots": {
+      "title": "Hotspots",
+      "none": "No hotspot: nothing changed recently."
+    },
+    "risk": {
+      "layer": "Risk map"
+    },
+    "metrics": {
+      "title": "Metrics",
+      "churn": "Churn",
+      "complexity": "Complexity",
+      "owner": "Owner",
+      "tested": "Tested",
+      "loc": "Lines",
+      "yes": "yes",
+      "no": "no"
+    }
+  }
+}

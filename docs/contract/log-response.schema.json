@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LogResponse",
+  "description": "Response of the `log` command: the commits, newest first.",
+  "type": "object",
+  "properties": {
+    "entries": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/LogEntry"
+      }
+    }
+  },
+  "required": [
+    "entries"
+  ],
+  "$defs": {
+    "LogEntry": {
+      "description": "One commit of a log.",
+      "type": "object",
+      "properties": {
+        "author": {
+          "type": "string"
+        },
+        "sha": {
+          "description": "Full SHA.",
+          "type": "string"
+        },
+        "short": {
+          "description": "First 7 characters of the SHA.",
+          "type": "string"
+        },
+        "subject": {
+          "description": "First line of the message.",
+          "type": "string"
+        },
+        "time": {
+          "description": "Author time, in seconds since the Unix epoch.",
+          "type": "integer",
+          "format": "int64"
+        }
+      },
+      "required": [
+        "sha",
+        "short",
+        "subject",
+        "author",
+        "time"
+      ]
+    }
+  }
+}

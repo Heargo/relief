@@ -1,0 +1,36 @@
+<section class="sec entry-points" data-testid="entry-points-section">
+  <h3>{{ 'explore.entryPoints.title' | translate }}</h3>
+  @for (group of groups(); track group.type) {
+    <h4>{{ 'explore.entryTypes.' + group.type | translate }}</h4>
+    @for (node of group.nodes; track node.id) {
+      <button
+        type="button"
+        data-testid="entry-point-row"
+        [attr.data-node-id]="node.id"
+        [attr.data-entry-type]="group.type"
+        (click)="nodeSelect.emit(node.id)"
+      >
+        {{ node.route ?? label()(node.id) }}
+      </button>
+    }
+  } @empty {
+    <p class="hint">{{ 'explore.entryPoints.none' | translate }}</p>
+  }
+</section>
+@if (overview(); as overview) {
+  <section class="sec overview" data-testid="explore-overview">
+    <h3>{{ 'explore.overview.title' | translate }}</h3>
+    <p>{{ 'explore.overview.detector' | translate }} : {{ overview.detector }}</p>
+    <p data-testid="overview-packages">
+      {{ 'explore.overview.packages' | translate: { count: overview.packages } }}
+    </p>
+    <p>{{ 'explore.overview.externals' | translate: { count: overview.externals } }}</p>
+    <p>{{ 'explore.overview.files' | translate: { count: overview.files } }}</p>
+    <p>{{ 'explore.overview.symbols' | translate: { count: overview.symbols } }}</p>
+    @for (link of links(overview); track link.kind) {
+      <p class="hint">
+        {{ 'explore.overview.linkKinds.' + link.kind | translate }} : {{ link.count }}
+      </p>
+    }
+  </section>
+}

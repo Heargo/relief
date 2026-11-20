@@ -1,0 +1,24 @@
+@for (entry of entries(); track $index) {
+  <section
+    class="rule-box"
+    data-testid="rule-box"
+    [attr.data-rule]="entry.violation.rule"
+    [class.existing]="!entry.violation.introduced"
+  >
+    <h4>
+      {{ 'rules.box.title' | translate }} <code>{{ entry.violation.rule }}</code>
+    </h4>
+    @if (entry.rule; as rule) {
+      @if (rule.description) {
+        <p>{{ rule.description }}</p>
+      }
+      <p class="globs">
+        {{ 'rules.box.from' | translate }} <code>{{ rule.from }}</code> ·
+        {{ 'rules.box.deny' | translate }} <code>{{ rule.deny }}</code>
+      </p>
+    }
+    <p class="status" data-testid="rule-status" [attr.data-introduced]="entry.violation.introduced">
+      {{ entry.violation.introduced ? ('rules.box.introduced' | translate) : existing() }}
+    </p>
+  </section>
+}

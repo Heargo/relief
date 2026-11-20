@@ -1,0 +1,13 @@
+{
+  "name": "@acme/api",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": { "start": "node dist/server.js", "test": "vitest run" },
+  "dependencies": {
+    "@acme/db": "workspace:*",
+    "@acme/shared": "workspace:*",
+    "fastify": "^4.0.0",
+    "stripe-sdk": "^1.0.0"
+  },
+  "devDependencies": { "vitest": "^1.0.0" }
+}

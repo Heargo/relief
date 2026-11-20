@@ -1,0 +1,94 @@
+---
+title: 'Commencer'
+description: 'Installer relief et ouvrir un dépôt.'
+---
+
+relief est une application de bureau qui affiche une carte zoomable de votre dépôt git, en local, dans sa propre fenêtre. Elle se lance depuis un terminal avec la commande `relief`.
+
+## Installer
+
+relief se distribue en trois formats pour Linux. `just package` construit le `.deb` et l'AppImage dans `target/release/bundle/` ; le paquet Arch se construit ensuite à partir du `.deb`.
+
+- **Debian, Ubuntu** : le paquet `.deb`, qui déclare sa dépendance à `libwebkit2gtk-4.1-0`.
+
+  ```sh
+  sudo apt install ./relief_0.1.0_amd64.deb
+  ```
+
+- **Arch, CachyOS, Manjaro** : un paquet natif, construit par le `PKGBUILD` de `packaging/arch/` à partir du `.deb` (il dépend de `webkit2gtk-4.1` et `gtk3`).
+
+  ```sh
+  cd packaging/arch && makepkg -f
+  sudo pacman -U relief-0.1.0-1-x86_64.pkg.tar.zst
+  ```
+
+- **Toute autre distribution** : l'AppImage, un seul fichier exécutable qui embarque ses bibliothèques. L'hôte doit seulement fournir un serveur graphique (X11 ou Wayland), les pilotes OpenGL et FUSE pour monter l'image (sans FUSE, lancer avec `APPIMAGE_EXTRACT_AND_RUN=1`).
+
+  ```sh
+  chmod +x relief_0.1.0_amd64.AppImage
+  ./relief_0.1.0_amd64.AppImage .
+  ```
+
+Le binaire est lié à la glibc de la machine qui l'a construit : le `.deb` et l'AppImage ne tournent que sur une distribution dont la glibc est au moins aussi récente (pour les paquets de ce dépôt, construits sous CachyOS, glibc 2.44). Pour une distribution plus ancienne, construisez relief sur elle ou depuis les sources.
+
+Si `relief` affiche encore des sous-commandes (`show`, `diff`, `serve`), c'est une ancienne version installée par `cargo install` dans `~/.cargo/bin`, qui passe avant `/usr/bin` dans le `PATH` : `which -a relief` les liste, `cargo uninstall relief-cli` retire l'ancienne.
+
+Dans les trois cas, la commande s'appelle `relief` (l'AppImage se lance par son nom de fichier, ou renommée en `relief`) et cette documentation est embarquée : l'entrée Documentation du menu Paramètres marche sans réseau.
+
+## Prérequis pour compiler
+
+- Rust (cargo), pour compiler relief ;
+- Node.js et npm, pour construire l'interface et cette documentation ;
+- git, et un dépôt à ouvrir ;
+- sous Linux, `webkit2gtk-4.1` (et `libsoup-3.0`, `gtk+-3.0`) : la fenêtre de relief s'appuie dessus, il doit être installé à l'exécution (les paquets `-dev` sont nécessaires pour compiler).
+
+## Depuis les sources
+
+relief s'installe depuis un clone de son dépôt. L'interface et cette documentation sont embarquées dans le binaire à la compilation : construisez-les d'abord, puis copiez la documentation dans l'interface.
+
+```sh
+git clone <url-du-depot-relief> && cd relief
+npm --prefix src/ui install && npm --prefix src/ui run build
+npm --prefix docs/user install && npm --prefix docs/user run build
+cp -r docs/user/dist src/ui/dist/relief/browser/docs
+cargo install --path src/interfaces/relief-desktop --features custom-protocol
+```
+
+Le binaire `relief` est alors dans `~/.cargo/bin`. Avec [`just`](https://github.com/casey/just), `just build` construit la documentation et l'interface, copie la documentation, puis compile `target/release/relief`.
+
+## Ouvrir un dépôt
+
+Placez-vous dans un dépôt git et lancez :
+
+```sh
+relief [path] [range]
+```
+
+La fenêtre de relief s'ouvre sur le dépôt courant. Rien n'est écrit dans votre dépôt.
+
+- Sans argument, la plage affichée va de `HEAD` à l'arbre de travail. Pour une autre plage (`range`), donnez-la : `relief . main...ma-branche` (contre le merge-base) ou `relief . A..B`.
+- Le premier argument (`path`) est le dossier à analyser : `relief ~/code/mon-depot`.
+
+## Premier regard
+
+L'écran d'accueil affiche le nom et le slogan de relief ; la fenêtre porte le nom du dépôt ; le lien « Aide » ouvre cette documentation dans une seconde fenêtre, hors ligne, dans la langue de l'interface.
+
+![Écran d'accueil de relief](../../assets/screens/fr/home.png)
+
+## Lire la carte
+
+La carte est imbriquée : systèmes, modules, fichiers, symboles.
+
+- **Molette** : zoome autour du curseur ; les boutons `+` et `−` zooment autour du centre, `⤢` recadre tout. Une boîte s'ouvre d'elle-même quand elle devient assez grande.
+- **Double-clic** sur une boîte : la cadre et l'ouvre.
+- **Glisser** : déplace la carte.
+- **Clic simple** : sans effet pour l'instant.
+- Les boutons en bas à droite (ou les touches `0` à `3`) choisissent le niveau affiché.
+
+![La carte au niveau des fichiers](../../assets/screens/fr/getting-started-files.png)
+
+Le détail est dans [La carte](../map/).
+
+## Où relief range ses données
+
+relief range ses données dans un dossier `.relief/` à la racine du dépôt. Il s'ignore lui-même (son `.gitignore` contient `*`) : `git status` reste propre, et relief n'analyse jamais son contenu. `cache/` contient l'index, jetable : le supprimer est sans risque, il est reconstruit. `state/` contient ce que relief retient pour vous (par exemple ce que vous avez déjà relu) : gardez-le. Pour un dépôt bare ou un dossier en lecture seule, relief se replie sur `~/.cache/relief/<repo-id>/` (ou `$XDG_CACHE_HOME/relief/<repo-id>/`). `RELIEF_CACHE_DIR` choisit un autre dossier.

@@ -1,0 +1,474 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "GraphDiff",
+  "description": "Difference between two graph snapshots.",
+  "type": "object",
+  "properties": {
+    "base": {
+      "type": "string"
+    },
+    "edges": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/EdgeChange"
+      }
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/FileChange"
+      }
+    },
+    "head": {
+      "type": "string"
+    },
+    "nodes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/NodeChange"
+      }
+    }
+  },
+  "required": [
+    "base",
+    "head",
+    "nodes",
+    "files",
+    "edges"
+  ],
+  "$defs": {
+    "EdgeChange": {
+      "description": "An edge that was added or removed, keyed by (from, to, kind).",
+      "type": "object",
+      "properties": {
+        "commit": {
+          "description": "First commit of the range where an added edge appears.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "from": {
+          "$ref": "#/$defs/NodeId"
+        },
+        "kind": {
+          "$ref": "#/$defs/EdgeKind"
+        },
+        "to": {
+          "$ref": "#/$defs/NodeId"
+        }
+      },
+      "allOf": [
+        {
+          "$ref": "#/$defs/EdgeStatus"
+        }
+      ],
+      "required": [
+        "from",
+        "to",
+        "kind",
+        "commit"
+      ]
+    },
+    "EdgeKind": {
+      "description": "Kind of relation between two nodes.",
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": [
+            "imports",
+            "calls",
+            "references",
+            "renders",
+            "extends",
+            "implements",
+            "http",
+            "depends_on"
+          ]
+        },
+        {
+          "description": "Files that change in the same commits (git history, not the code).",
+          "type": "string",
+          "const": "co_change"
+        }
+      ]
+    },
+    "EdgeStatus": {
+      "description": "Whether an edge appeared or disappeared.",
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "const": "added"
+            }
+          },
+          "required": [
+            "status"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "const": "removed"
+            }
+          },
+          "required": [
+            "status"
+          ]
+        },
+        {
+          "description": "Rewritten because an endpoint moved; the change carries head ids.",
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "const": "moved"
+            }
+          },
+          "required": [
+            "status"
+          ]
+        }
+      ]
+    },
+    "FileChange": {
+      "description": "Line counts of a changed file, as reported by git.",
+      "type": "object",
+      "properties": {
+        "linesAdded": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "linesRemoved": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "linesAdded",
+        "linesRemoved"
+      ]
+    },
+    "NodeChange": {
+      "description": "A node that was added, removed or modified, with its line counts.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/NodeId"
+        },
+        "linesAdded": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "linesRemoved": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        }
+      },
+      "allOf": [
+        {
+          "$ref": "#/$defs/NodeStatus"
+        }
+      ],
+      "required": [
+        "id",
+        "linesAdded",
+        "linesRemoved"
+      ]
+    },
+    "NodeId": {
+      "type": "string"
+    },
+    "NodeStatus": {
+      "description": "How a node differs between base and head.",
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "const": "added"
+            }
+          },
+          "required": [
+            "status"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "const": "removed"
+            }
+          },
+          "required": [
+            "status"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "body": {
+              "type": "boolean"
+            },
+            "signature": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/SignatureChange"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "status": {
+              "type": "string",
+              "const": "modified"
+            }
+          },
+          "required": [
+            "status",
+            "body"
+          ]
+        },
+        {
+          "description": "Same symbol, different file: `from` is its id in the base snapshot.\n`body` is true when its content changed as well.",
+          "type": "object",
+          "properties": {
+            "body": {
+              "type": "boolean"
+            },
+            "from": {
+              "$ref": "#/$defs/NodeId"
+            },
+            "status": {
+              "type": "string",
+              "const": "moved"
+            }
+          },
+          "required": [
+            "status",
+            "from",
+            "body"
+          ]
+        }
+      ]
+    },
+    "SignatureChange": {
+      "description": "A symbol whose signature changed, with the adapter's verdict.",
+      "type": "object",
+      "properties": {
+        "after": {
+          "type": "string"
+        },
+        "before": {
+          "type": "string"
+        },
+        "breaking": {
+          "type": "boolean"
+        },
+        "internal": {
+          "description": "The symbol is not exported (less serious for callers).",
+          "type": "boolean"
+        },
+        "reason": {
+          "$ref": "#/$defs/SignatureReason"
+        }
+      },
+      "required": [
+        "before",
+        "after",
+        "breaking",
+        "reason",
+        "internal"
+      ]
+    },
+    "SignatureReason": {
+      "description": "Why a signature change is breaking or compatible: a stable code that the\nUI translates (`param` is the parameter name when there is one).",
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "code": {
+              "type": "string",
+              "const": "exportRemoved"
+            }
+          },
+          "required": [
+            "code"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "code": {
+              "type": "string",
+              "const": "visibilityReduced"
+            }
+          },
+          "required": [
+            "code"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "code": {
+              "type": "string",
+              "const": "paramRequiredAdded"
+            },
+            "param": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "code",
+            "param"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "code": {
+              "type": "string",
+              "const": "paramTypeChanged"
+            },
+            "param": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "code",
+            "param"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "code": {
+              "type": "string",
+              "const": "paramBecameRequired"
+            },
+            "param": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "code",
+            "param"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "code": {
+              "type": "string",
+              "const": "paramRemoved"
+            }
+          },
+          "required": [
+            "code"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "code": {
+              "type": "string",
+              "const": "paramOptionalAdded"
+            }
+          },
+          "required": [
+            "code"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "code": {
+              "type": "string",
+              "const": "returnWidenedNull"
+            }
+          },
+          "required": [
+            "code"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "code": {
+              "type": "string",
+              "const": "returnWidenedUndefined"
+            }
+          },
+          "required": [
+            "code"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "code": {
+              "type": "string",
+              "const": "returnWidened"
+            }
+          },
+          "required": [
+            "code"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "code": {
+              "type": "string",
+              "const": "returnNarrowed"
+            }
+          },
+          "required": [
+            "code"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "code": {
+              "type": "string",
+              "const": "returnChanged"
+            }
+          },
+          "required": [
+            "code"
+          ]
+        },
+        {
+          "description": "The adapter has no finer reason (default adapter, no verdict).",
+          "type": "object",
+          "properties": {
+            "code": {
+              "type": "string",
+              "const": "unspecified"
+            }
+          },
+          "required": [
+            "code"
+          ]
+        }
+      ]
+    }
+  }
+}

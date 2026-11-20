@@ -1,0 +1,27 @@
+# Repackages the .deb built by `just package` (default: ../../target/release/bundle, or RELIEF_BUNDLE_DIR).
+pkgname=relief
+pkgver=0.1.0
+pkgrel=1
+pkgdesc='Zoomable map of a git repository with the diff overlaid'
+arch=('x86_64')
+license=('MIT')
+depends=('webkit2gtk-4.1' 'gtk3')
+makedepends=('binutils')
+options=('!strip' '!debug')
+
+prepare() {
+  # makepkg runs prepare() from $srcdir: a relative RELIEF_BUNDLE_DIR is taken from this folder,
+  # and without it the bundle of the repository holding this PKGBUILD is used.
+  local bundle="${RELIEF_BUNDLE_DIR:-../../target/release/bundle}" deb
+  [[ $bundle = /* ]] || bundle="$startdir/$bundle"
+  deb="$bundle/deb/${pkgname}_${pkgver}_amd64.deb"
+  [ -f "$deb" ] || { echo "missing $deb (run just package)" >&2; return 1; }
+  mkdir -p "$srcdir/deb"
+  cd "$srcdir/deb"
+  ar x "$deb"
+  tar -xf data.tar.*
+}
+
+package() {
+  cp -a "$srcdir/deb/usr" "$pkgdir/usr"
+}

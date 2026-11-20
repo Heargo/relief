@@ -1,0 +1,44 @@
+<section class="sec rules" data-testid="rules-section">
+  <h3>{{ 'rules.title' | translate }}</h3>
+  <ul>
+    @for (row of rows(); track row.rule.id) {
+      <li>
+        <button
+          type="button"
+          data-testid="rule-row"
+          [attr.data-rule]="row.rule.id"
+          [title]="row.rule.description"
+          (click)="ruleSelect.emit(row.rule.id)"
+        >
+          <code class="id">{{ row.rule.id }}</code>
+          <span class="glob">{{ row.rule.from }} ↛ {{ row.rule.deny }}</span>
+          <span class="status">
+            @if (row.respected) {
+              <span class="chip ok">{{ 'rules.respected' | translate }}</span>
+            }
+            @if (row.introduced > 0) {
+              <span class="chip new">{{ plural('rules.introduced', row.introduced) }}</span>
+            }
+            @if (row.existing > 0) {
+              <span class="chip old">{{ plural('rules.existing', row.existing) }}</span>
+            }
+          </span>
+        </button>
+      </li>
+    }
+  </ul>
+  @if (source() !== null) {
+    <button
+      type="button"
+      class="view-file iconbtn"
+      data-testid="rules-view-file"
+      [attr.aria-expanded]="fileOpen()"
+      (click)="fileOpen.set(!fileOpen())"
+    >
+      {{ (fileOpen() ? 'rules.hideFile' : 'rules.viewFile') | translate }}
+    </button>
+    @if (fileOpen()) {
+      <pre class="file" data-testid="rules-file"><code>{{ source() }}</code></pre>
+    }
+  }
+</section>

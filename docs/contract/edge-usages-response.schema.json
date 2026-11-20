@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "EdgeUsagesResponse",
+  "description": "Response of the `edge_usages` command.",
+  "type": "object",
+  "properties": {
+    "files": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/FileUsages"
+      }
+    },
+    "supported": {
+      "description": "False when no adapter can find usages in the source files.",
+      "type": "boolean"
+    },
+    "total": {
+      "description": "Every usage found, listed or not.",
+      "type": "integer",
+      "format": "uint",
+      "minimum": 0
+    }
+  },
+  "required": [
+    "supported",
+    "total",
+    "files"
+  ],
+  "$defs": {
+    "FileUsages": {
+      "description": "The usages found in one source file.",
+      "type": "object",
+      "properties": {
+        "file": {
+          "$ref": "#/$defs/NodeId"
+        },
+        "usages": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Usage"
+          }
+        }
+      },
+      "required": [
+        "file",
+        "usages"
+      ]
+    },
+    "NodeId": {
+      "type": "string"
+    },
+    "Usage": {
+      "description": "One reference, in a file, to a binding imported from another module.",
+      "type": "object",
+      "properties": {
+        "binding": {
+          "description": "Name as exported by the target module.",
+          "type": "string"
+        },
+        "column": {
+          "description": "0-based char offset of the identifier in `snippet`.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "enclosing": {
+          "description": "Enclosing function or method (`Class.method`); none at top level.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "line": {
+          "description": "1-based line.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "snippet": {
+          "description": "The source line, without its terminator.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "binding",
+        "line",
+        "column",
+        "snippet"
+      ]
+    }
+  }
+}

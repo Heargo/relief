@@ -1,0 +1,31 @@
+.hotspots {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  p {
+    margin: 0;
+  }
+
+  button {
+    display: flex;
+    gap: 8px;
+    justify-content: space-between;
+    cursor: pointer;
+    padding: 3px 8px;
+    border: 1px solid var(--relief-line);
+    border-radius: 6px;
+    background: transparent;
+    color: inherit;
+    text-align: left;
+  }
+
+  .risk {
+    color: var(--relief-risk-4);
+    font-weight: 600;
+  }
+
+  .hint {
+    color: var(--relief-muted);
+  }
+}

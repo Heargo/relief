@@ -1,0 +1,38 @@
+<section class="node-edges">
+  <h4>{{ 'map.inspector.dependsOn' | translate }}</h4>
+  <ul data-testid="node-edges-depends-on">
+    @for (edge of edges().dependsOn; track edge.from + '>' + edge.to) {
+      <li>
+        <button
+          type="button"
+          class="iconbtn"
+          data-testid="node-edge-row"
+          [attr.data-from]="edge.from"
+          [attr.data-to]="edge.to"
+          (click)="edgeSelect.emit(edge)"
+        >
+          {{ label()(edge.to) }}
+          <span class="kind">{{ edge.kinds.join(', ') }}</span>
+        </button>
+      </li>
+    }
+  </ul>
+  <h4>{{ 'map.inspector.usedBy' | translate }}</h4>
+  <ul data-testid="node-edges-used-by">
+    @for (edge of edges().usedBy; track edge.from + '>' + edge.to) {
+      <li>
+        <button
+          type="button"
+          class="iconbtn"
+          data-testid="node-edge-row"
+          [attr.data-from]="edge.from"
+          [attr.data-to]="edge.to"
+          (click)="edgeSelect.emit(edge)"
+        >
+          {{ label()(edge.from) }}
+          <span class="kind">{{ edge.kinds.join(', ') }}</span>
+        </button>
+      </li>
+    }
+  </ul>
+</section>

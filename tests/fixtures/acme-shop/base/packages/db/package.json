@@ -1,0 +1,7 @@
+{
+  "name": "@acme/db",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": { "drizzle-orm": "^0.30.0" },
+  "devDependencies": { "vitest": "^1.0.0" }
+}

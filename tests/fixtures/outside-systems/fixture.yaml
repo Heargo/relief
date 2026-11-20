@@ -1,0 +1,4 @@
+commits:
+  - id: init
+    message: "feat: a repo whose only manifest is a test fixture"
+    date: "2024-05-01T09:00:00Z"

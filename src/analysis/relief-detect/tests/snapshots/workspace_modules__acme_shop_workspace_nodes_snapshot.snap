@@ -1,0 +1,374 @@
+---
+source: src/analysis/relief-detect/tests/workspace_modules.rs
+expression: nodes
+---
+[
+  {
+    "id": "pkg:@acme/api",
+    "kind": "service",
+    "subkind": "http-server",
+    "parent": "pkg:acme-shop",
+    "visibility": "public",
+    "contentHash": "",
+    "path": "apps/api"
+  },
+  {
+    "id": "pkg:@acme/api/auth",
+    "kind": "module",
+    "subkind": "module",
+    "parent": "pkg:@acme/api",
+    "visibility": "public",
+    "contentHash": "",
+    "path": "apps/api/auth"
+  },
+  {
+    "id": "pkg:@acme/api/auth::file:apps/api/auth/session.ts",
+    "kind": "file",
+    "subkind": "file",
+    "parent": "pkg:@acme/api/auth",
+    "lang": "ts",
+    "visibility": "public",
+    "contentHash": "a871c8c19f9a4f09"
+  },
+  {
+    "id": "pkg:@acme/api/auth::file:apps/api/auth/tokens.ts",
+    "kind": "file",
+    "subkind": "file",
+    "parent": "pkg:@acme/api/auth",
+    "lang": "ts",
+    "visibility": "public",
+    "contentHash": "af6b6e9b4a88b5db"
+  },
+  {
+    "id": "pkg:@acme/api/billing",
+    "kind": "module",
+    "subkind": "module",
+    "parent": "pkg:@acme/api",
+    "visibility": "public",
+    "contentHash": "",
+    "path": "apps/api/billing"
+  },
+  {
+    "id": "pkg:@acme/api/billing::file:apps/api/billing/invoice.spec.ts",
+    "kind": "file",
+    "subkind": "file",
+    "parent": "pkg:@acme/api/billing",
+    "lang": "ts",
+    "visibility": "public",
+    "contentHash": "f32a5c97a9151fb0"
+  },
+  {
+    "id": "pkg:@acme/api/billing::file:apps/api/billing/invoice.ts",
+    "kind": "file",
+    "subkind": "file",
+    "parent": "pkg:@acme/api/billing",
+    "lang": "ts",
+    "visibility": "public",
+    "contentHash": "924024c936376a43"
+  },
+  {
+    "id": "pkg:@acme/api/billing::file:apps/api/billing/legacyCoupon.ts",
+    "kind": "file",
+    "subkind": "file",
+    "parent": "pkg:@acme/api/billing",
+    "lang": "ts",
+    "visibility": "public",
+    "contentHash": "b71687b8edace36d"
+  },
+  {
+    "id": "pkg:@acme/api/billing::file:apps/api/billing/payment.spec.ts",
+    "kind": "file",
+    "subkind": "file",
+    "parent": "pkg:@acme/api/billing",
+    "lang": "ts",
+    "visibility": "public",
+    "contentHash": "66d287cdc049fd5c"
+  },
+  {
+    "id": "pkg:@acme/api/billing::file:apps/api/billing/payment.ts",
+    "kind": "file",
+    "subkind": "file",
+    "parent": "pkg:@acme/api/billing",
+    "lang": "ts",
+    "visibility": "public",
+    "contentHash": "7216d1fcd21311ae"
+  },
+  {
+    "id": "pkg:@acme/api/jobs",
+    "kind": "module",
+    "subkind": "module",
+    "parent": "pkg:@acme/api",
+    "visibility": "public",
+    "contentHash": "",
+    "path": "apps/api/jobs"
+  },
+  {
+    "id": "pkg:@acme/api/jobs::file:apps/api/jobs/renewals.ts",
+    "kind": "file",
+    "subkind": "file",
+    "parent": "pkg:@acme/api/jobs",
+    "lang": "ts",
+    "visibility": "public",
+    "contentHash": "7275b87357036a22"
+  },
+  {
+    "id": "pkg:@acme/api/routes",
+    "kind": "module",
+    "subkind": "module",
+    "parent": "pkg:@acme/api",
+    "visibility": "public",
+    "contentHash": "",
+    "path": "apps/api/routes"
+  },
+  {
+    "id": "pkg:@acme/api/routes::file:apps/api/routes/checkout.spec.ts",
+    "kind": "file",
+    "subkind": "file",
+    "parent": "pkg:@acme/api/routes",
+    "lang": "ts",
+    "visibility": "public",
+    "contentHash": "77029a46c468a386"
+  },
+  {
+    "id": "pkg:@acme/api/routes::file:apps/api/routes/checkout.ts",
+    "kind": "file",
+    "subkind": "file",
+    "parent": "pkg:@acme/api/routes",
+    "lang": "ts",
+    "visibility": "public",
+    "contentHash": "6ea8d34f611cbe6f"
+  },
+  {
+    "id": "pkg:@acme/api/routes::file:apps/api/routes/invoices.spec.ts",
+    "kind": "file",
+    "subkind": "file",
+    "parent": "pkg:@acme/api/routes",
+    "lang": "ts",
+    "visibility": "public",
+    "contentHash": "4c3d0d8320965f5c"
+  },
+  {
+    "id": "pkg:@acme/api/routes::file:apps/api/routes/invoices.ts",
+    "kind": "file",
+    "subkind": "file",
+    "parent": "pkg:@acme/api/routes",
+    "lang": "ts",
+    "visibility": "public",
+    "contentHash": "39b0fdd5c997ae4d"
+  },
+  {
+    "id": "pkg:@acme/api/routes::file:apps/api/routes/middleware.spec.ts",
+    "kind": "file",
+    "subkind": "file",
+    "parent": "pkg:@acme/api/routes",
+    "lang": "ts",
+    "visibility": "public",
+    "contentHash": "8841c71f89c8463b"
+  },
+  {
+    "id": "pkg:@acme/api/routes::file:apps/api/routes/middleware.ts",
+    "kind": "file",
+    "subkind": "file",
+    "parent": "pkg:@acme/api/routes",
+    "lang": "ts",
+    "visibility": "public",
+    "contentHash": "13a78e7a98601c8b"
+  },
+  {
+    "id": "pkg:@acme/api::file:apps/api/package.json",
+    "kind": "file",
+    "subkind": "file",
+    "parent": "pkg:@acme/api",
+    "lang": "json",
+    "visibility": "public",
+    "contentHash": "55b19d2b193c6597"
+  },
+  {
+    "id": "pkg:@acme/db",
+    "kind": "package",
+    "subkind": "library",
+    "parent": "pkg:acme-shop",
+    "visibility": "public",
+    "contentHash": "",
+    "path": "packages/db"
+  },
+  {
+    "id": "pkg:@acme/db/repos",
+    "kind": "module",
+    "subkind": "module",
+    "parent": "pkg:@acme/db",
+    "visibility": "public",
+    "contentHash": "",
+    "path": "packages/db/repos"
+  },
+  {
+    "id": "pkg:@acme/db/schema",
+    "kind": "module",
+    "subkind": "module",
+    "parent": "pkg:@acme/db",
+    "visibility": "public",
+    "contentHash": "",
+    "path": "packages/db/schema"
+  },
+  {
+    "id": "pkg:@acme/shared",
+    "kind": "package",
+    "subkind": "library",
+    "parent": "pkg:acme-shop",
+    "visibility": "public",
+    "contentHash": "",
+    "path": "packages/shared"
+  },
+  {
+    "id": "pkg:@acme/shared/http",
+    "kind": "module",
+    "subkind": "module",
+    "parent": "pkg:@acme/shared",
+    "visibility": "public",
+    "contentHash": "",
+    "path": "packages/shared/http"
+  },
+  {
+    "id": "pkg:@acme/shared/money",
+    "kind": "module",
+    "subkind": "module",
+    "parent": "pkg:@acme/shared",
+    "visibility": "public",
+    "contentHash": "",
+    "path": "packages/shared/money"
+  },
+  {
+    "id": "pkg:@acme/web",
+    "kind": "service",
+    "subkind": "react-app",
+    "parent": "pkg:acme-shop",
+    "visibility": "public",
+    "contentHash": "",
+    "path": "apps/web"
+  },
+  {
+    "id": "pkg:@acme/web/components",
+    "kind": "module",
+    "subkind": "module",
+    "parent": "pkg:@acme/web",
+    "visibility": "public",
+    "contentHash": "",
+    "path": "apps/web/components"
+  },
+  {
+    "id": "pkg:@acme/web/hooks",
+    "kind": "module",
+    "subkind": "module",
+    "parent": "pkg:@acme/web",
+    "visibility": "public",
+    "contentHash": "",
+    "path": "apps/web/hooks"
+  },
+  {
+    "id": "pkg:@acme/web/pages",
+    "kind": "module",
+    "subkind": "module",
+    "parent": "pkg:@acme/web",
+    "visibility": "public",
+    "contentHash": "",
+    "path": "apps/web/pages"
+  },
+  {
+    "id": "pkg:@acme/web/utils",
+    "kind": "module",
+    "subkind": "module",
+    "parent": "pkg:@acme/web",
+    "visibility": "public",
+    "contentHash": "",
+    "path": "apps/web/utils"
+  },
+  {
+    "id": "pkg:acme-shop",
+    "kind": "repo",
+    "subkind": "system",
+    "parent": null,
+    "visibility": "public",
+    "contentHash": ""
+  },
+  {
+    "id": "pkg:acme-shop/types",
+    "kind": "module",
+    "subkind": "module",
+    "parent": "pkg:acme-shop",
+    "visibility": "public",
+    "contentHash": "",
+    "path": "types"
+  },
+  {
+    "id": "pkg:external",
+    "kind": "module",
+    "subkind": "external-group",
+    "parent": "pkg:acme-shop",
+    "visibility": "public",
+    "contentHash": ""
+  },
+  {
+    "id": "pkg:external/@tanstack/react-query",
+    "kind": "external",
+    "subkind": "external",
+    "parent": "pkg:external",
+    "visibility": "public",
+    "contentHash": ""
+  },
+  {
+    "id": "pkg:external/drizzle-orm",
+    "kind": "external",
+    "subkind": "external",
+    "parent": "pkg:external",
+    "visibility": "public",
+    "contentHash": ""
+  },
+  {
+    "id": "pkg:external/fastify",
+    "kind": "external",
+    "subkind": "external",
+    "parent": "pkg:external",
+    "visibility": "public",
+    "contentHash": ""
+  },
+  {
+    "id": "pkg:external/react",
+    "kind": "external",
+    "subkind": "external",
+    "parent": "pkg:external",
+    "visibility": "public",
+    "contentHash": ""
+  },
+  {
+    "id": "pkg:external/react-dom",
+    "kind": "external",
+    "subkind": "external",
+    "parent": "pkg:external",
+    "visibility": "public",
+    "contentHash": ""
+  },
+  {
+    "id": "pkg:external/react-router",
+    "kind": "external",
+    "subkind": "external",
+    "parent": "pkg:external",
+    "visibility": "public",
+    "contentHash": ""
+  },
+  {
+    "id": "pkg:external/stripe-sdk",
+    "kind": "external",
+    "subkind": "external",
+    "parent": "pkg:external",
+    "visibility": "public",
+    "contentHash": ""
+  },
+  {
+    "id": "pkg:external/vitest",
+    "kind": "external",
+    "subkind": "external",
+    "parent": "pkg:external",
+    "visibility": "public",
+    "contentHash": ""
+  }
+]

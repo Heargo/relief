@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SearchResponse",
+  "description": "Response of the `search` command: best match first.",
+  "type": "object",
+  "properties": {
+    "hits": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/SearchHit"
+      }
+    }
+  },
+  "required": [
+    "hits"
+  ],
+  "$defs": {
+    "NodeId": {
+      "type": "string"
+    },
+    "NodeKind": {
+      "description": "Level of a node in the containment hierarchy.",
+      "type": "string",
+      "enum": [
+        "repo",
+        "workspace",
+        "service",
+        "package",
+        "module",
+        "file",
+        "symbol",
+        "external"
+      ]
+    },
+    "SearchHit": {
+      "description": "One match of the `search` command.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/NodeId"
+        },
+        "kind": {
+          "$ref": "#/$defs/NodeKind"
+        }
+      },
+      "required": [
+        "id",
+        "kind"
+      ]
+    }
+  }
+}

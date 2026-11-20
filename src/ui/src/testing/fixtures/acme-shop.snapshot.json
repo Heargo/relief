@@ -1,0 +1,2574 @@
+{
+  "graph": {
+    "commit": "d0cf48d9468e64b81a65cdb5d5e6931a3bc21e03",
+    "nodes": [
+      {
+        "id": "pkg:acme",
+        "kind": "repo",
+        "subkind": "system",
+        "parent": null,
+        "visibility": "public",
+        "contentHash": ""
+      },
+      {
+        "id": "pkg:@acme/api",
+        "kind": "service",
+        "subkind": "http-server",
+        "parent": "pkg:acme",
+        "visibility": "public",
+        "contentHash": "",
+        "path": "apps/api"
+      },
+      {
+        "id": "pkg:@acme/db",
+        "kind": "package",
+        "subkind": "library",
+        "parent": "pkg:acme",
+        "visibility": "public",
+        "contentHash": "",
+        "path": "packages/db"
+      },
+      {
+        "id": "pkg:@acme/shared",
+        "kind": "package",
+        "subkind": "library",
+        "parent": "pkg:acme",
+        "visibility": "public",
+        "contentHash": "",
+        "path": "packages/shared"
+      },
+      {
+        "id": "pkg:@acme/web",
+        "kind": "service",
+        "subkind": "react-app",
+        "parent": "pkg:acme",
+        "visibility": "public",
+        "contentHash": "",
+        "path": "apps/web"
+      },
+      {
+        "id": "pkg:external",
+        "kind": "module",
+        "subkind": "external-group",
+        "parent": "pkg:acme",
+        "visibility": "public",
+        "contentHash": ""
+      },
+      {
+        "id": "pkg:external/@tanstack/react-query",
+        "kind": "external",
+        "subkind": "external",
+        "parent": "pkg:external",
+        "visibility": "public",
+        "contentHash": ""
+      },
+      {
+        "id": "pkg:external/drizzle-orm",
+        "kind": "external",
+        "subkind": "external",
+        "parent": "pkg:external",
+        "visibility": "public",
+        "contentHash": ""
+      },
+      {
+        "id": "pkg:external/fastify",
+        "kind": "external",
+        "subkind": "external",
+        "parent": "pkg:external",
+        "visibility": "public",
+        "contentHash": ""
+      },
+      {
+        "id": "pkg:external/react",
+        "kind": "external",
+        "subkind": "external",
+        "parent": "pkg:external",
+        "visibility": "public",
+        "contentHash": ""
+      },
+      {
+        "id": "pkg:external/react-dom",
+        "kind": "external",
+        "subkind": "external",
+        "parent": "pkg:external",
+        "visibility": "public",
+        "contentHash": ""
+      },
+      {
+        "id": "pkg:external/react-router",
+        "kind": "external",
+        "subkind": "external",
+        "parent": "pkg:external",
+        "visibility": "public",
+        "contentHash": ""
+      },
+      {
+        "id": "pkg:external/stripe-sdk",
+        "kind": "external",
+        "subkind": "external",
+        "parent": "pkg:external",
+        "visibility": "public",
+        "contentHash": ""
+      },
+      {
+        "id": "pkg:external/vitest",
+        "kind": "external",
+        "subkind": "external",
+        "parent": "pkg:external",
+        "visibility": "public",
+        "contentHash": ""
+      },
+      {
+        "id": "pkg:acme::file:package.json",
+        "kind": "file",
+        "subkind": "file",
+        "parent": "pkg:acme",
+        "lang": "json",
+        "visibility": "public",
+        "contentHash": "6c0ec709188e163e"
+      },
+      {
+        "id": "pkg:acme::file:pnpm-workspace.yaml",
+        "kind": "file",
+        "subkind": "file",
+        "parent": "pkg:acme",
+        "lang": "yaml",
+        "visibility": "public",
+        "contentHash": "032e0c7bc871f7a1"
+      },
+      {
+        "id": "pkg:acme::file:relief.config.yaml",
+        "kind": "file",
+        "subkind": "file",
+        "parent": "pkg:acme",
+        "lang": "yaml",
+        "visibility": "public",
+        "contentHash": "231fab8f365892b2"
+      },
+      {
+        "id": "pkg:acme::file:tsconfig.json",
+        "kind": "file",
+        "subkind": "file",
+        "parent": "pkg:acme",
+        "lang": "json",
+        "visibility": "public",
+        "contentHash": "1e8dd261cafa04d6"
+      },
+      {
+        "id": "pkg:acme::file:types/external.d.ts",
+        "kind": "file",
+        "subkind": "file",
+        "parent": "pkg:acme",
+        "lang": "ts",
+        "visibility": "public",
+        "contentHash": "663e4c188d357228"
+      },
+      {
+        "id": "pkg:@acme/api/auth",
+        "kind": "module",
+        "subkind": "module",
+        "parent": "pkg:@acme/api",
+        "visibility": "public",
+        "contentHash": "",
+        "path": "apps/api/auth"
+      },
+      {
+        "id": "pkg:@acme/api/billing",
+        "kind": "module",
+        "subkind": "module",
+        "parent": "pkg:@acme/api",
+        "visibility": "public",
+        "contentHash": "",
+        "path": "apps/api/billing"
+      },
+      {
+        "id": "pkg:@acme/api/jobs",
+        "kind": "module",
+        "subkind": "module",
+        "parent": "pkg:@acme/api",
+        "visibility": "public",
+        "contentHash": "",
+        "path": "apps/api/jobs"
+      },
+      {
+        "id": "pkg:@acme/api/routes",
+        "kind": "module",
+        "subkind": "module",
+        "parent": "pkg:@acme/api",
+        "visibility": "public",
+        "contentHash": "",
+        "path": "apps/api/routes"
+      },
+      {
+        "id": "pkg:@acme/api/auth::file:apps/api/auth/session.ts",
+        "kind": "file",
+        "subkind": "file",
+        "parent": "pkg:@acme/api/auth",
+        "lang": "ts",
+        "visibility": "public",
+        "contentHash": "92b8766c4d8c8ddb"
+      },
+      {
+        "id": "pkg:@acme/api/auth::file:apps/api/auth/tokens.ts",
+        "kind": "file",
+        "subkind": "file",
+        "parent": "pkg:@acme/api/auth",
+        "lang": "ts",
+        "visibility": "public",
+        "contentHash": "af6b6e9b4a88b5db"
+      },
+      {
+        "id": "pkg:@acme/api/billing::file:apps/api/billing/discount.ts",
+        "kind": "file",
+        "subkind": "file",
+        "parent": "pkg:@acme/api/billing",
+        "lang": "ts",
+        "visibility": "public",
+        "contentHash": "92e048831e5d51c9"
+      },
+      {
+        "id": "pkg:@acme/api/billing::file:apps/api/billing/invoice.spec.ts",
+        "kind": "file",
+        "subkind": "file",
+        "parent": "pkg:@acme/api/billing",
+        "lang": "ts",
+        "visibility": "public",
+        "contentHash": "f32a5c97a9151fb0"
+      },
+      {
+        "id": "pkg:@acme/api/billing::file:apps/api/billing/invoice.ts",
+        "kind": "file",
+        "subkind": "file",
+        "parent": "pkg:@acme/api/billing",
+        "lang": "ts",
+        "visibility": "public",
+        "contentHash": "cd45fed119c9a94c"
+      },
+      {
+        "id": "pkg:@acme/api/billing::file:apps/api/billing/payment.spec.ts",
+        "kind": "file",
+        "subkind": "file",
+        "parent": "pkg:@acme/api/billing",
+        "lang": "ts",
+        "visibility": "public",
+        "contentHash": "66d287cdc049fd5c"
+      },
+      {
+        "id": "pkg:@acme/api/billing::file:apps/api/billing/payment.ts",
+        "kind": "file",
+        "subkind": "file",
+        "parent": "pkg:@acme/api/billing",
+        "lang": "ts",
+        "visibility": "public",
+        "contentHash": "7f0a24a9bee7fd38"
+      },
+      {
+        "id": "pkg:@acme/api/jobs::file:apps/api/jobs/renewals.ts",
+        "kind": "file",
+        "subkind": "file",
+        "parent": "pkg:@acme/api/jobs",
+        "lang": "ts",
+        "visibility": "public",
+        "contentHash": "7275b87357036a22"
+      },
+      {
+        "id": "pkg:@acme/api::file:apps/api/package.json",
+        "kind": "file",
+        "subkind": "file",
+        "parent": "pkg:@acme/api",
+        "lang": "json",
+        "visibility": "public",
+        "contentHash": "55b19d2b193c6597"
+      },
+      {
+        "id": "pkg:@acme/api/routes::file:apps/api/routes/checkout.spec.ts",
+        "kind": "file",
+        "subkind": "file",
+        "parent": "pkg:@acme/api/routes",
+        "lang": "ts",
+        "visibility": "public",
+        "contentHash": "77029a46c468a386"
+      },
+      {
+        "id": "pkg:@acme/api/routes::file:apps/api/routes/checkout.ts",
+        "kind": "file",
+        "subkind": "file",
+        "parent": "pkg:@acme/api/routes",
+        "lang": "ts",
+        "visibility": "public",
+        "contentHash": "858f0e410ea83ad8"
+      },
+      {
+        "id": "pkg:@acme/api/routes::file:apps/api/routes/invoices.spec.ts",
+        "kind": "file",
+        "subkind": "file",
+        "parent": "pkg:@acme/api/routes",
+        "lang": "ts",
+        "visibility": "public",
+        "contentHash": "4c3d0d8320965f5c"
+      },
+      {
+        "id": "pkg:@acme/api/routes::file:apps/api/routes/invoices.ts",
+        "kind": "file",
+        "subkind": "file",
+        "parent": "pkg:@acme/api/routes",
+        "lang": "ts",
+        "visibility": "public",
+        "contentHash": "2b6de9e87943b9d9"
+      },
+      {
+        "id": "pkg:@acme/api/routes::file:apps/api/routes/middleware.spec.ts",
+        "kind": "file",
+        "subkind": "file",
+        "parent": "pkg:@acme/api/routes",
+        "lang": "ts",
+        "visibility": "public",
+        "contentHash": "8841c71f89c8463b"
+      },
+      {
+        "id": "pkg:@acme/api/routes::file:apps/api/routes/middleware.ts",
+        "kind": "file",
+        "subkind": "file",
+        "parent": "pkg:@acme/api/routes",
+        "lang": "ts",
+        "visibility": "public",
+        "contentHash": "13a78e7a98601c8b"
+      },
+      {
+        "id": "pkg:@acme/db/repos",
+        "kind": "module",
+        "subkind": "module",
+        "parent": "pkg:@acme/db",
+        "visibility": "public",
+        "contentHash": "",
+        "path": "packages/db/repos"
+      },
+      {
+        "id": "pkg:@acme/db/schema",
+        "kind": "module",
+        "subkind": "module",
+        "parent": "pkg:@acme/db",
+        "visibility": "public",
+        "contentHash": "",
+        "path": "packages/db/schema"
+      },
+      {
+        "id": "pkg:@acme/db::file:packages/db/package.json",
+        "kind": "file",
+        "subkind": "file",
+        "parent": "pkg:@acme/db",
+        "lang": "json",
+        "visibility": "public",
+        "contentHash": "6e5213c46d7f63ba"
+      },
+      {
+        "id": "pkg:@acme/db/repos::file:packages/db/repos/discountRepo.ts",
+        "kind": "file",
+        "subkind": "file",
+        "parent": "pkg:@acme/db/repos",
+        "lang": "ts",
+        "visibility": "public",
+        "contentHash": "949062ccf211826e"
+      },
+      {
+        "id": "pkg:@acme/db/repos::file:packages/db/repos/invoiceRepo.ts",
+        "kind": "file",
+        "subkind": "file",
+        "parent": "pkg:@acme/db/repos",
+        "lang": "ts",
+        "visibility": "public",
+        "contentHash": "42b51ae18da7b8b7"
+      },
+      {
+        "id": "pkg:@acme/db/repos::file:packages/db/repos/userRepo.ts",
+        "kind": "file",
+        "subkind": "file",
+        "parent": "pkg:@acme/db/repos",
+        "lang": "ts",
+        "visibility": "public",
+        "contentHash": "972b95c6a75895f7"
+      },
+      {
+        "id": "pkg:@acme/db/schema::file:packages/db/schema/discounts.ts",
+        "kind": "file",
+        "subkind": "file",
+        "parent": "pkg:@acme/db/schema",
+        "lang": "ts",
+        "visibility": "public",
+        "contentHash": "709a317472b34056"
+      },
+      {
+        "id": "pkg:@acme/db/schema::file:packages/db/schema/invoices.ts",
+        "kind": "file",
+        "subkind": "file",
+        "parent": "pkg:@acme/db/schema",
+        "lang": "ts",
+        "visibility": "public",
+        "contentHash": "5cae655bcb781cfb"
+      },
+      {
+        "id": "pkg:@acme/db/schema::file:packages/db/schema/users.ts",
+        "kind": "file",
+        "subkind": "file",
+        "parent": "pkg:@acme/db/schema",
+        "lang": "ts",
+        "visibility": "public",
+        "contentHash": "5167a62cfbc16725"
+      },
+      {
+        "id": "pkg:@acme/shared/http",
+        "kind": "module",
+        "subkind": "module",
+        "parent": "pkg:@acme/shared",
+        "visibility": "public",
+        "contentHash": "",
+        "path": "packages/shared/http"
+      },
+      {
+        "id": "pkg:@acme/shared/money",
+        "kind": "module",
+        "subkind": "module",
+        "parent": "pkg:@acme/shared",
+        "visibility": "public",
+        "contentHash": "",
+        "path": "packages/shared/money"
+      },
+      {
+        "id": "pkg:@acme/shared/http::file:packages/shared/http/client.ts",
+        "kind": "file",
+        "subkind": "file",
+        "parent": "pkg:@acme/shared/http",
+        "lang": "ts",
+        "visibility": "public",
+        "contentHash": "8324aa55e3f13b91"
+      },
+      {
+        "id": "pkg:@acme/shared/money::file:packages/shared/money/currency.ts",
+        "kind": "file",
+        "subkind": "file",
+        "parent": "pkg:@acme/shared/money",
+        "lang": "ts",
+        "visibility": "public",
+        "contentHash": "a496a8edaf25681b"
+      },
+      {
+        "id": "pkg:@acme/shared/money::file:packages/shared/money/format.ts",
+        "kind": "file",
+        "subkind": "file",
+        "parent": "pkg:@acme/shared/money",
+        "lang": "ts",
+        "visibility": "public",
+        "contentHash": "16e8135d5aa95256"
+      },
+      {
+        "id": "pkg:@acme/shared::file:packages/shared/package.json",
+        "kind": "file",
+        "subkind": "file",
+        "parent": "pkg:@acme/shared",
+        "lang": "json",
+        "visibility": "public",
+        "contentHash": "d0b8e042a1f7e35a"
+      },
+      {
+        "id": "pkg:@acme/web/components",
+        "kind": "module",
+        "subkind": "module",
+        "parent": "pkg:@acme/web",
+        "visibility": "public",
+        "contentHash": "",
+        "path": "apps/web/components"
+      },
+      {
+        "id": "pkg:@acme/web/hooks",
+        "kind": "module",
+        "subkind": "module",
+        "parent": "pkg:@acme/web",
+        "visibility": "public",
+        "contentHash": "",
+        "path": "apps/web/hooks"
+      },
+      {
+        "id": "pkg:@acme/web/pages",
+        "kind": "module",
+        "subkind": "module",
+        "parent": "pkg:@acme/web",
+        "visibility": "public",
+        "contentHash": "",
+        "path": "apps/web/pages"
+      },
+      {
+        "id": "pkg:@acme/web/utils",
+        "kind": "module",
+        "subkind": "module",
+        "parent": "pkg:@acme/web",
+        "visibility": "public",
+        "contentHash": "",
+        "path": "apps/web/utils"
+      },
+      {
+        "id": "pkg:@acme/web/components::file:apps/web/components/Button.tsx",
+        "kind": "file",
+        "subkind": "file",
+        "parent": "pkg:@acme/web/components",
+        "lang": "tsx",
+        "visibility": "public",
+        "contentHash": "d3d4b50d88bab05d"
+      },
+      {
+        "id": "pkg:@acme/web/components::file:apps/web/components/CartSummary.spec.tsx",
+        "kind": "file",
+        "subkind": "file",
+        "parent": "pkg:@acme/web/components",
+        "lang": "tsx",
+        "visibility": "public",
+        "contentHash": "6b1936e75812a426"
+      },
+      {
+        "id": "pkg:@acme/web/components::file:apps/web/components/CartSummary.tsx",
+        "kind": "file",
+        "subkind": "file",
+        "parent": "pkg:@acme/web/components",
+        "lang": "tsx",
+        "visibility": "public",
+        "contentHash": "2d94a0d767a6f0c4"
+      },
+      {
+        "id": "pkg:@acme/web/components::file:apps/web/components/PromoCodeInput.tsx",
+        "kind": "file",
+        "subkind": "file",
+        "parent": "pkg:@acme/web/components",
+        "lang": "tsx",
+        "visibility": "public",
+        "contentHash": "c09ef068368b14ff"
+      },
+      {
+        "id": "pkg:@acme/web/hooks::file:apps/web/hooks/useInvoice.ts",
+        "kind": "file",
+        "subkind": "file",
+        "parent": "pkg:@acme/web/hooks",
+        "lang": "ts",
+        "visibility": "public",
+        "contentHash": "549274063d2dcb79"
+      },
+      {
+        "id": "pkg:@acme/web/hooks::file:apps/web/hooks/useSession.ts",
+        "kind": "file",
+        "subkind": "file",
+        "parent": "pkg:@acme/web/hooks",
+        "lang": "ts",
+        "visibility": "public",
+        "contentHash": "95b9eeafad807a78"
+      },
+      {
+        "id": "pkg:@acme/web::file:apps/web/package.json",
+        "kind": "file",
+        "subkind": "file",
+        "parent": "pkg:@acme/web",
+        "lang": "json",
+        "visibility": "public",
+        "contentHash": "965506f364f78c17"
+      },
+      {
+        "id": "pkg:@acme/web/pages::file:apps/web/pages/Checkout.spec.tsx",
+        "kind": "file",
+        "subkind": "file",
+        "parent": "pkg:@acme/web/pages",
+        "lang": "tsx",
+        "visibility": "public",
+        "contentHash": "41a074b31d39dce3"
+      },
+      {
+        "id": "pkg:@acme/web/pages::file:apps/web/pages/Checkout.tsx",
+        "kind": "file",
+        "subkind": "file",
+        "parent": "pkg:@acme/web/pages",
+        "lang": "tsx",
+        "visibility": "public",
+        "contentHash": "906110366de2aeb1"
+      },
+      {
+        "id": "pkg:@acme/web/pages::file:apps/web/pages/Invoices.tsx",
+        "kind": "file",
+        "subkind": "file",
+        "parent": "pkg:@acme/web/pages",
+        "lang": "tsx",
+        "visibility": "public",
+        "contentHash": "1005a4181b03003d"
+      },
+      {
+        "id": "pkg:@acme/web/pages::file:apps/web/pages/Login.tsx",
+        "kind": "file",
+        "subkind": "file",
+        "parent": "pkg:@acme/web/pages",
+        "lang": "tsx",
+        "visibility": "public",
+        "contentHash": "13e822fda0feb97d"
+      },
+      {
+        "id": "pkg:@acme/web/utils::file:apps/web/utils/dates.ts",
+        "kind": "file",
+        "subkind": "file",
+        "parent": "pkg:@acme/web/utils",
+        "lang": "ts",
+        "visibility": "public",
+        "contentHash": "24e322004b4bba78"
+      },
+      {
+        "id": "pkg:@acme/api/auth::file:apps/api/auth/session.ts::sym:SessionExpiredError",
+        "kind": "symbol",
+        "subkind": "class",
+        "parent": "pkg:@acme/api/auth::file:apps/api/auth/session.ts",
+        "lang": "ts",
+        "span": {
+          "startLine": 4,
+          "endLine": 4
+        },
+        "visibility": "public",
+        "contentHash": "4c97c4101fe8b9b4272e61004aa205c226caaf32ec8431ec65c76bf23f2db530",
+        "signatureHash": "c405fdb8bc781107956354765f902ac409ce8e9071f04a1dabda93f569ed0baf"
+      },
+      {
+        "id": "pkg:@acme/api/auth::file:apps/api/auth/session.ts::sym:Session",
+        "kind": "symbol",
+        "subkind": "type",
+        "parent": "pkg:@acme/api/auth::file:apps/api/auth/session.ts",
+        "lang": "ts",
+        "span": {
+          "startLine": 6,
+          "endLine": 6
+        },
+        "visibility": "public",
+        "contentHash": "818f47fc67ff521b2137abdb83a362b29dd59e4e7c9afe8cb41c2ee2c7e119a7",
+        "signatureHash": "f510d08c6959ec1d7162ed2eff359f6a3e3f7d5ed234dc4d8dd840cad7976799"
+      },
+      {
+        "id": "pkg:@acme/api/auth::file:apps/api/auth/session.ts::sym:SessionStore",
+        "kind": "symbol",
+        "subkind": "class",
+        "parent": "pkg:@acme/api/auth::file:apps/api/auth/session.ts",
+        "lang": "ts",
+        "span": {
+          "startLine": 8,
+          "endLine": 25
+        },
+        "visibility": "public",
+        "contentHash": "4b876cf658cf0814ac9abcb46fefa5afef877e2ff5d5726af0c60ac80284e5ab",
+        "signatureHash": "de02d18830d5c0ee417b8285a0b077d095a33aacd9f6736375e105a90169e93a"
+      },
+      {
+        "id": "pkg:@acme/api/auth::file:apps/api/auth/session.ts::sym:SessionStore.login",
+        "kind": "symbol",
+        "subkind": "method",
+        "parent": "pkg:@acme/api/auth::file:apps/api/auth/session.ts",
+        "lang": "ts",
+        "span": {
+          "startLine": 9,
+          "endLine": 13
+        },
+        "visibility": "public",
+        "contentHash": "5cc8db77f842ba2cbcfc59aa7eafa4f6b606a41af0811195c3d6615756eafa90",
+        "signatureHash": "34b51c479849c208969f107a1a948a24319b757c379fd7ffa1725eb142126427"
+      },
+      {
+        "id": "pkg:@acme/api/auth::file:apps/api/auth/session.ts::sym:SessionStore.refresh",
+        "kind": "symbol",
+        "subkind": "method",
+        "parent": "pkg:@acme/api/auth::file:apps/api/auth/session.ts",
+        "lang": "ts",
+        "span": {
+          "startLine": 15,
+          "endLine": 19
+        },
+        "visibility": "public",
+        "contentHash": "3ec037c2351da4da3ecc5b8e6f9d8fb6a4d4bb52acf603b8e38d855d34d83652",
+        "signatureHash": "dfa02b0367f4fc8de83ac6d923c37d2a518cc842d3a600ad0622e98181bd52aa"
+      },
+      {
+        "id": "pkg:@acme/api/auth::file:apps/api/auth/session.ts::sym:SessionStore.load",
+        "kind": "symbol",
+        "subkind": "method",
+        "parent": "pkg:@acme/api/auth::file:apps/api/auth/session.ts",
+        "lang": "ts",
+        "span": {
+          "startLine": 21,
+          "endLine": 24
+        },
+        "visibility": "internal",
+        "contentHash": "35ba9d11bcf579ddd688b80f56b166f27a6f007d9e0cd664b7c21cc4110e86fd",
+        "signatureHash": "d5642fd993f704b9ffa204bb0fff858afd0d50e9ba4016956da5a5fa00852ec0"
+      },
+      {
+        "id": "pkg:@acme/api/auth::file:apps/api/auth/session.ts::sym:sessions",
+        "kind": "symbol",
+        "subkind": "const",
+        "parent": "pkg:@acme/api/auth::file:apps/api/auth/session.ts",
+        "lang": "ts",
+        "span": {
+          "startLine": 27,
+          "endLine": 27
+        },
+        "visibility": "public",
+        "contentHash": "497a1801d18ba05d1a68a15d30765d6faf4e3368503b65dd3f2690b27e92f409",
+        "signatureHash": "d6cc18c9e788fe3d04f3fed34f0668eed4a3d9a1b8e001b2ffbe0c40b4546c2a"
+      },
+      {
+        "id": "pkg:@acme/api/auth::file:apps/api/auth/tokens.ts::sym:Claims",
+        "kind": "symbol",
+        "subkind": "type",
+        "parent": "pkg:@acme/api/auth::file:apps/api/auth/tokens.ts",
+        "lang": "ts",
+        "span": {
+          "startLine": 1,
+          "endLine": 1
+        },
+        "visibility": "public",
+        "contentHash": "932465ba1df8fabda6d51520332536a9f1e7fd75ec6f4557576a2f8ef92956e5",
+        "signatureHash": "8948e2a5b3b336486bd46e41e756f2c46ede919e544f247232e2fb3f7f3090e3"
+      },
+      {
+        "id": "pkg:@acme/api/auth::file:apps/api/auth/tokens.ts::sym:signToken",
+        "kind": "symbol",
+        "subkind": "function",
+        "parent": "pkg:@acme/api/auth::file:apps/api/auth/tokens.ts",
+        "lang": "ts",
+        "span": {
+          "startLine": 3,
+          "endLine": 5
+        },
+        "visibility": "public",
+        "contentHash": "ef77d9b0d6a8e7305e6d649496a60f6cba5c1debd4e1d9c0deba71a181a47e6c",
+        "signatureHash": "a06c61c6876523bd5af19aee91e9824e631a6c33135968316ce40bd20ea191a5"
+      },
+      {
+        "id": "pkg:@acme/api/auth::file:apps/api/auth/tokens.ts::sym:verifyToken",
+        "kind": "symbol",
+        "subkind": "function",
+        "parent": "pkg:@acme/api/auth::file:apps/api/auth/tokens.ts",
+        "lang": "ts",
+        "span": {
+          "startLine": 7,
+          "endLine": 13
+        },
+        "visibility": "public",
+        "contentHash": "51430b711c7c407c77655b6e4f8e8b387e4070b73216c1d7ee23203e786911f2",
+        "signatureHash": "0c0ac3a9ce6fb497fd1cf623a2fd4aae121d1215007a4ae82ad0338d8dda1ca9"
+      },
+      {
+        "id": "pkg:@acme/api/billing::file:apps/api/billing/discount.ts::sym:DiscountCode",
+        "kind": "symbol",
+        "subkind": "type",
+        "parent": "pkg:@acme/api/billing::file:apps/api/billing/discount.ts",
+        "lang": "ts",
+        "span": {
+          "startLine": 3,
+          "endLine": 7
+        },
+        "visibility": "public",
+        "contentHash": "24d6debcbdc7966587c19a802b322729c6df182cadb5bc3f064624451bc200f5",
+        "signatureHash": "5738ce45a2a72688993acb46085a6d139d7dff9e31f358f88b5ded984416c8e3"
+      },
+      {
+        "id": "pkg:@acme/api/billing::file:apps/api/billing/discount.ts::sym:applyDiscount",
+        "kind": "symbol",
+        "subkind": "function",
+        "parent": "pkg:@acme/api/billing::file:apps/api/billing/discount.ts",
+        "lang": "ts",
+        "span": {
+          "startLine": 9,
+          "endLine": 13
+        },
+        "visibility": "public",
+        "contentHash": "8b60fa86ff1b8ea6e2a4ad4681cc16f9171a44d247f058cf7fa6a20d8c95e9ad",
+        "signatureHash": "c284b62b4b7d99634921fa28c38134246ec6f91a940c335cc9bef85a81768285"
+      },
+      {
+        "id": "pkg:@acme/api/billing::file:apps/api/billing/discount.ts::sym:isExpired",
+        "kind": "symbol",
+        "subkind": "function",
+        "parent": "pkg:@acme/api/billing::file:apps/api/billing/discount.ts",
+        "lang": "ts",
+        "span": {
+          "startLine": 15,
+          "endLine": 17
+        },
+        "visibility": "internal",
+        "contentHash": "d19c5889df2e73b23c3da1638182dacb2b5955a61ed12b0f9a1586795c301bb7",
+        "signatureHash": "8af3a9f2004c6d99538b3d684f6d23a8b27dea04f9433800addeabac03e58630"
+      },
+      {
+        "id": "pkg:@acme/api/billing::file:apps/api/billing/invoice.ts::sym:InvoiceLine",
+        "kind": "symbol",
+        "subkind": "type",
+        "parent": "pkg:@acme/api/billing::file:apps/api/billing/invoice.ts",
+        "lang": "ts",
+        "span": {
+          "startLine": 4,
+          "endLine": 4
+        },
+        "visibility": "public",
+        "contentHash": "ea888f7ecb16924fef7d4ffb0264d050c92d081324ab566566595f28720075a2",
+        "signatureHash": "a3bb16b1e5ce2428a0521e71023a413dc087228a0e325d026e60b29d1bff9eb1"
+      },
+      {
+        "id": "pkg:@acme/api/billing::file:apps/api/billing/invoice.ts::sym:Invoice",
+        "kind": "symbol",
+        "subkind": "type",
+        "parent": "pkg:@acme/api/billing::file:apps/api/billing/invoice.ts",
+        "lang": "ts",
+        "span": {
+          "startLine": 6,
+          "endLine": 6
+        },
+        "visibility": "public",
+        "contentHash": "9aada18fcf4244bca12648bb301db9de6147abdfbe7337d0b7974b85dc445aae",
+        "signatureHash": "277520890ad417b224b3097f94b2600663c8bebeac7cadee64aea92ef2de3d8a"
+      },
+      {
+        "id": "pkg:@acme/api/billing::file:apps/api/billing/invoice.ts::sym:computeTotal",
+        "kind": "symbol",
+        "subkind": "function",
+        "parent": "pkg:@acme/api/billing::file:apps/api/billing/invoice.ts",
+        "lang": "ts",
+        "span": {
+          "startLine": 8,
+          "endLine": 12
+        },
+        "visibility": "public",
+        "contentHash": "134e07d2aa07eb8aee3b74cebb74d6370c6b57e9700c33dccb411d2832d0c94a",
+        "signatureHash": "a1020d9a6804cf116bc23eff4a17526fb50b9d71ac755a7e6f440b588e1476d7"
+      },
+      {
+        "id": "pkg:@acme/api/billing::file:apps/api/billing/invoice.ts::sym:renderInvoice",
+        "kind": "symbol",
+        "subkind": "function",
+        "parent": "pkg:@acme/api/billing::file:apps/api/billing/invoice.ts",
+        "lang": "ts",
+        "span": {
+          "startLine": 14,
+          "endLine": 16
+        },
+        "visibility": "public",
+        "contentHash": "43ce6d037cf80aef292dfd181f207fe24c0bf62f0f8554aaf27bd777eec8a8d9",
+        "signatureHash": "c235a439108fdb25998018217503196bf1b1a325b48b3885d8874daefc699dde"
+      },
+      {
+        "id": "pkg:@acme/api/billing::file:apps/api/billing/payment.ts::sym:chargeCustomer",
+        "kind": "symbol",
+        "subkind": "function",
+        "parent": "pkg:@acme/api/billing::file:apps/api/billing/payment.ts",
+        "lang": "ts",
+        "span": {
+          "startLine": 6,
+          "endLine": 13
+        },
+        "visibility": "public",
+        "contentHash": "cfed02a546356bb0630c25c54ac2b7fc25cced9a6d80a6e57ec3efb626ceec8e",
+        "signatureHash": "7d46dc06dfd0a87cd0b41751104eb7e27c8c22f05f8bc748be19d803a1676e6a"
+      },
+      {
+        "id": "pkg:@acme/api/jobs::file:apps/api/jobs/renewals.ts::sym:Subscription",
+        "kind": "symbol",
+        "subkind": "type",
+        "parent": "pkg:@acme/api/jobs::file:apps/api/jobs/renewals.ts",
+        "lang": "ts",
+        "span": {
+          "startLine": 6,
+          "endLine": 6
+        },
+        "visibility": "internal",
+        "contentHash": "ecce8538db9dd781d38dac30617697dde46496407c7080499160975edb29b8af",
+        "signatureHash": "a485e103da0894b16556840210d860e4d3e7b3bfa18197f3b45a3ce5893b58be"
+      },
+      {
+        "id": "pkg:@acme/api/jobs::file:apps/api/jobs/renewals.ts::sym:dueSubscriptions",
+        "kind": "symbol",
+        "subkind": "function",
+        "parent": "pkg:@acme/api/jobs::file:apps/api/jobs/renewals.ts",
+        "lang": "ts",
+        "span": {
+          "startLine": 8,
+          "endLine": 10
+        },
+        "visibility": "internal",
+        "contentHash": "4868584ab681b6ae6819453dcb5565bb0f61fb8994b3ffab8a17d89a4c8aed9c",
+        "signatureHash": "6251829df7aa84144d30f93ba54ce1eb22c2fab185063998072cee1150b0a3dc"
+      },
+      {
+        "id": "pkg:@acme/api/jobs::file:apps/api/jobs/renewals.ts::sym:buildInvoice",
+        "kind": "symbol",
+        "subkind": "function",
+        "parent": "pkg:@acme/api/jobs::file:apps/api/jobs/renewals.ts",
+        "lang": "ts",
+        "span": {
+          "startLine": 12,
+          "endLine": 14
+        },
+        "visibility": "internal",
+        "contentHash": "ef3666c7d373936ec052eafb112f4d868a91a0cb24a1b925ccc5480186cf62ef",
+        "signatureHash": "aee5a30c2fbc421cc3d43ff5d0dd705e8b6e89b4bad4b32e83042faca643e0d4"
+      },
+      {
+        "id": "pkg:@acme/api/jobs::file:apps/api/jobs/renewals.ts::sym:renewSubscriptions",
+        "kind": "symbol",
+        "subkind": "function",
+        "parent": "pkg:@acme/api/jobs::file:apps/api/jobs/renewals.ts",
+        "lang": "ts",
+        "span": {
+          "startLine": 16,
+          "endLine": 22
+        },
+        "visibility": "public",
+        "contentHash": "4ed359c1b62fd5afcc520dfe65deb75160326378493180edd032d5ef60cb881d",
+        "signatureHash": "0fef1e03fc74117eed556f646411f1686a56ddee5222e63c00cfd02651fc881b"
+      },
+      {
+        "id": "pkg:@acme/api/routes::file:apps/api/routes/checkout.ts::sym:postCheckout",
+        "kind": "symbol",
+        "subkind": "function",
+        "parent": "pkg:@acme/api/routes::file:apps/api/routes/checkout.ts",
+        "lang": "ts",
+        "span": {
+          "startLine": 7,
+          "endLine": 13
+        },
+        "visibility": "internal",
+        "contentHash": "a88894de1d1be2ea764c221b1b8cbaf338a386f7c404ca13f5573a61b61c4e8d",
+        "signatureHash": "277121706565f5ab3fc06c914e3a69c0b358015058386c9645f49854442423d8"
+      },
+      {
+        "id": "pkg:@acme/api/routes::file:apps/api/routes/checkout.ts::sym:postPromoValidate",
+        "kind": "symbol",
+        "subkind": "function",
+        "parent": "pkg:@acme/api/routes::file:apps/api/routes/checkout.ts",
+        "lang": "ts",
+        "span": {
+          "startLine": 15,
+          "endLine": 19
+        },
+        "visibility": "internal",
+        "contentHash": "b4370288f07d531e6fbecb7ada5372eaaa89f5adf2e4987fa8e89cd3db110fad",
+        "signatureHash": "33c791e3deb714da41eb31f6b6acd124aff22ce81a848c8c3c7067badbbc3b2f"
+      },
+      {
+        "id": "pkg:@acme/api/routes::file:apps/api/routes/checkout.ts::sym:registerCheckoutRoutes",
+        "kind": "symbol",
+        "subkind": "function",
+        "parent": "pkg:@acme/api/routes::file:apps/api/routes/checkout.ts",
+        "lang": "ts",
+        "span": {
+          "startLine": 21,
+          "endLine": 24
+        },
+        "visibility": "public",
+        "contentHash": "9ff8b0e19fd3c09a1be03e64900acc45d32eefc475c17edf2ae2b14effbadf53",
+        "signatureHash": "6689f7cc1a311cd35dad06ccfd59cdd9aa618b85efa02d2690a9afa3dee054cc"
+      },
+      {
+        "id": "pkg:@acme/api/routes::file:apps/api/routes/invoices.ts::sym:getInvoice",
+        "kind": "symbol",
+        "subkind": "function",
+        "parent": "pkg:@acme/api/routes::file:apps/api/routes/invoices.ts",
+        "lang": "ts",
+        "span": {
+          "startLine": 9,
+          "endLine": 12
+        },
+        "visibility": "internal",
+        "contentHash": "9c76189c3f990dabd3137614e182aa4ae131d745d4dfde934bb88cb0191e3a35",
+        "signatureHash": "63cafb99db445bf5e5a33bb87cea245fa82fc8b3e192e5229429b591e8055e6e"
+      },
+      {
+        "id": "pkg:@acme/api/routes::file:apps/api/routes/invoices.ts::sym:listInvoices",
+        "kind": "symbol",
+        "subkind": "function",
+        "parent": "pkg:@acme/api/routes::file:apps/api/routes/invoices.ts",
+        "lang": "ts",
+        "span": {
+          "startLine": 14,
+          "endLine": 17
+        },
+        "visibility": "internal",
+        "contentHash": "30ae6ccb3eda2cb3c305a3288a81a97828edd56403ef164a4880076affa60da5",
+        "signatureHash": "9bd66d880e656dac337cd55d51da100e6425183af6b73db7b40ac2b0ade69136"
+      },
+      {
+        "id": "pkg:@acme/api/routes::file:apps/api/routes/invoices.ts::sym:registerInvoiceRoutes",
+        "kind": "symbol",
+        "subkind": "function",
+        "parent": "pkg:@acme/api/routes::file:apps/api/routes/invoices.ts",
+        "lang": "ts",
+        "span": {
+          "startLine": 19,
+          "endLine": 22
+        },
+        "visibility": "public",
+        "contentHash": "9abf4b047307c643e08af0c3bc6245e7de56d8b517eafc4140f9fa6756de1d8a",
+        "signatureHash": "b834d0889049e5ce85458fc0000582b80da53cf179b3711e6d9a87940e0839e4"
+      },
+      {
+        "id": "pkg:@acme/api/routes::file:apps/api/routes/middleware.ts::sym:bearer",
+        "kind": "symbol",
+        "subkind": "function",
+        "parent": "pkg:@acme/api/routes::file:apps/api/routes/middleware.ts",
+        "lang": "ts",
+        "span": {
+          "startLine": 4,
+          "endLine": 6
+        },
+        "visibility": "internal",
+        "contentHash": "3de440b626e965e6873ef4d17758f6282c55eed09c97206f6b2b46248da3678c",
+        "signatureHash": "103545323d020a666ad263fcd9af59ca2fa971974ae9daa5f170e2a01014314e"
+      },
+      {
+        "id": "pkg:@acme/api/routes::file:apps/api/routes/middleware.ts::sym:requireAuth",
+        "kind": "symbol",
+        "subkind": "function",
+        "parent": "pkg:@acme/api/routes::file:apps/api/routes/middleware.ts",
+        "lang": "ts",
+        "span": {
+          "startLine": 8,
+          "endLine": 11
+        },
+        "visibility": "public",
+        "contentHash": "a408a31906b07743378cbe35b87779b4b43c6aa29b9dade11753163656a01eed",
+        "signatureHash": "7eb1204a781aedd5e9dacc424da1ed651d9d3dd77fd77daec0422f87c7a8de1d"
+      },
+      {
+        "id": "pkg:@acme/db/repos::file:packages/db/repos/discountRepo.ts::sym:findDiscountByCode",
+        "kind": "symbol",
+        "subkind": "function",
+        "parent": "pkg:@acme/db/repos::file:packages/db/repos/discountRepo.ts",
+        "lang": "ts",
+        "span": {
+          "startLine": 5,
+          "endLine": 9
+        },
+        "visibility": "public",
+        "contentHash": "a771f86e33ff8ff3ac2e8c82d7e67733e2583b835871974867a8d69e055eeeaf",
+        "signatureHash": "12e002d70cc90bd1c40f7f047ed3070402c08e050f82590862416e42c1947c17"
+      },
+      {
+        "id": "pkg:@acme/db/repos::file:packages/db/repos/invoiceRepo.ts::sym:findInvoice",
+        "kind": "symbol",
+        "subkind": "function",
+        "parent": "pkg:@acme/db/repos::file:packages/db/repos/invoiceRepo.ts",
+        "lang": "ts",
+        "span": {
+          "startLine": 5,
+          "endLine": 8
+        },
+        "visibility": "public",
+        "contentHash": "041b1bf2e51c8a530672558ecfb214d5cdbef6308d4c338d8bde7895dd16e66c",
+        "signatureHash": "414d17ea2d999c09e2d8c6f0d86912b6a88e3297776b224410c0b991d08fa4f9"
+      },
+      {
+        "id": "pkg:@acme/db/repos::file:packages/db/repos/invoiceRepo.ts::sym:saveInvoice",
+        "kind": "symbol",
+        "subkind": "function",
+        "parent": "pkg:@acme/db/repos::file:packages/db/repos/invoiceRepo.ts",
+        "lang": "ts",
+        "span": {
+          "startLine": 10,
+          "endLine": 12
+        },
+        "visibility": "public",
+        "contentHash": "25d920a26f6b8ff8af84d7f052bcb4375f5615895a37f95fcd46381210910807",
+        "signatureHash": "96a63eee56e295646bed0bf82e36b72a7c126f131af315e1528d9d1584cd9282"
+      },
+      {
+        "id": "pkg:@acme/db/repos::file:packages/db/repos/userRepo.ts::sym:findUser",
+        "kind": "symbol",
+        "subkind": "function",
+        "parent": "pkg:@acme/db/repos::file:packages/db/repos/userRepo.ts",
+        "lang": "ts",
+        "span": {
+          "startLine": 5,
+          "endLine": 8
+        },
+        "visibility": "public",
+        "contentHash": "251e5966e9f319cfd3b41e4a8a7c96da8f8478f37cf0a71d967d2e8b3140857c",
+        "signatureHash": "d63942cba412503d1eda26585b88fe9a00a29b9b599a0a19d98f4fb20ea974aa"
+      },
+      {
+        "id": "pkg:@acme/db/schema::file:packages/db/schema/discounts.ts::sym:discountsTable",
+        "kind": "symbol",
+        "subkind": "const",
+        "parent": "pkg:@acme/db/schema::file:packages/db/schema/discounts.ts",
+        "lang": "ts",
+        "span": {
+          "startLine": 3,
+          "endLine": 7
+        },
+        "visibility": "public",
+        "contentHash": "96a0eddff5f6c3b2ee5d91900d1b19e22de032e6c3a9676d8b3d3c38a02d3304",
+        "signatureHash": "a7429e6428b7cafc0f9cfab7edd273db826450f1392698ececdd3a8257357daf"
+      },
+      {
+        "id": "pkg:@acme/db/schema::file:packages/db/schema/invoices.ts::sym:InvoiceRecord",
+        "kind": "symbol",
+        "subkind": "type",
+        "parent": "pkg:@acme/db/schema::file:packages/db/schema/invoices.ts",
+        "lang": "ts",
+        "span": {
+          "startLine": 3,
+          "endLine": 8
+        },
+        "visibility": "public",
+        "contentHash": "f45783f3e2f5916f4af2f73eb6d5cabab504f9a6a4aebd57a9d72fd42da1f84d",
+        "signatureHash": "3fd4cefc9013afd55509f2eb8c2d984d87bae430cf0cc2663999e2e9be26ac69"
+      },
+      {
+        "id": "pkg:@acme/db/schema::file:packages/db/schema/invoices.ts::sym:invoicesTable",
+        "kind": "symbol",
+        "subkind": "const",
+        "parent": "pkg:@acme/db/schema::file:packages/db/schema/invoices.ts",
+        "lang": "ts",
+        "span": {
+          "startLine": 10,
+          "endLine": 14
+        },
+        "visibility": "public",
+        "contentHash": "c4e6481d8505f2bc8007571b8efe7e2e27788ec7b33880ce12e50275b0b299b6",
+        "signatureHash": "baf9ae8537c5beac57ff232fd9975662c8ec1c36d0e011d3cd7c460ff08aae08"
+      },
+      {
+        "id": "pkg:@acme/db/schema::file:packages/db/schema/users.ts::sym:usersTable",
+        "kind": "symbol",
+        "subkind": "const",
+        "parent": "pkg:@acme/db/schema::file:packages/db/schema/users.ts",
+        "lang": "ts",
+        "span": {
+          "startLine": 3,
+          "endLine": 7
+        },
+        "visibility": "public",
+        "contentHash": "5bd8b4f49ac0a17e512a23ab0262cc322a0c4aabf48c399081b1b16420437cbb",
+        "signatureHash": "ba160c621a9f785d95642acf6233bcc45de259333a6c5a0607f00d04e80c8c68"
+      },
+      {
+        "id": "pkg:@acme/shared/http::file:packages/shared/http/client.ts::sym:HttpError",
+        "kind": "symbol",
+        "subkind": "class",
+        "parent": "pkg:@acme/shared/http::file:packages/shared/http/client.ts",
+        "lang": "ts",
+        "span": {
+          "startLine": 1,
+          "endLine": 8
+        },
+        "visibility": "public",
+        "contentHash": "5a553b10a1b5c7beaad63b5bacecbdf2d3f89aaeb56d6659db8ddc7ce65cd131",
+        "signatureHash": "0f485d90db556ecce3b8c54827f6c5f739c6fdc4a55fac2f74f7c8b232366fa7"
+      },
+      {
+        "id": "pkg:@acme/shared/http::file:packages/shared/http/client.ts::sym:HttpError.constructor",
+        "kind": "symbol",
+        "subkind": "method",
+        "parent": "pkg:@acme/shared/http::file:packages/shared/http/client.ts",
+        "lang": "ts",
+        "span": {
+          "startLine": 2,
+          "endLine": 7
+        },
+        "visibility": "public",
+        "contentHash": "31698e87b02cee8e8a93c4b84e9090a4b2503d2fb1e319bd61f5f9f90222c734",
+        "signatureHash": "0b977dd34d048af7d7ba773647de5b3e3bd82a5e2b02a1fb2ec73aacfe779151"
+      },
+      {
+        "id": "pkg:@acme/shared/http::file:packages/shared/http/client.ts::sym:httpGet",
+        "kind": "symbol",
+        "subkind": "function",
+        "parent": "pkg:@acme/shared/http::file:packages/shared/http/client.ts",
+        "lang": "ts",
+        "span": {
+          "startLine": 10,
+          "endLine": 20
+        },
+        "visibility": "public",
+        "contentHash": "e6333a10bf00dedb9dc76b8b45b15c71a3cf45f55d29aa3bdc1bae2e7e775926",
+        "signatureHash": "90ffa213b080c44121861d1330ba05a17f32d3019a606de2cc23bb5dad5cb838"
+      },
+      {
+        "id": "pkg:@acme/shared/http::file:packages/shared/http/client.ts::sym:httpPost",
+        "kind": "symbol",
+        "subkind": "function",
+        "parent": "pkg:@acme/shared/http::file:packages/shared/http/client.ts",
+        "lang": "ts",
+        "span": {
+          "startLine": 22,
+          "endLine": 38
+        },
+        "visibility": "public",
+        "contentHash": "6fc36cedb176619faa4bfd34e61e1cb31ff34f3a77a5d4f374b6fad463f04a14",
+        "signatureHash": "1a7d764c2438e531857dbdaadd9b70e614bfdb0e08838a0a667600002ced2769"
+      },
+      {
+        "id": "pkg:@acme/shared/money::file:packages/shared/money/currency.ts::sym:Currency",
+        "kind": "symbol",
+        "subkind": "type",
+        "parent": "pkg:@acme/shared/money::file:packages/shared/money/currency.ts",
+        "lang": "ts",
+        "span": {
+          "startLine": 1,
+          "endLine": 1
+        },
+        "visibility": "public",
+        "contentHash": "c8d5bd011663346dd92868412d2c28685148e6a84bbdf916b21a8cc9a4142151",
+        "signatureHash": "004e1d1b48d1b71a11120d034f76306196d6e3c9931ba8ef192654fe04d2a40d"
+      },
+      {
+        "id": "pkg:@acme/shared/money::file:packages/shared/money/currency.ts::sym:Money",
+        "kind": "symbol",
+        "subkind": "type",
+        "parent": "pkg:@acme/shared/money::file:packages/shared/money/currency.ts",
+        "lang": "ts",
+        "span": {
+          "startLine": 3,
+          "endLine": 3
+        },
+        "visibility": "public",
+        "contentHash": "10d7a4efce31a228f5b3908cd2e69be60faa0f36ad29d34899957f23c221b86a",
+        "signatureHash": "0b08fe402c8cabbc7a964d692a4b548e732254da360f3c8d0f651b94456b4d44"
+      },
+      {
+        "id": "pkg:@acme/shared/money::file:packages/shared/money/currency.ts::sym:toCents",
+        "kind": "symbol",
+        "subkind": "function",
+        "parent": "pkg:@acme/shared/money::file:packages/shared/money/currency.ts",
+        "lang": "ts",
+        "span": {
+          "startLine": 5,
+          "endLine": 7
+        },
+        "visibility": "public",
+        "contentHash": "84cbaaab170eecd924488ace6af511799db0ce43f58090b13f7e95c0cf909c1b",
+        "signatureHash": "a6c337065d1b72d132bd374d36ed840a1184333612f19f7f8e12693ad95f64c8"
+      },
+      {
+        "id": "pkg:@acme/shared/money::file:packages/shared/money/format.ts::sym:formatPrice",
+        "kind": "symbol",
+        "subkind": "function",
+        "parent": "pkg:@acme/shared/money::file:packages/shared/money/format.ts",
+        "lang": "ts",
+        "span": {
+          "startLine": 3,
+          "endLine": 7
+        },
+        "visibility": "public",
+        "contentHash": "1cdca22a479ed9062c8c70172bf99486113c445c6881e58dab0b2982115e7cea",
+        "signatureHash": "50bf691966877d552389d6738552ac9ce6afae5da10e698aca8fceeea10d6f30"
+      },
+      {
+        "id": "pkg:@acme/web/components::file:apps/web/components/Button.tsx::sym:Props",
+        "kind": "symbol",
+        "subkind": "type",
+        "parent": "pkg:@acme/web/components::file:apps/web/components/Button.tsx",
+        "lang": "tsx",
+        "span": {
+          "startLine": 1,
+          "endLine": 1
+        },
+        "visibility": "internal",
+        "contentHash": "7a8381576ac7752064bc131d04d38dd4062d9e82a58107d2126a8995549593c3",
+        "signatureHash": "ffeb0d9371b2de3bb6bd67a445ecbe1167afc801f170ee755373fe354f8cb143"
+      },
+      {
+        "id": "pkg:@acme/web/components::file:apps/web/components/Button.tsx::sym:Button",
+        "kind": "symbol",
+        "subkind": "component",
+        "parent": "pkg:@acme/web/components::file:apps/web/components/Button.tsx",
+        "lang": "tsx",
+        "span": {
+          "startLine": 3,
+          "endLine": 9
+        },
+        "visibility": "public",
+        "contentHash": "608d5bf8586d6207d4d26d91db9812e2f95dbab0c54ac61991a57b747889c3bb",
+        "signatureHash": "48b388149ba6cbbc999a18cf10784814486a87e74489bb1f8da3ceca3c89845b"
+      },
+      {
+        "id": "pkg:@acme/web/components::file:apps/web/components/CartSummary.tsx::sym:Props",
+        "kind": "symbol",
+        "subkind": "type",
+        "parent": "pkg:@acme/web/components::file:apps/web/components/CartSummary.tsx",
+        "lang": "tsx",
+        "span": {
+          "startLine": 4,
+          "endLine": 4
+        },
+        "visibility": "internal",
+        "contentHash": "b9971859470b1032faae1ab78a08325fbcb588f383a26de01b5db006b1df9145",
+        "signatureHash": "7ebbe192fe7c63be1c5ca9cae336594a91a51f228a170bd0ecd46532d340e037"
+      },
+      {
+        "id": "pkg:@acme/web/components::file:apps/web/components/CartSummary.tsx::sym:CartSummary",
+        "kind": "symbol",
+        "subkind": "component",
+        "parent": "pkg:@acme/web/components::file:apps/web/components/CartSummary.tsx",
+        "lang": "tsx",
+        "span": {
+          "startLine": 6,
+          "endLine": 13
+        },
+        "visibility": "public",
+        "contentHash": "944d5843aebc4a5e4f4d5253e746943c2cc26c7b50df5c12941277eee12fe0aa",
+        "signatureHash": "2ffe30b8975db756425027d7938fc1d8e3bea3c40d3efe869b367b1cfe4a0a6d"
+      },
+      {
+        "id": "pkg:@acme/web/components::file:apps/web/components/PromoCodeInput.tsx::sym:Props",
+        "kind": "symbol",
+        "subkind": "type",
+        "parent": "pkg:@acme/web/components::file:apps/web/components/PromoCodeInput.tsx",
+        "lang": "tsx",
+        "span": {
+          "startLine": 6,
+          "endLine": 6
+        },
+        "visibility": "internal",
+        "contentHash": "6a9a9e35a22462351ede8b757cbdae059bac9ea27025b8785796aa0732853544",
+        "signatureHash": "95c909f5b91020b15891d4438984d855eb517d5f2974433ba96ad733eda93182"
+      },
+      {
+        "id": "pkg:@acme/web/components::file:apps/web/components/PromoCodeInput.tsx::sym:validateCodeLocally",
+        "kind": "symbol",
+        "subkind": "function",
+        "parent": "pkg:@acme/web/components::file:apps/web/components/PromoCodeInput.tsx",
+        "lang": "tsx",
+        "span": {
+          "startLine": 8,
+          "endLine": 10
+        },
+        "visibility": "internal",
+        "contentHash": "6c929b91c2f6e911f2457ba9b6e2b035e24d84102d0e9cded57fe1b2bb84678f",
+        "signatureHash": "3fbb2dc41c0427e4242998e6b9809a23c8ca1de85e3f76e3907779796ba35b23"
+      },
+      {
+        "id": "pkg:@acme/web/components::file:apps/web/components/PromoCodeInput.tsx::sym:PromoCodeInput",
+        "kind": "symbol",
+        "subkind": "component",
+        "parent": "pkg:@acme/web/components::file:apps/web/components/PromoCodeInput.tsx",
+        "lang": "tsx",
+        "span": {
+          "startLine": 12,
+          "endLine": 25
+        },
+        "visibility": "public",
+        "contentHash": "3deff787d41834b86d45f0b08d7a60a76167c516d8045bd471356cb2d7907d07",
+        "signatureHash": "41d50e24fcf6b6d5007db55a24f36ae6e7e162e66e7d6ad1f70c7e162667da03"
+      },
+      {
+        "id": "pkg:@acme/web/hooks::file:apps/web/hooks/useInvoice.ts::sym:useInvoice",
+        "kind": "symbol",
+        "subkind": "hook",
+        "parent": "pkg:@acme/web/hooks::file:apps/web/hooks/useInvoice.ts",
+        "lang": "ts",
+        "span": {
+          "startLine": 4,
+          "endLine": 6
+        },
+        "visibility": "public",
+        "contentHash": "2a9f26a0dcd7100d524b787785066c39ada10d8b7839f9498cb4ad405bde1852",
+        "signatureHash": "847fb317eab4e9673d311797d3efee5c9409059cfe8318a438b79635d5894000"
+      },
+      {
+        "id": "pkg:@acme/web/hooks::file:apps/web/hooks/useSession.ts::sym:useSession",
+        "kind": "symbol",
+        "subkind": "hook",
+        "parent": "pkg:@acme/web/hooks::file:apps/web/hooks/useSession.ts",
+        "lang": "ts",
+        "span": {
+          "startLine": 4,
+          "endLine": 6
+        },
+        "visibility": "public",
+        "contentHash": "37b99f1464720cb164c0a40966960f2cd0b0b459ae6798db6b8b8a12ec5c0d23",
+        "signatureHash": "0d0758fb40a82f33468ac9ead216f7c66b9443aecb6e86261c742a893377c476"
+      },
+      {
+        "id": "pkg:@acme/web/pages::file:apps/web/pages/Checkout.tsx::sym:Cart",
+        "kind": "symbol",
+        "subkind": "type",
+        "parent": "pkg:@acme/web/pages::file:apps/web/pages/Checkout.tsx",
+        "lang": "tsx",
+        "span": {
+          "startLine": 8,
+          "endLine": 8
+        },
+        "visibility": "internal",
+        "contentHash": "b16e5b304bb9c2e253f9d3650e0bf56d72b8a7e21ed382a132cb54ea1448b229",
+        "signatureHash": "be885ea175b02ae63d27822105c681b46cad2c4b244cdbb5ef09dc95c402a94e"
+      },
+      {
+        "id": "pkg:@acme/web/pages::file:apps/web/pages/Checkout.tsx::sym:Layout",
+        "kind": "symbol",
+        "subkind": "component",
+        "parent": "pkg:@acme/web/pages::file:apps/web/pages/Checkout.tsx",
+        "lang": "tsx",
+        "span": {
+          "startLine": 10,
+          "endLine": 12
+        },
+        "visibility": "internal",
+        "contentHash": "65c505e41f007be040c62ebc1a0f1b2c7705642e6a0f2c353cce9f6b4c68fa29",
+        "signatureHash": "4da1627089d35ad73d142e4e4c15e9b1902edf56db2a5ef9067bd0ff086746cc"
+      },
+      {
+        "id": "pkg:@acme/web/pages::file:apps/web/pages/Checkout.tsx::sym:useCart",
+        "kind": "symbol",
+        "subkind": "hook",
+        "parent": "pkg:@acme/web/pages::file:apps/web/pages/Checkout.tsx",
+        "lang": "tsx",
+        "span": {
+          "startLine": 14,
+          "endLine": 16
+        },
+        "visibility": "internal",
+        "contentHash": "d1c0d4e831e408f352b349b0b94fa9b897bd329e03a9f52640a9e677a2588ae8",
+        "signatureHash": "6e5128ead05195b77a80a0716ae4b84b5d623a8bb3c81f18cf41f4fb8b6c4912"
+      },
+      {
+        "id": "pkg:@acme/web/pages::file:apps/web/pages/Checkout.tsx::sym:useCheckoutTotals",
+        "kind": "symbol",
+        "subkind": "hook",
+        "parent": "pkg:@acme/web/pages::file:apps/web/pages/Checkout.tsx",
+        "lang": "tsx",
+        "span": {
+          "startLine": 18,
+          "endLine": 21
+        },
+        "visibility": "internal",
+        "contentHash": "a50ec6e509f3d306f38ae000bb55ff0b245e88a94664eae6e78749053934742d",
+        "signatureHash": "707d2ae5ea5acfe04491cf8de1383531cd099e90d90c7270b930d7832f5ea920"
+      },
+      {
+        "id": "pkg:@acme/web/pages::file:apps/web/pages/Checkout.tsx::sym:CheckoutPage",
+        "kind": "symbol",
+        "subkind": "component",
+        "parent": "pkg:@acme/web/pages::file:apps/web/pages/Checkout.tsx",
+        "lang": "tsx",
+        "span": {
+          "startLine": 23,
+          "endLine": 33
+        },
+        "visibility": "public",
+        "contentHash": "1145fafa2925afe0b13f5268cd7405256428efcde6ff3ef0b3dad09ff5158ffe",
+        "signatureHash": "06dd86f74b2b737e6890ff0f41e138519fff730f58f11bd5e3df86125f35ae8c"
+      },
+      {
+        "id": "pkg:@acme/web/pages::file:apps/web/pages/Invoices.tsx::sym:InvoicesPage",
+        "kind": "symbol",
+        "subkind": "component",
+        "parent": "pkg:@acme/web/pages::file:apps/web/pages/Invoices.tsx",
+        "lang": "tsx",
+        "span": {
+          "startLine": 6,
+          "endLine": 14
+        },
+        "visibility": "public",
+        "contentHash": "977735d135eb899c9b20e92a0c10745944ea0e827773c51099bec06db286b58e",
+        "signatureHash": "a2df117e830cf6ef7da3438dd50a66dbf42cd87ebf75381e92c6073d6030b5c8"
+      },
+      {
+        "id": "pkg:@acme/web/pages::file:apps/web/pages/Login.tsx::sym:LoginPage",
+        "kind": "symbol",
+        "subkind": "component",
+        "parent": "pkg:@acme/web/pages::file:apps/web/pages/Login.tsx",
+        "lang": "tsx",
+        "span": {
+          "startLine": 4,
+          "endLine": 7
+        },
+        "visibility": "public",
+        "contentHash": "db53c95117fa3df807a602a4dfd7cf8a23b711399e77cbf1b0f34dfe5a1141fc",
+        "signatureHash": "f4e956a925a646be1b6d6241cdbcc17fcc86d24bee653f2fb5e4d47f770939b7"
+      },
+      {
+        "id": "pkg:@acme/web/utils::file:apps/web/utils/dates.ts::sym:formatDate",
+        "kind": "symbol",
+        "subkind": "function",
+        "parent": "pkg:@acme/web/utils::file:apps/web/utils/dates.ts",
+        "lang": "ts",
+        "span": {
+          "startLine": 1,
+          "endLine": 3
+        },
+        "visibility": "public",
+        "contentHash": "9e3a230d8cefebccf1d57a2762a290f96ef4f7aa2aafac2dfca0e5af436f872c",
+        "signatureHash": "eb67e5b00ff3483dfbc44bbaea1f75ca9a6262f041533aa6c15a4a2978e3896d"
+      }
+    ],
+    "edges": [
+      {
+        "from": "pkg:@acme/api",
+        "to": "pkg:@acme/db",
+        "kind": "depends_on",
+        "precision": "resolved"
+      },
+      {
+        "from": "pkg:@acme/api",
+        "to": "pkg:@acme/shared",
+        "kind": "depends_on",
+        "precision": "resolved"
+      },
+      {
+        "from": "pkg:@acme/api",
+        "to": "pkg:external/fastify",
+        "kind": "depends_on",
+        "precision": "resolved"
+      },
+      {
+        "from": "pkg:@acme/api",
+        "to": "pkg:external/stripe-sdk",
+        "kind": "depends_on",
+        "precision": "resolved"
+      },
+      {
+        "from": "pkg:@acme/api",
+        "to": "pkg:external/vitest",
+        "kind": "depends_on",
+        "precision": "resolved"
+      },
+      {
+        "from": "pkg:@acme/db",
+        "to": "pkg:external/drizzle-orm",
+        "kind": "depends_on",
+        "precision": "resolved"
+      },
+      {
+        "from": "pkg:@acme/db",
+        "to": "pkg:external/vitest",
+        "kind": "depends_on",
+        "precision": "resolved"
+      },
+      {
+        "from": "pkg:@acme/web",
+        "to": "pkg:@acme/shared",
+        "kind": "depends_on",
+        "precision": "resolved"
+      },
+      {
+        "from": "pkg:@acme/web",
+        "to": "pkg:external/@tanstack/react-query",
+        "kind": "depends_on",
+        "precision": "resolved"
+      },
+      {
+        "from": "pkg:@acme/web",
+        "to": "pkg:external/react",
+        "kind": "depends_on",
+        "precision": "resolved"
+      },
+      {
+        "from": "pkg:@acme/web",
+        "to": "pkg:external/react-dom",
+        "kind": "depends_on",
+        "precision": "resolved"
+      },
+      {
+        "from": "pkg:@acme/web",
+        "to": "pkg:external/react-router",
+        "kind": "depends_on",
+        "precision": "resolved"
+      },
+      {
+        "from": "pkg:@acme/web",
+        "to": "pkg:external/vitest",
+        "kind": "depends_on",
+        "precision": "resolved"
+      },
+      {
+        "from": "pkg:@acme/api/auth::file:apps/api/auth/session.ts::sym:SessionStore.login",
+        "to": "pkg:@acme/api/auth::file:apps/api/auth/session.ts::sym:Session",
+        "kind": "references",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/auth::file:apps/api/auth/session.ts::sym:SessionStore.login",
+        "to": "pkg:@acme/db/repos::file:packages/db/repos/userRepo.ts::sym:findUser",
+        "kind": "calls",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/auth::file:apps/api/auth/session.ts::sym:SessionStore.login",
+        "to": "pkg:@acme/api/auth::file:apps/api/auth/tokens.ts::sym:signToken",
+        "kind": "calls",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/auth::file:apps/api/auth/session.ts::sym:SessionStore.refresh",
+        "to": "pkg:@acme/api/auth::file:apps/api/auth/session.ts::sym:Session",
+        "kind": "references",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/auth::file:apps/api/auth/session.ts::sym:SessionStore.refresh",
+        "to": "pkg:@acme/api/auth::file:apps/api/auth/tokens.ts::sym:verifyToken",
+        "kind": "calls",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/auth::file:apps/api/auth/session.ts::sym:SessionStore.load",
+        "to": "pkg:@acme/api/auth::file:apps/api/auth/session.ts::sym:Session",
+        "kind": "references",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/auth::file:apps/api/auth/session.ts::sym:SessionStore.load",
+        "to": "pkg:@acme/db/repos::file:packages/db/repos/userRepo.ts::sym:findUser",
+        "kind": "calls",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/auth::file:apps/api/auth/session.ts",
+        "to": "pkg:@acme/db/repos::file:packages/db/repos/userRepo.ts::sym:findUser",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/auth::file:apps/api/auth/session.ts",
+        "to": "pkg:@acme/api/auth::file:apps/api/auth/tokens.ts::sym:signToken",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/auth::file:apps/api/auth/session.ts",
+        "to": "pkg:@acme/api/auth::file:apps/api/auth/tokens.ts::sym:verifyToken",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/auth::file:apps/api/auth/tokens.ts::sym:signToken",
+        "to": "pkg:@acme/api/auth::file:apps/api/auth/tokens.ts::sym:Claims",
+        "kind": "references",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/auth::file:apps/api/auth/tokens.ts::sym:verifyToken",
+        "to": "pkg:@acme/api/auth::file:apps/api/auth/tokens.ts::sym:Claims",
+        "kind": "references",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/billing::file:apps/api/billing/discount.ts::sym:applyDiscount",
+        "to": "pkg:@acme/shared/money::file:packages/shared/money/currency.ts::sym:Money",
+        "kind": "references",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/billing::file:apps/api/billing/discount.ts::sym:applyDiscount",
+        "to": "pkg:@acme/api/billing::file:apps/api/billing/discount.ts::sym:DiscountCode",
+        "kind": "references",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/billing::file:apps/api/billing/discount.ts::sym:applyDiscount",
+        "to": "pkg:@acme/api/billing::file:apps/api/billing/discount.ts::sym:isExpired",
+        "kind": "calls",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/billing::file:apps/api/billing/discount.ts::sym:applyDiscount",
+        "to": "pkg:@acme/shared/money::file:packages/shared/money/currency.ts::sym:toCents",
+        "kind": "calls",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/billing::file:apps/api/billing/discount.ts::sym:isExpired",
+        "to": "pkg:@acme/api/billing::file:apps/api/billing/discount.ts::sym:DiscountCode",
+        "kind": "references",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/billing::file:apps/api/billing/discount.ts",
+        "to": "pkg:@acme/shared/money::file:packages/shared/money/currency.ts::sym:toCents",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/billing::file:apps/api/billing/discount.ts",
+        "to": "pkg:@acme/shared/money::file:packages/shared/money/currency.ts::sym:Money",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/billing::file:apps/api/billing/invoice.spec.ts",
+        "to": "pkg:external/vitest",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/billing::file:apps/api/billing/invoice.spec.ts",
+        "to": "pkg:@acme/api/billing::file:apps/api/billing/invoice.ts::sym:computeTotal",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/billing::file:apps/api/billing/invoice.ts::sym:InvoiceLine",
+        "to": "pkg:@acme/shared/money::file:packages/shared/money/currency.ts::sym:Currency",
+        "kind": "references",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/billing::file:apps/api/billing/invoice.ts::sym:Invoice",
+        "to": "pkg:@acme/api/billing::file:apps/api/billing/invoice.ts::sym:InvoiceLine",
+        "kind": "references",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/billing::file:apps/api/billing/invoice.ts::sym:Invoice",
+        "to": "pkg:@acme/shared/money::file:packages/shared/money/currency.ts::sym:Money",
+        "kind": "references",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/billing::file:apps/api/billing/invoice.ts::sym:computeTotal",
+        "to": "pkg:@acme/api/billing::file:apps/api/billing/invoice.ts::sym:InvoiceLine",
+        "kind": "references",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/billing::file:apps/api/billing/invoice.ts::sym:computeTotal",
+        "to": "pkg:@acme/api/billing::file:apps/api/billing/discount.ts::sym:DiscountCode",
+        "kind": "references",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/billing::file:apps/api/billing/invoice.ts::sym:computeTotal",
+        "to": "pkg:@acme/shared/money::file:packages/shared/money/currency.ts::sym:Money",
+        "kind": "references",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/billing::file:apps/api/billing/invoice.ts::sym:computeTotal",
+        "to": "pkg:@acme/shared/money::file:packages/shared/money/currency.ts::sym:toCents",
+        "kind": "calls",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/billing::file:apps/api/billing/invoice.ts::sym:computeTotal",
+        "to": "pkg:@acme/api/billing::file:apps/api/billing/discount.ts::sym:applyDiscount",
+        "kind": "calls",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/billing::file:apps/api/billing/invoice.ts::sym:renderInvoice",
+        "to": "pkg:@acme/api/billing::file:apps/api/billing/invoice.ts::sym:InvoiceLine",
+        "kind": "references",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/billing::file:apps/api/billing/invoice.ts::sym:renderInvoice",
+        "to": "pkg:@acme/shared/money::file:packages/shared/money/currency.ts::sym:Money",
+        "kind": "references",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/billing::file:apps/api/billing/invoice.ts::sym:renderInvoice",
+        "to": "pkg:@acme/api/billing::file:apps/api/billing/invoice.ts::sym:Invoice",
+        "kind": "references",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/billing::file:apps/api/billing/invoice.ts",
+        "to": "pkg:@acme/shared/money::file:packages/shared/money/currency.ts::sym:toCents",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/billing::file:apps/api/billing/invoice.ts",
+        "to": "pkg:@acme/shared/money::file:packages/shared/money/currency.ts::sym:Currency",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/billing::file:apps/api/billing/invoice.ts",
+        "to": "pkg:@acme/shared/money::file:packages/shared/money/currency.ts::sym:Money",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/billing::file:apps/api/billing/invoice.ts",
+        "to": "pkg:@acme/api/billing::file:apps/api/billing/discount.ts::sym:applyDiscount",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/billing::file:apps/api/billing/invoice.ts",
+        "to": "pkg:@acme/api/billing::file:apps/api/billing/discount.ts::sym:DiscountCode",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/billing::file:apps/api/billing/payment.spec.ts",
+        "to": "pkg:external/vitest",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/billing::file:apps/api/billing/payment.spec.ts",
+        "to": "pkg:@acme/api/billing::file:apps/api/billing/payment.ts::sym:chargeCustomer",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/billing::file:apps/api/billing/payment.ts::sym:chargeCustomer",
+        "to": "pkg:@acme/api/billing::file:apps/api/billing/invoice.ts::sym:Invoice",
+        "kind": "references",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/billing::file:apps/api/billing/payment.ts::sym:chargeCustomer",
+        "to": "pkg:@acme/api/auth::file:apps/api/auth/session.ts::sym:SessionStore.refresh",
+        "kind": "calls",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/billing::file:apps/api/billing/payment.ts::sym:chargeCustomer",
+        "to": "pkg:@acme/shared/http::file:packages/shared/http/client.ts::sym:HttpError",
+        "kind": "references",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/billing::file:apps/api/billing/payment.ts",
+        "to": "pkg:@acme/shared/http::file:packages/shared/http/client.ts::sym:HttpError",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/billing::file:apps/api/billing/payment.ts",
+        "to": "pkg:external/stripe-sdk",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/billing::file:apps/api/billing/payment.ts",
+        "to": "pkg:@acme/api/auth::file:apps/api/auth/session.ts::sym:sessions",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/billing::file:apps/api/billing/payment.ts",
+        "to": "pkg:@acme/api/billing::file:apps/api/billing/invoice.ts::sym:Invoice",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/jobs::file:apps/api/jobs/renewals.ts::sym:Subscription",
+        "to": "pkg:@acme/api/billing::file:apps/api/billing/invoice.ts::sym:Invoice",
+        "kind": "references",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/jobs::file:apps/api/jobs/renewals.ts::sym:dueSubscriptions",
+        "to": "pkg:@acme/api/jobs::file:apps/api/jobs/renewals.ts::sym:Subscription",
+        "kind": "references",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/jobs::file:apps/api/jobs/renewals.ts::sym:buildInvoice",
+        "to": "pkg:@acme/api/jobs::file:apps/api/jobs/renewals.ts::sym:Subscription",
+        "kind": "references",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/jobs::file:apps/api/jobs/renewals.ts::sym:buildInvoice",
+        "to": "pkg:@acme/api/billing::file:apps/api/billing/invoice.ts::sym:Invoice",
+        "kind": "references",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/jobs::file:apps/api/jobs/renewals.ts::sym:buildInvoice",
+        "to": "pkg:@acme/api/billing::file:apps/api/billing/invoice.ts::sym:computeTotal",
+        "kind": "calls",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/jobs::file:apps/api/jobs/renewals.ts::sym:renewSubscriptions",
+        "to": "pkg:@acme/api/jobs::file:apps/api/jobs/renewals.ts::sym:dueSubscriptions",
+        "kind": "calls",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/jobs::file:apps/api/jobs/renewals.ts::sym:renewSubscriptions",
+        "to": "pkg:@acme/api/auth::file:apps/api/auth/session.ts::sym:SessionStore.refresh",
+        "kind": "calls",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/jobs::file:apps/api/jobs/renewals.ts::sym:renewSubscriptions",
+        "to": "pkg:@acme/db/repos::file:packages/db/repos/userRepo.ts::sym:findUser",
+        "kind": "calls",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/jobs::file:apps/api/jobs/renewals.ts::sym:renewSubscriptions",
+        "to": "pkg:@acme/api/billing::file:apps/api/billing/payment.ts::sym:chargeCustomer",
+        "kind": "calls",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/jobs::file:apps/api/jobs/renewals.ts::sym:renewSubscriptions",
+        "to": "pkg:@acme/api/jobs::file:apps/api/jobs/renewals.ts::sym:buildInvoice",
+        "kind": "calls",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/jobs::file:apps/api/jobs/renewals.ts",
+        "to": "pkg:@acme/db/repos::file:packages/db/repos/userRepo.ts::sym:findUser",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/jobs::file:apps/api/jobs/renewals.ts",
+        "to": "pkg:@acme/api/auth::file:apps/api/auth/session.ts::sym:sessions",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/jobs::file:apps/api/jobs/renewals.ts",
+        "to": "pkg:@acme/api/billing::file:apps/api/billing/invoice.ts::sym:computeTotal",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/jobs::file:apps/api/jobs/renewals.ts",
+        "to": "pkg:@acme/api/billing::file:apps/api/billing/invoice.ts::sym:Invoice",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/jobs::file:apps/api/jobs/renewals.ts",
+        "to": "pkg:@acme/api/billing::file:apps/api/billing/payment.ts::sym:chargeCustomer",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/routes::file:apps/api/routes/checkout.spec.ts",
+        "to": "pkg:external/vitest",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/routes::file:apps/api/routes/checkout.spec.ts",
+        "to": "pkg:@acme/api/routes::file:apps/api/routes/checkout.ts::sym:registerCheckoutRoutes",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/routes::file:apps/api/routes/checkout.ts::sym:postCheckout",
+        "to": "pkg:@acme/db/repos::file:packages/db/repos/discountRepo.ts::sym:findDiscountByCode",
+        "kind": "calls",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/routes::file:apps/api/routes/checkout.ts::sym:postCheckout",
+        "to": "pkg:@acme/api/billing::file:apps/api/billing/invoice.ts::sym:computeTotal",
+        "kind": "calls",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/routes::file:apps/api/routes/checkout.ts::sym:postCheckout",
+        "to": "pkg:@acme/api/billing::file:apps/api/billing/payment.ts::sym:chargeCustomer",
+        "kind": "calls",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/routes::file:apps/api/routes/checkout.ts::sym:postPromoValidate",
+        "to": "pkg:@acme/db/repos::file:packages/db/repos/discountRepo.ts::sym:findDiscountByCode",
+        "kind": "calls",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/routes::file:apps/api/routes/checkout.ts::sym:registerCheckoutRoutes",
+        "to": "pkg:@acme/api/routes::file:apps/api/routes/middleware.ts::sym:requireAuth",
+        "kind": "references",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/routes::file:apps/api/routes/checkout.ts",
+        "to": "pkg:external/fastify",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/routes::file:apps/api/routes/checkout.ts",
+        "to": "pkg:@acme/db/repos::file:packages/db/repos/discountRepo.ts::sym:findDiscountByCode",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/routes::file:apps/api/routes/checkout.ts",
+        "to": "pkg:@acme/api/billing::file:apps/api/billing/invoice.ts::sym:computeTotal",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/routes::file:apps/api/routes/checkout.ts",
+        "to": "pkg:@acme/api/billing::file:apps/api/billing/payment.ts::sym:chargeCustomer",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/routes::file:apps/api/routes/checkout.ts",
+        "to": "pkg:@acme/api/routes::file:apps/api/routes/middleware.ts::sym:requireAuth",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/routes::file:apps/api/routes/invoices.spec.ts",
+        "to": "pkg:external/vitest",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/routes::file:apps/api/routes/invoices.spec.ts",
+        "to": "pkg:@acme/api/routes::file:apps/api/routes/invoices.ts::sym:registerInvoiceRoutes",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/routes::file:apps/api/routes/invoices.ts::sym:getInvoice",
+        "to": "pkg:@acme/db/repos::file:packages/db/repos/invoiceRepo.ts::sym:findInvoice",
+        "kind": "calls",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/routes::file:apps/api/routes/invoices.ts::sym:getInvoice",
+        "to": "pkg:@acme/api/billing::file:apps/api/billing/invoice.ts::sym:renderInvoice",
+        "kind": "calls",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/routes::file:apps/api/routes/invoices.ts::sym:getInvoice",
+        "to": "pkg:@acme/api/billing::file:apps/api/billing/invoice.ts::sym:computeTotal",
+        "kind": "calls",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/routes::file:apps/api/routes/invoices.ts::sym:listInvoices",
+        "to": "pkg:@acme/db/schema::file:packages/db/schema/invoices.ts::sym:invoicesTable",
+        "kind": "references",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/routes::file:apps/api/routes/invoices.ts::sym:listInvoices",
+        "to": "pkg:@acme/db/repos::file:packages/db/repos/invoiceRepo.ts::sym:findInvoice",
+        "kind": "calls",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/routes::file:apps/api/routes/invoices.ts::sym:registerInvoiceRoutes",
+        "to": "pkg:@acme/api/routes::file:apps/api/routes/middleware.ts::sym:requireAuth",
+        "kind": "references",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/routes::file:apps/api/routes/invoices.ts",
+        "to": "pkg:external/drizzle-orm",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/routes::file:apps/api/routes/invoices.ts",
+        "to": "pkg:external/fastify",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/routes::file:apps/api/routes/invoices.ts",
+        "to": "pkg:@acme/db/repos::file:packages/db/repos/invoiceRepo.ts::sym:findInvoice",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/routes::file:apps/api/routes/invoices.ts",
+        "to": "pkg:@acme/db/schema::file:packages/db/schema/invoices.ts::sym:invoicesTable",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/routes::file:apps/api/routes/invoices.ts",
+        "to": "pkg:@acme/api/billing::file:apps/api/billing/invoice.ts::sym:computeTotal",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/routes::file:apps/api/routes/invoices.ts",
+        "to": "pkg:@acme/api/billing::file:apps/api/billing/invoice.ts::sym:renderInvoice",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/routes::file:apps/api/routes/invoices.ts",
+        "to": "pkg:@acme/api/routes::file:apps/api/routes/middleware.ts::sym:requireAuth",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/routes::file:apps/api/routes/middleware.spec.ts",
+        "to": "pkg:external/vitest",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/routes::file:apps/api/routes/middleware.spec.ts",
+        "to": "pkg:@acme/api/routes::file:apps/api/routes/middleware.ts::sym:requireAuth",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/routes::file:apps/api/routes/middleware.ts::sym:requireAuth",
+        "to": "pkg:@acme/api/auth::file:apps/api/auth/session.ts::sym:SessionStore.refresh",
+        "kind": "calls",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/routes::file:apps/api/routes/middleware.ts::sym:requireAuth",
+        "to": "pkg:@acme/api/routes::file:apps/api/routes/middleware.ts::sym:bearer",
+        "kind": "calls",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/routes::file:apps/api/routes/middleware.ts",
+        "to": "pkg:external/fastify",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/api/routes::file:apps/api/routes/middleware.ts",
+        "to": "pkg:@acme/api/auth::file:apps/api/auth/session.ts::sym:sessions",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/db/repos::file:packages/db/repos/discountRepo.ts::sym:findDiscountByCode",
+        "to": "pkg:@acme/db/schema::file:packages/db/schema/discounts.ts::sym:discountsTable",
+        "kind": "references",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/db/repos::file:packages/db/repos/discountRepo.ts",
+        "to": "pkg:external/drizzle-orm",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/db/repos::file:packages/db/repos/discountRepo.ts",
+        "to": "pkg:@acme/db/schema::file:packages/db/schema/discounts.ts::sym:discountsTable",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/db/repos::file:packages/db/repos/invoiceRepo.ts::sym:findInvoice",
+        "to": "pkg:@acme/db/schema::file:packages/db/schema/invoices.ts::sym:InvoiceRecord",
+        "kind": "references",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/db/repos::file:packages/db/repos/invoiceRepo.ts::sym:findInvoice",
+        "to": "pkg:@acme/db/schema::file:packages/db/schema/invoices.ts::sym:invoicesTable",
+        "kind": "references",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/db/repos::file:packages/db/repos/invoiceRepo.ts::sym:saveInvoice",
+        "to": "pkg:@acme/db/schema::file:packages/db/schema/invoices.ts::sym:InvoiceRecord",
+        "kind": "references",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/db/repos::file:packages/db/repos/invoiceRepo.ts::sym:saveInvoice",
+        "to": "pkg:@acme/db/schema::file:packages/db/schema/invoices.ts::sym:invoicesTable",
+        "kind": "references",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/db/repos::file:packages/db/repos/invoiceRepo.ts",
+        "to": "pkg:external/drizzle-orm",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/db/repos::file:packages/db/repos/invoiceRepo.ts",
+        "to": "pkg:@acme/db/schema::file:packages/db/schema/invoices.ts::sym:invoicesTable",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/db/repos::file:packages/db/repos/invoiceRepo.ts",
+        "to": "pkg:@acme/db/schema::file:packages/db/schema/invoices.ts::sym:InvoiceRecord",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/db/repos::file:packages/db/repos/userRepo.ts::sym:findUser",
+        "to": "pkg:@acme/db/schema::file:packages/db/schema/users.ts::sym:usersTable",
+        "kind": "references",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/db/repos::file:packages/db/repos/userRepo.ts",
+        "to": "pkg:external/drizzle-orm",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/db/repos::file:packages/db/repos/userRepo.ts",
+        "to": "pkg:@acme/db/schema::file:packages/db/schema/users.ts::sym:usersTable",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/db/schema::file:packages/db/schema/discounts.ts",
+        "to": "pkg:external/drizzle-orm",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/db/schema::file:packages/db/schema/invoices.ts",
+        "to": "pkg:external/drizzle-orm",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/db/schema::file:packages/db/schema/users.ts",
+        "to": "pkg:external/drizzle-orm",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/shared/money::file:packages/shared/money/currency.ts::sym:Money",
+        "to": "pkg:@acme/shared/money::file:packages/shared/money/currency.ts::sym:Currency",
+        "kind": "references",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/shared/money::file:packages/shared/money/format.ts::sym:formatPrice",
+        "to": "pkg:@acme/shared/money::file:packages/shared/money/currency.ts::sym:Money",
+        "kind": "references",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/shared/money::file:packages/shared/money/format.ts",
+        "to": "pkg:@acme/shared/money::file:packages/shared/money/currency.ts::sym:Money",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/web/components::file:apps/web/components/Button.tsx::sym:Button",
+        "to": "pkg:@acme/web/components::file:apps/web/components/Button.tsx::sym:Props",
+        "kind": "references",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/web/components::file:apps/web/components/CartSummary.spec.tsx",
+        "to": "pkg:external/vitest",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/web/components::file:apps/web/components/CartSummary.spec.tsx",
+        "to": "pkg:@acme/web/components::file:apps/web/components/CartSummary.tsx::sym:CartSummary",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/web/components::file:apps/web/components/CartSummary.tsx::sym:Props",
+        "to": "pkg:@acme/shared/money::file:packages/shared/money/currency.ts::sym:Money",
+        "kind": "references",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/web/components::file:apps/web/components/CartSummary.tsx::sym:CartSummary",
+        "to": "pkg:@acme/web/components::file:apps/web/components/CartSummary.tsx::sym:Props",
+        "kind": "references",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/web/components::file:apps/web/components/CartSummary.tsx::sym:CartSummary",
+        "to": "pkg:@acme/shared/money::file:packages/shared/money/format.ts::sym:formatPrice",
+        "kind": "calls",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/web/components::file:apps/web/components/CartSummary.tsx",
+        "to": "pkg:@acme/shared/money::file:packages/shared/money/format.ts::sym:formatPrice",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/web/components::file:apps/web/components/CartSummary.tsx",
+        "to": "pkg:@acme/shared/money::file:packages/shared/money/currency.ts::sym:Money",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/web/components::file:apps/web/components/PromoCodeInput.tsx::sym:validateCodeLocally",
+        "to": "pkg:@acme/db/repos::file:packages/db/repos/discountRepo.ts::sym:findDiscountByCode",
+        "kind": "calls",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/web/components::file:apps/web/components/PromoCodeInput.tsx::sym:PromoCodeInput",
+        "to": "pkg:@acme/web/components::file:apps/web/components/PromoCodeInput.tsx::sym:Props",
+        "kind": "references",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/web/components::file:apps/web/components/PromoCodeInput.tsx::sym:PromoCodeInput",
+        "to": "pkg:@acme/web/components::file:apps/web/components/PromoCodeInput.tsx::sym:validateCodeLocally",
+        "kind": "calls",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/web/components::file:apps/web/components/PromoCodeInput.tsx::sym:PromoCodeInput",
+        "to": "pkg:@acme/shared/http::file:packages/shared/http/client.ts::sym:httpPost",
+        "kind": "calls",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/web/components::file:apps/web/components/PromoCodeInput.tsx::sym:PromoCodeInput",
+        "to": "pkg:@acme/web/components::file:apps/web/components/Button.tsx::sym:Button",
+        "kind": "renders",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/web/components::file:apps/web/components/PromoCodeInput.tsx",
+        "to": "pkg:external/react",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/web/components::file:apps/web/components/PromoCodeInput.tsx",
+        "to": "pkg:@acme/db/repos::file:packages/db/repos/discountRepo.ts::sym:findDiscountByCode",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/web/components::file:apps/web/components/PromoCodeInput.tsx",
+        "to": "pkg:@acme/shared/http::file:packages/shared/http/client.ts::sym:httpPost",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/web/components::file:apps/web/components/PromoCodeInput.tsx",
+        "to": "pkg:@acme/web/components::file:apps/web/components/Button.tsx::sym:Button",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/web/hooks::file:apps/web/hooks/useInvoice.ts::sym:useInvoice",
+        "to": "pkg:@acme/shared/http::file:packages/shared/http/client.ts::sym:httpGet",
+        "kind": "calls",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/web/hooks::file:apps/web/hooks/useInvoice.ts",
+        "to": "pkg:external/@tanstack/react-query",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/web/hooks::file:apps/web/hooks/useInvoice.ts",
+        "to": "pkg:@acme/shared/http::file:packages/shared/http/client.ts::sym:httpGet",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/web/hooks::file:apps/web/hooks/useSession.ts::sym:useSession",
+        "to": "pkg:@acme/shared/http::file:packages/shared/http/client.ts::sym:httpPost",
+        "kind": "calls",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/web/hooks::file:apps/web/hooks/useSession.ts",
+        "to": "pkg:external/@tanstack/react-query",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/web/hooks::file:apps/web/hooks/useSession.ts",
+        "to": "pkg:@acme/shared/http::file:packages/shared/http/client.ts::sym:httpPost",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/web/pages::file:apps/web/pages/Checkout.spec.tsx",
+        "to": "pkg:external/vitest",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/web/pages::file:apps/web/pages/Checkout.spec.tsx",
+        "to": "pkg:@acme/web/pages::file:apps/web/pages/Checkout.tsx::sym:CheckoutPage",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/web/pages::file:apps/web/pages/Checkout.tsx::sym:useCart",
+        "to": "pkg:@acme/web/pages::file:apps/web/pages/Checkout.tsx::sym:Cart",
+        "kind": "references",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/web/pages::file:apps/web/pages/Checkout.tsx::sym:useCheckoutTotals",
+        "to": "pkg:@acme/web/pages::file:apps/web/pages/Checkout.tsx::sym:Cart",
+        "kind": "references",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/web/pages::file:apps/web/pages/Checkout.tsx::sym:useCheckoutTotals",
+        "to": "pkg:@acme/shared/http::file:packages/shared/http/client.ts::sym:httpPost",
+        "kind": "calls",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/web/pages::file:apps/web/pages/Checkout.tsx::sym:CheckoutPage",
+        "to": "pkg:@acme/web/pages::file:apps/web/pages/Checkout.tsx::sym:useCart",
+        "kind": "calls",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/web/pages::file:apps/web/pages/Checkout.tsx::sym:CheckoutPage",
+        "to": "pkg:@acme/web/pages::file:apps/web/pages/Checkout.tsx::sym:useCheckoutTotals",
+        "kind": "calls",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/web/pages::file:apps/web/pages/Checkout.tsx::sym:CheckoutPage",
+        "to": "pkg:@acme/web/pages::file:apps/web/pages/Checkout.tsx::sym:Layout",
+        "kind": "renders",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/web/pages::file:apps/web/pages/Checkout.tsx::sym:CheckoutPage",
+        "to": "pkg:@acme/web/components::file:apps/web/components/CartSummary.tsx::sym:CartSummary",
+        "kind": "renders",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/web/pages::file:apps/web/pages/Checkout.tsx::sym:CheckoutPage",
+        "to": "pkg:@acme/shared/money::file:packages/shared/money/currency.ts::sym:Money",
+        "kind": "references",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/web/pages::file:apps/web/pages/Checkout.tsx::sym:CheckoutPage",
+        "to": "pkg:@acme/web/components::file:apps/web/components/PromoCodeInput.tsx::sym:PromoCodeInput",
+        "kind": "renders",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/web/pages::file:apps/web/pages/Checkout.tsx",
+        "to": "pkg:external/react",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/web/pages::file:apps/web/pages/Checkout.tsx",
+        "to": "pkg:external/@tanstack/react-query",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/web/pages::file:apps/web/pages/Checkout.tsx",
+        "to": "pkg:@acme/shared/http::file:packages/shared/http/client.ts::sym:httpPost",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/web/pages::file:apps/web/pages/Checkout.tsx",
+        "to": "pkg:@acme/shared/money::file:packages/shared/money/currency.ts::sym:Money",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/web/pages::file:apps/web/pages/Checkout.tsx",
+        "to": "pkg:@acme/web/components::file:apps/web/components/CartSummary.tsx::sym:CartSummary",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/web/pages::file:apps/web/pages/Checkout.tsx",
+        "to": "pkg:@acme/web/components::file:apps/web/components/PromoCodeInput.tsx::sym:PromoCodeInput",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/web/pages::file:apps/web/pages/Invoices.tsx::sym:InvoicesPage",
+        "to": "pkg:@acme/web/hooks::file:apps/web/hooks/useInvoice.ts::sym:useInvoice",
+        "kind": "calls",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/web/pages::file:apps/web/pages/Invoices.tsx::sym:InvoicesPage",
+        "to": "pkg:@acme/web/utils::file:apps/web/utils/dates.ts::sym:formatDate",
+        "kind": "calls",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/web/pages::file:apps/web/pages/Invoices.tsx::sym:InvoicesPage",
+        "to": "pkg:@acme/shared/money::file:packages/shared/money/format.ts::sym:formatPrice",
+        "kind": "calls",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/web/pages::file:apps/web/pages/Invoices.tsx",
+        "to": "pkg:external/react-router",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/web/pages::file:apps/web/pages/Invoices.tsx",
+        "to": "pkg:@acme/web/hooks::file:apps/web/hooks/useInvoice.ts::sym:useInvoice",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/web/pages::file:apps/web/pages/Invoices.tsx",
+        "to": "pkg:@acme/web/utils::file:apps/web/utils/dates.ts::sym:formatDate",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/web/pages::file:apps/web/pages/Invoices.tsx",
+        "to": "pkg:@acme/shared/money::file:packages/shared/money/format.ts::sym:formatPrice",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/web/pages::file:apps/web/pages/Login.tsx::sym:LoginPage",
+        "to": "pkg:@acme/web/hooks::file:apps/web/hooks/useSession.ts::sym:useSession",
+        "kind": "calls",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/web/pages::file:apps/web/pages/Login.tsx::sym:LoginPage",
+        "to": "pkg:@acme/web/components::file:apps/web/components/Button.tsx::sym:Button",
+        "kind": "renders",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/web/pages::file:apps/web/pages/Login.tsx",
+        "to": "pkg:@acme/web/components::file:apps/web/components/Button.tsx::sym:Button",
+        "kind": "imports",
+        "precision": "syntactic"
+      },
+      {
+        "from": "pkg:@acme/web/pages::file:apps/web/pages/Login.tsx",
+        "to": "pkg:@acme/web/hooks::file:apps/web/hooks/useSession.ts::sym:useSession",
+        "kind": "imports",
+        "precision": "syntactic"
+      }
+    ]
+  },
+  "meta": {
+    "commit": "d0cf48d9468e64b81a65cdb5d5e6931a3bc21e03",
+    "date": "2024-03-08T10:00:00Z",
+    "detector": "workspaces",
+    "adapters": ["typescript"],
+    "ignoredFiles": 0,
+    "parsedFiles": 35,
+    "cachedFiles": 0,
+    "warnings": []
+  }
+}

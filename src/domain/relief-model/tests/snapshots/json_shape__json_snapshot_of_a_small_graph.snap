@@ -1,0 +1,55 @@
+---
+source: src/domain/relief-model/tests/json_shape.rs
+expression: small_graph()
+---
+{
+  "commit": "c0ffee",
+  "nodes": [
+    {
+      "id": "pkg:@acme/api",
+      "kind": "package",
+      "subkind": "package",
+      "parent": null,
+      "visibility": "public",
+      "contentHash": ""
+    },
+    {
+      "id": "pkg:@acme/api::file:src/a.ts",
+      "kind": "file",
+      "subkind": "file",
+      "parent": "pkg:@acme/api",
+      "visibility": "public",
+      "contentHash": ""
+    },
+    {
+      "id": "pkg:@acme/api::file:src/c.ts",
+      "kind": "file",
+      "subkind": "file",
+      "parent": "pkg:@acme/api",
+      "visibility": "public",
+      "contentHash": ""
+    },
+    {
+      "id": "pkg:@acme/api::file:src/a.ts::sym:A.b",
+      "kind": "symbol",
+      "subkind": "symbol",
+      "parent": "pkg:@acme/api::file:src/a.ts",
+      "visibility": "public",
+      "contentHash": ""
+    }
+  ],
+  "edges": [
+    {
+      "from": "pkg:@acme/api::file:src/a.ts",
+      "to": "pkg:@acme/api::file:src/c.ts",
+      "kind": "imports",
+      "precision": "syntactic"
+    },
+    {
+      "from": "pkg:@acme/api::file:src/a.ts::sym:A.b",
+      "to": "pkg:@acme/api::file:src/c.ts",
+      "kind": "calls",
+      "precision": "syntactic"
+    }
+  ]
+}

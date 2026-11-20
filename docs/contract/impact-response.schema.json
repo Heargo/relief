@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ImpactResponse",
+  "description": "Response of the `impact` command.",
+  "type": "object",
+  "properties": {
+    "reached": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ImpactedNode"
+      }
+    }
+  },
+  "required": [
+    "reached"
+  ],
+  "$defs": {
+    "EdgeKind": {
+      "description": "Kind of relation between two nodes.",
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": [
+            "imports",
+            "calls",
+            "references",
+            "renders",
+            "extends",
+            "implements",
+            "http",
+            "depends_on"
+          ]
+        },
+        {
+          "description": "Files that change in the same commits (git history, not the code).",
+          "type": "string",
+          "const": "co_change"
+        }
+      ]
+    },
+    "ImpactedNode": {
+      "description": "A symbol reached by an impact walk.",
+      "type": "object",
+      "properties": {
+        "depth": {
+          "description": "Number of hops from the seed (1 = direct).",
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        },
+        "kind": {
+          "description": "Kind of the last edge.",
+          "$ref": "#/$defs/EdgeKind"
+        },
+        "node": {
+          "$ref": "#/$defs/NodeId"
+        },
+        "outOfDiff": {
+          "description": "The range did not touch it.",
+          "type": "boolean"
+        },
+        "tested": {
+          "description": "A test reaches it directly.",
+          "type": "boolean"
+        },
+        "via": {
+          "description": "Shortest path from the seed to the node (seed included, node excluded).",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/NodeId"
+          }
+        }
+      },
+      "required": [
+        "node",
+        "depth",
+        "via",
+        "kind",
+        "tested",
+        "outOfDiff"
+      ]
+    },
+    "NodeId": {
+      "type": "string"
+    }
+  }
+}

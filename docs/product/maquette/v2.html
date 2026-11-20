@@ -1,0 +1,891 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>relief, propositions v2</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: a long review page, one section per proposal, each with a live mock in the relief look (tokens from docs/product/maquette). */
+:root{
+  --bg:#f3f4f7; --map:#f7f8fa; --panel:#ffffff; --panel-2:#f2f4f8; --line:#e2e5eb; --line-2:#cdd2dc;
+  --text:#1b1f27; --muted:#5b6475; --faint:#9aa2b1;
+  --node:#ffffff; --node-open:rgba(20,30,60,.025); --ghost:rgba(20,30,60,.07);
+  --add:#1f9d3a; --mod:#c48a00; --del:#d93a32; --acc:#1f6feb; --acc-soft:rgba(31,111,235,.12); --imp:#e67700;
+  --shadow:0 8px 30px rgba(20,30,60,.15);
+  --mono:ui-monospace,"JetBrains Mono","SF Mono",Menlo,Consolas,monospace;
+  --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0c0f15; --map:#0f131b; --panel:#131720; --panel-2:#191e29; --line:#242a36; --line-2:#323a4a;
+  --text:#e6e9ef; --muted:#98a1b3; --faint:#5d6679;
+  --node:#161b25; --node-open:rgba(255,255,255,.018); --ghost:rgba(255,255,255,.06);
+  --add:#3fb950; --mod:#e3b341; --del:#f85149; --acc:#5eb1ff; --acc-soft:rgba(94,177,255,.14); --imp:#ff9e3d;
+  --shadow:0 8px 30px rgba(0,0,0,.45); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0c0f15; --map:#0f131b; --panel:#131720; --panel-2:#191e29; --line:#242a36; --line-2:#323a4a;
+  --text:#e6e9ef; --muted:#98a1b3; --faint:#5d6679;
+  --node:#161b25; --node-open:rgba(255,255,255,.018); --ghost:rgba(255,255,255,.06);
+  --add:#3fb950; --mod:#e3b341; --del:#f85149; --acc:#5eb1ff; --acc-soft:rgba(94,177,255,.14); --imp:#ff9e3d;
+  --shadow:0 8px 30px rgba(0,0,0,.45); color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font:14px/1.55 var(--sans);padding-block:24px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+button{font:inherit;color:inherit}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:56px}
+header.intro h1{font-size:26px;margin:0 0 6px;text-wrap:balance}
+header.intro p{color:var(--muted);margin:0;max-width:70ch}
+.toc{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.toc a{color:var(--text);text-decoration:none;border:1px solid var(--line-2);border-radius:999px;padding:3px 12px;font-size:13px;background:var(--panel)}
+.toc a:hover{border-color:var(--acc)}
+section.prop{display:flex;flex-direction:column;gap:16px}
+.eyebrow{font:600 11px/1 var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--acc)}
+h2{font-size:20px;margin:0;text-wrap:balance}
+h3{font-size:15px;margin:0 0 6px}
+p{margin:0}
+.lead{color:var(--muted);max-width:75ch}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px}
+.opt{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.opt.rec{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc) inset}
+.opt .tag{font:600 10px/1 var(--sans);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.opt.rec .tag{color:var(--acc)}
+.opt ul{margin:0;padding-left:18px;color:var(--muted);font-size:13px}
+.pro{color:var(--add)} .con{color:var(--del)}
+.note{font-size:13px;color:var(--muted);border-left:2px solid var(--line-2);padding-left:10px;max-width:80ch}
+code,.mono{font-family:var(--mono);font-size:12px}
+.frame{background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden;box-shadow:var(--shadow)}
+.ctrl{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;padding:10px 12px;border-bottom:1px solid var(--line);background:var(--panel)}
+.seg{display:inline-flex;border:1px solid var(--line-2);border-radius:6px;overflow:hidden;flex-wrap:wrap}
+.seg button{background:transparent;border:0;padding:5px 10px;font-size:12px;cursor:pointer;color:var(--muted)}
+.seg button+button{border-left:1px solid var(--line-2)}
+.seg button[aria-pressed="true"]{background:var(--acc-soft);color:var(--text);font-weight:600}
+.seg button:focus-visible,.btn:focus-visible,.chip:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+label.rng{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
+input[type=range]{accent-color:var(--acc);width:180px}
+.readout{font:12px var(--mono);color:var(--muted);margin-left:auto}
+
+/* ---------- 1. zoom ---------- */
+#zmap{position:relative;height:440px;background:var(--map);overflow:hidden;cursor:grab;touch-action:none}
+#zmap.drag{cursor:grabbing}
+.zn{position:absolute;border:1px solid var(--line-2);border-radius:6px;background:var(--node);overflow:hidden}
+.zn.open{background:var(--node-open);overflow:visible}
+.zn.ghost{background:var(--ghost);border-color:transparent;border-radius:3px}
+.zn.sym{background:var(--panel-2);border-color:var(--line)}
+.zn .hd{position:absolute;left:0;right:0;top:-1px;display:flex;align-items:center;gap:6px;padding:0 8px;white-space:nowrap;overflow:hidden;font-weight:600;border-bottom:1px solid var(--line);background:var(--panel);border-radius:6px 6px 0 0}
+.zn.before .hd{background:color-mix(in srgb,var(--panel) 92%,transparent)}
+.zn .lbl{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;white-space:nowrap;overflow:hidden;color:var(--muted);padding:0 4px}
+.zn .tab{position:absolute;left:8px;top:0;transform:translateY(-55%);font:600 11px/1 var(--sans);background:var(--panel);border:1px solid var(--line-2);border-radius:4px;padding:3px 6px;white-space:nowrap;z-index:3;color:var(--text)}
+.wm{position:absolute;display:flex;align-items:center;justify-content:center;pointer-events:none;font-weight:700;letter-spacing:.06em;color:var(--text);white-space:nowrap;z-index:2;text-shadow:0 0 6px var(--map),0 0 2px var(--map)}
+.kind-system{border-color:var(--line-2)}
+.ztable{width:100%;border-collapse:collapse;font-size:13px}
+.ztable th,.ztable td{text-align:left;padding:6px 10px;border-bottom:1px solid var(--line)}
+.ztable th{font-weight:600;color:var(--muted);font-size:12px}
+.ztable td.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.ztable tr.on td{background:var(--acc-soft)}
+.tablewrap{overflow-x:auto;padding:0 12px 12px}
+
+/* ---------- 2. ref picker ---------- */
+.tb{display:flex;align-items:center;gap:12px;height:48px;padding:0 14px;border-bottom:1px solid var(--line);background:var(--panel);font-size:13px;position:relative;min-width:720px}
+.logo{font-weight:700;font-size:15px}
+.repo{color:var(--muted)} .repo b{color:var(--text)}
+.modeseg button{padding:4px 12px}
+.cmp{display:flex;align-items:center;border:1px solid var(--line-2);border-radius:7px;background:var(--panel-2);height:32px}
+.side{display:flex;align-items:center;gap:6px;height:100%;padding:0 10px;background:transparent;border:0;cursor:pointer;font:12px var(--mono);border-radius:6px;max-width:220px}
+.side:hover,.side[aria-expanded="true"]{background:var(--acc-soft)}
+.side .k{font:600 9px/1 var(--sans);letter-spacing:.08em;color:var(--faint);text-transform:uppercase}
+.side .v{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.side .ic{color:var(--muted)}
+.dots{font:12px var(--mono);color:var(--muted);padding:0 2px;cursor:pointer;background:transparent;border:0;height:100%}
+.dots:hover{color:var(--acc)}
+.swap{border:0;border-left:1px solid var(--line-2);background:transparent;height:100%;padding:0 9px;cursor:pointer;color:var(--muted)}
+.swap:hover{color:var(--acc)}
+.count{font-size:12px;color:var(--muted);white-space:nowrap}
+.spacer{flex:1}
+.iconbtn{border:1px solid var(--line-2);background:transparent;border-radius:6px;padding:4px 8px;font-size:12px;color:var(--muted)}
+.pop{position:absolute;top:44px;width:440px;max-width:calc(100vw - 48px);background:var(--panel);border:1px solid var(--line-2);border-radius:9px;box-shadow:var(--shadow);z-index:20;display:flex;flex-direction:column;overflow:hidden}
+.pop .ph{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line)}
+.pop .ph .t{font-weight:600;font-size:13px}
+.pop .ph .t small{color:var(--muted);font-weight:400}
+.pop input.q{flex:1;background:var(--panel-2);border:1px solid var(--line-2);border-radius:6px;padding:5px 9px;font:12px var(--sans);color:var(--text);outline:none;min-width:0}
+.pop input.q:focus{border-color:var(--acc)}
+.pop .tabs{display:flex;gap:2px;padding:6px 10px 0;border-bottom:1px solid var(--line)}
+.pop .tabs button{border:0;background:transparent;padding:6px 10px;font-size:12px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent}
+.pop .tabs button[aria-selected="true"]{color:var(--text);border-bottom-color:var(--acc);font-weight:600}
+.pop .tabs .n{color:var(--faint);font-weight:400;margin-left:3px}
+.pop .list{max-height:300px;overflow:auto;padding:4px 0}
+.row{display:grid;grid-template-columns:16px 1fr auto;align-items:center;gap:8px;padding:5px 12px;cursor:pointer;font-size:12px;width:100%;text-align:left;border:0;background:transparent}
+.row:hover,.row.kb{background:var(--panel-2)}
+.row.sel{background:var(--acc-soft)}
+.row .main{display:flex;gap:8px;align-items:baseline;min-width:0}
+.row .sha{font:11px var(--mono);color:var(--acc)}
+.row .msg{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .meta{color:var(--faint);font-size:11px;white-space:nowrap}
+.row .rail{position:relative;width:16px;height:100%;min-height:22px}
+.row .rail::before{content:"";position:absolute;left:7px;top:-6px;bottom:-6px;width:2px;background:var(--line-2)}
+.row .rail i{position:absolute;left:3px;top:50%;margin-top:-5px;width:10px;height:10px;border-radius:50%;background:var(--panel);border:2px solid var(--line-2)}
+.row.inr .rail::before{background:var(--acc)}
+.row.inr .rail i{border-color:var(--acc)}
+.row .end{font:600 9px/1 var(--sans);letter-spacing:.06em;padding:3px 5px;border-radius:3px;background:var(--acc);color:var(--panel)}
+.row .end.other{background:var(--line-2);color:var(--text)}
+.row .pill{font:10px var(--mono);border:1px solid var(--line-2);border-radius:999px;padding:0 6px;color:var(--muted)}
+.pop .pf{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:8px 12px;border-top:1px solid var(--line);font-size:11px;color:var(--muted)}
+kbd{font:10px var(--mono);border:1px solid var(--line-2);border-bottom-width:2px;border-radius:3px;padding:0 4px;background:var(--panel-2);color:var(--muted)}
+.chips{display:flex;gap:6px;flex-wrap:wrap;padding:8px 12px;border-bottom:1px solid var(--line)}
+.chip{border:1px solid var(--line-2);background:var(--panel);border-radius:999px;padding:2px 10px;font-size:11px;cursor:pointer;color:var(--muted)}
+.chip:hover{border-color:var(--acc);color:var(--text)}
+.tbwrap{overflow-x:auto}
+.stage2{height:430px;background:var(--map);position:relative}
+.stage2 .hint{position:absolute;left:16px;bottom:14px;right:16px;font-size:12px;color:var(--faint)}
+
+/* ---------- 3/4. panels ---------- */
+.app{display:grid;grid-template-columns:270px 1fr 330px;height:560px;min-width:900px}
+.panel{background:var(--panel);overflow:auto;font-size:12.5px}
+.panel.left{border-right:1px solid var(--line)}
+.panel.right{border-left:1px solid var(--line)}
+.ptitle{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line);font-weight:600;font-size:12px;position:sticky;top:0;background:var(--panel);z-index:2}
+.ptitle .sub{color:var(--muted);font-weight:400}
+.grp{padding:10px 12px;border-bottom:1px solid var(--line)}
+.grp h4{margin:0 0 8px;font:600 10px/1 var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--faint);display:flex;align-items:center;gap:6px}
+.grp h4 .r{margin-left:auto;color:var(--muted);letter-spacing:0;text-transform:none;font-weight:400}
+.tog{display:flex;align-items:center;gap:8px;padding:3px 0;color:var(--muted)}
+.tog .sw{width:26px;height:15px;border-radius:999px;background:var(--line-2);position:relative;flex:none}
+.tog .sw::after{content:"";position:absolute;top:2px;left:2px;width:11px;height:11px;border-radius:50%;background:var(--panel)}
+.tog.on .sw{background:var(--acc)} .tog.on .sw::after{left:13px}
+.tog.on{color:var(--text)}
+.item{display:flex;align-items:center;gap:8px;padding:4px 0}
+.item .cb{width:13px;height:13px;border:1px solid var(--line-2);border-radius:3px;flex:none}
+.item.done .cb{background:var(--add);border-color:var(--add)}
+.item.done span{color:var(--faint);text-decoration:line-through}
+.item .p{font:11px var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar{height:5px;border-radius:3px;background:var(--line);overflow:hidden;margin-top:6px}
+.bar i{display:block;height:100%;width:40%;background:var(--add)}
+.stats{display:flex;gap:10px;font:12px var(--mono);margin-top:4px}
+.stats .p{color:var(--add)} .stats .m{color:var(--del)}
+.center{position:relative;background:var(--map);overflow:hidden}
+.mn{position:absolute;border:1px solid var(--line-2);border-radius:6px;background:var(--node);padding:6px 9px;font-size:11.5px;cursor:pointer;transition:opacity .15s,box-shadow .15s}
+.mn .f{font-family:var(--mono);font-weight:600}
+.mn .d{color:var(--faint);font-size:10.5px}
+.mn.ch{border-left:3px solid var(--mod)}
+.mn.add{border-left:3px solid var(--add)}
+.mn.sel{box-shadow:0 0 0 2px var(--acc)}
+.mn.dim{opacity:.35}
+.mgroup{position:absolute;border:1px dashed var(--line-2);border-radius:8px}
+.mgroup span{position:absolute;top:-9px;left:10px;background:var(--map);padding:0 6px;font:600 11px var(--sans);color:var(--muted)}
+svg.edges{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+svg.edges path.e{fill:none;stroke:var(--faint);stroke-width:1.4;transition:opacity .15s,stroke .15s}
+svg.edges path.hit{fill:none;stroke:transparent;stroke-width:12;cursor:pointer}
+svg.edges path.e.dim{opacity:.12}
+svg.edges path.e.out{stroke:var(--acc);stroke-width:2.4}
+svg.edges path.e.in{stroke:var(--imp);stroke-width:2.4}
+svg.edges path.e.picked{stroke:var(--acc);stroke-width:3}
+svg.edges .lab{font:10px var(--mono);fill:var(--muted);transition:opacity .15s}
+svg.edges .lab.dim{opacity:.1}
+.legend{position:absolute;left:10px;bottom:10px;display:flex;gap:12px;font-size:11px;color:var(--muted);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:4px 8px}
+.legend i{display:inline-block;width:14px;height:3px;border-radius:2px;vertical-align:middle;margin-right:4px}
+.badge{display:inline-flex;align-items:center;gap:5px;font:700 10px/1 var(--sans);letter-spacing:.08em;text-transform:uppercase;padding:4px 7px;border-radius:4px}
+.badge.node{background:var(--acc-soft);color:var(--acc)}
+.badge.edge{background:color-mix(in srgb,var(--imp) 16%,transparent);color:var(--imp)}
+.badge.none{background:var(--panel-2);color:var(--muted)}
+.badge svg{width:11px;height:11px}
+.insp-h{padding:12px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:6px}
+.insp-h .name{font:600 14px var(--mono);word-break:break-all}
+.insp-h .path{font:11px var(--mono);color:var(--muted);word-break:break-all}
+.insp-h .x{margin-left:auto;border:0;background:transparent;color:var(--faint);cursor:pointer;font-size:14px}
+.ends{display:grid;grid-template-columns:1fr auto 1fr;gap:6px;align-items:center}
+.ends .end{border:1px solid var(--line-2);border-radius:5px;padding:5px 7px;font:11px var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;background:var(--panel-2)}
+.ends .arr{color:var(--muted)}
+.kv{display:flex;flex-wrap:wrap;gap:6px}
+.kv span{font:11px var(--mono);border:1px solid var(--line-2);border-radius:999px;padding:1px 8px;color:var(--muted)}
+.use{border:1px solid var(--line);border-radius:6px;margin-bottom:8px;overflow:hidden}
+.use .uh{display:flex;align-items:center;gap:6px;padding:6px 8px;background:var(--panel-2);font:12px var(--mono)}
+.use .uh b{font-weight:600}
+.use .uh .n{margin-left:auto;color:var(--muted);font-family:var(--sans);font-size:11px}
+.use .ul{list-style:none;margin:0;padding:0}
+.use .ul li{display:grid;grid-template-columns:auto 1fr;gap:8px;padding:5px 8px;border-top:1px solid var(--line);font:11px/1.5 var(--mono);cursor:pointer}
+.use .ul li:hover{background:var(--panel-2)}
+.use .ul .ln{color:var(--faint);white-space:nowrap}
+.use .ul code{white-space:pre-wrap;word-break:break-word}
+.use .ul mark{background:var(--acc-soft);color:var(--text);border-radius:2px;padding:0 1px}
+.use .ul .ctx{color:var(--faint);font-size:10.5px;grid-column:2}
+.empty{padding:20px 12px;color:var(--muted);font-size:12.5px;display:flex;flex-direction:column;gap:8px}
+.list{display:flex;flex-direction:column}
+.list a{display:flex;justify-content:space-between;gap:8px;padding:4px 0;color:var(--text);text-decoration:none;font:11.5px var(--mono);cursor:pointer}
+.list a span:last-child{color:var(--faint)}
+.appwrap{overflow-x:auto}
+.gear{cursor:pointer;font-size:14px;padding:3px 9px}
+.gear[aria-expanded="true"]{border-color:var(--acc);color:var(--text)}
+.setmenu{left:auto;right:10px;width:290px;padding:6px 0}
+.setmenu .mi{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 12px;font-size:12px;color:var(--muted)}
+.setmenu .msep{height:1px;background:var(--line);margin:6px 0}
+.setmenu .mrow{display:flex;justify-content:space-between;align-items:center;width:100%;border:0;background:transparent;padding:7px 12px;font-size:12px;cursor:pointer;text-align:left}
+.setmenu .mrow:hover{background:var(--panel-2)}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+<header class="intro">
+  <div class="eyebrow">relief · maquette de travail · 20 nov. 2026</div>
+  <h1>Zoom, comparaison de refs, panneaux et arêtes</h1>
+  <p>Quatre retours sur l'UI actuelle (après U10 à U12), chacun avec des options, une recommandation et une maquette interactive. Rien n'est implémenté : choisis une option par sujet et on en fait des tickets.</p>
+  <nav class="toc">
+    <a href="#zoom">1 · Zoom lisible</a>
+    <a href="#refs">2 · Choisir base et head</a>
+    <a href="#panels">3 · Panneaux et inspecteur</a>
+    <a href="#panels">4 · Arêtes du nœud sélectionné</a>
+  </nav>
+</header>
+
+<!-- ============ 1 ============ -->
+<section class="prop" id="zoom">
+  <div class="eyebrow">Sujet 1</div>
+  <h2>Revenir au zoom d'avant U10, sans en-têtes qui se chevauchent</h2>
+  <p class="lead">Avant U10, un conteneur s'ouvrait dès que sa largeur à l'écran atteignait son seuil (470, 300, 175 px), mais son en-tête gardait 38, 30 ou 26 px alors que la disposition ne lui réserve que 50, 36 ou 30 unités du monde : sous l'échelle 0,8 les enfants passaient dessous. U10 a corrigé ça en n'ouvrant un conteneur qu'une fois son titre lisible (police ≥ 8 px), ce qui retarde l'ouverture des modules jusqu'à l'échelle 0,44 environ, et des systèmes jusqu'à 0,32. Sur un dépôt aux modules larges, on reste donc longtemps au niveau système ou module. L'idée commune aux options : <b>rouvrir sur la seule largeur, comme avant</b>, et trouver une autre place au titre quand l'en-tête réservé est trop petit.</p>
+
+  <div class="cols">
+    <div class="opt rec">
+      <span class="tag">Option A · retenue</span>
+      <h3>Étiquette sur le bord</h3>
+      <p class="note" style="border:0;padding:0">L'en-tête prend la place réservée (comme U10) ; sous 11 px de police, le titre devient une petite étiquette posée à cheval sur la bordure haute, en police fixe.</p>
+      <ul><li class="pro">Titre toujours lisible, ouverture précoce</li><li class="con">L'étiquette mord sur la marge et parfois sur l'en-tête du parent</li><li class="con">Beaucoup d'étiquettes à la même hauteur quand les frères sont alignés</li></ul>
+    </div>
+    <div class="opt">
+      <span class="tag">Option B · écartée</span>
+      <h3>Titre en filigrane</h3>
+      <p class="note" style="border:0;padding:0">Sous 10 px, l'en-tête se réduit à une bande et le nom du conteneur s'écrit en grand, en transparence, au milieu de son contenu, comme le nom d'une région sur une carte géographique. Il cède la place à l'en-tête par un fondu quand celui-ci devient lisible.</p>
+      <ul><li class="pro">Aucun chevauchement : rien ne bouge dans la disposition</li><li class="pro">La taille du nom suit celle du conteneur : on lit d'abord les grandes zones</li><li class="con">Du texte translucide passe sur les boîtes enfants (halo pour la lisibilité)</li></ul>
+    </div>
+    <div class="opt">
+      <span class="tag">Option C · écartée</span>
+      <h3>Réserver l'en-tête en pixels écran</h3>
+      <p class="note" style="border:0;padding:0">La disposition réserve <code>max(monde, px / échelle)</code> et se recalcule quand l'échelle change de palier.</p>
+      <ul><li class="pro">En-têtes de taille maquette partout</li><li class="con">Les boîtes bougent pendant qu'on zoome : on perd ses repères</li><li class="con">Relayout coûteux sur les gros dépôts (S02)</li></ul>
+    </div>
+  </div>
+  <p class="note">Dans les trois cas on garde la règle d'U10 sur les boîtes fermées (pas de libellé coupé sous 14 × 28 px, nom au survol). En complément possible de B : un fil d'Ariane du point visé, en haut à gauche de la carte, pour les conteneurs dont même le filigrane sort de l'écran.</p>
+
+  <div class="frame">
+    <div class="ctrl">
+      <div class="seg" id="zstrat" role="group" aria-label="Stratégie">
+        <button data-s="before" aria-pressed="false">Avant U10</button>
+        <button data-s="u10" aria-pressed="false">Actuel (U10)</button>
+        <button data-s="tab" aria-pressed="true">A · Étiquette</button>
+        <button data-s="wm" aria-pressed="false">B · Filigrane</button>
+      </div>
+      <label class="rng" for="zscale">Échelle <input id="zscale" type="range" min="-2.1" max="1.1" step="0.01" value="-1.1"></label>
+      <span class="readout" id="zread"></span>
+    </div>
+    <div id="zmap" aria-label="Carte de démonstration : molette pour zoomer, glisser pour déplacer"></div>
+    <div class="tablewrap">
+      <table class="ztable" aria-label="Échelle d'ouverture par niveau">
+        <thead><tr><th>Stratégie</th><th>Systèmes ouverts dès</th><th>Modules ouverts dès</th><th>Fichiers ouverts dès</th><th>Chevauchements</th></tr></thead>
+        <tbody id="ztbody"></tbody>
+      </table>
+    </div>
+  </div>
+  <p class="note">La carte ci-dessus reprend les unités réelles de <code>layout.logic.ts</code> et <code>header.logic.ts</code> sur un extrait du dépôt relief. Molette pour zoomer, glisser pour déplacer. Essaie l'échelle 0,30 à 0,45 : c'est la zone où U10 garde les modules fermés.</p>
+</section>
+
+<!-- ============ 2 ============ -->
+<section class="prop" id="refs">
+  <div class="eyebrow">Sujet 2</div>
+  <h2>Choisir finement les deux côtés de la comparaison</h2>
+  <p class="lead">Aujourd'hui, un seul menu propose des plages toutes faites (<code>main..develop</code>, <code>HEAD~1..HEAD</code>, working tree). On le remplace par un contrôle à deux côtés, <b>base</b> et <b>head</b>, chacun avec son sélecteur. On garde des raccourcis pour les cas fréquents.</p>
+  <div class="cols">
+    <div class="opt rec">
+      <span class="tag">Proposition</span>
+      <h3>Base ··· Head, un sélecteur par côté</h3>
+      <ul>
+        <li>Chaque côté ouvre un menu avec recherche et trois onglets : Branches, Tags, Commits.</li>
+        <li>L'onglet Commits montre l'historique de head avec un rail : les commits compris dans la plage sont surlignés, l'autre extrémité est marquée.</li>
+        <li>Head propose en tête « Working tree » (non commité, avec index).</li>
+        <li><code>···</code> entre les deux bascule entre « depuis l'ancêtre commun » (<code>...</code>, défaut, comme une PR) et « diff direct » (<code>..</code>).</li>
+        <li>⇄ inverse base et head. À droite, le nombre de commits de la plage.</li>
+        <li>Clavier : <kbd>b</kbd> ouvre base, <kbd>h</kbd> ouvre head, flèches et Entrée dans la liste.</li>
+      </ul>
+    </div>
+    <div class="opt">
+      <span class="tag">Ce qu'il faut côté cœur</span>
+      <h3>Une commande de log</h3>
+      <ul>
+        <li><code>meta</code> ne renvoie que branches et tags. Il faut une commande <code>log(ref, limit, query)</code> sur <code>Session</code> (la crate git a déjà <code>log</code>) qui renvoie sha court, sujet, auteur, date.</li>
+        <li>Le nombre de commits de la plage : <code>log(range).len()</code>, déjà calculé pour l'ordre de lecture.</li>
+        <li>La plage reste une chaîne <code>base...head</code> : <code>setRange</code> ne change pas.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="frame">
+    <div class="tbwrap">
+      <div class="tb" id="tb">
+        <span class="logo">relief</span>
+        <span class="repo"><b>relief</b></span>
+        <div class="cmp" id="cmp">
+          <button class="side" id="sideBase" aria-expanded="false" aria-haspopup="dialog"><span class="k">base</span><span class="ic" id="baseIc">⎇</span><span class="v" id="baseV">main</span></button>
+          <button class="dots" id="dots" title="Depuis l'ancêtre commun : ce que head ajoute, comme une PR">···</button>
+          <button class="side" id="sideHead" aria-expanded="false" aria-haspopup="dialog"><span class="k">head</span><span class="ic" id="headIc">⎇</span><span class="v" id="headV">develop</span></button>
+          <button class="swap" id="swap" title="Inverser base et head" aria-label="Inverser base et head">⇄</button>
+        </div>
+        <span class="count" id="rcount"></span>
+        <span class="spacer"></span>
+        <span class="iconbtn">⌕ Rechercher <kbd>/</kbd></span>
+        <button class="iconbtn gear" aria-label="Paramètres" aria-haspopup="menu" aria-expanded="false">⚙</button>
+        <div class="pop" id="pop" hidden></div>
+      </div>
+    </div>
+    <div class="stage2"><div class="hint" id="rangeHint"></div></div>
+  </div>
+</section>
+
+<!-- ============ 3 & 4 ============ -->
+<section class="prop" id="panels">
+  <div class="eyebrow">Sujets 3 et 4</div>
+  <h2>À gauche les outils du mode, à droite ce qui est sélectionné</h2>
+  <p class="lead">Le panneau gauche mélange aujourd'hui l'état de la PR, les calques, les règles, l'ordre de lecture et la disposition. La bascule PR / Explorer reste où elle est, en haut de ce panneau. Sous elle, deux blocs : <b>les outils du mode courant</b> en haut (PR : carte de la PR, ordre de lecture, signaux ; Explorer : points d'entrée, hotspots, règles), puis <b>Affichage</b>, commun aux deux modes (calques, dépendances externes, disposition). Le panneau droit devient un <b>inspecteur</b> avec un badge qui dit ce qu'on regarde : NŒUD, ARÊTE, ou rien (vue d'ensemble).</p>
+  <div class="cols">
+    <div class="opt rec">
+      <span class="tag">Inspecteur d'arête</span>
+      <h3>Les utilisations, pas seulement l'import</h3>
+      <ul>
+        <li>En tête : les deux extrémités (cliquables), le type, la précision, le nombre d'arêtes agrégées.</li>
+        <li>Puis, par symbole importé, chaque utilisation : fichier, ligne, la ligne de code avec le symbole surligné, la fonction qui l'appelle. Un clic ouvre le code.</li>
+        <li>Côté cœur : une commande <code>edge_usages(from, to)</code> calculée à la demande. L'adapter relit le fichier source (tree-sitter, déjà en cache par blob) et cherche les références aux liaisons importées. Rien de neuf dans le snapshot, donc pas de coût à l'indexation.</li>
+      </ul>
+    </div>
+    <div class="opt rec">
+      <span class="tag">Sujet 4</span>
+      <h3>Les arêtes du nœud sélectionné ressortent</h3>
+      <ul>
+        <li>Arêtes sortantes en accent, entrantes en orange (couleur de l'impact), plus épaisses.</li>
+        <li>Toutes les autres arêtes et leurs libellés à 12 % d'opacité ; les nœuds non voisins à 35 %.</li>
+        <li>Échap ou clic dans le vide rétablit tout. Même règle quand une arête est sélectionnée : seules ses deux extrémités restent nettes.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="frame">
+    <div class="tbwrap">
+      <div class="tb">
+        <span class="logo">relief</span>
+        <span class="repo"><b>acme-shop</b></span>
+        <div class="cmp"><span class="side"><span class="k">base</span><span class="ic">⎇</span><span class="v">main</span></span><span class="dots">···</span><span class="side"><span class="k">head</span><span class="ic">⎇</span><span class="v">feat/discounts</span></span></div>
+        <span class="spacer"></span>
+        <span class="iconbtn">⌕ Rechercher <kbd>/</kbd></span>
+        <button class="iconbtn gear" aria-label="Paramètres" aria-haspopup="menu" aria-expanded="false">⚙</button>
+      </div>
+    </div>
+    <div class="appwrap">
+      <div class="app">
+        <aside class="panel left" id="left"></aside>
+        <div class="center" id="center">
+          <svg class="edges" id="edges"></svg>
+          <div class="legend"><span><i style="background:var(--acc)"></i>sortante</span><span><i style="background:var(--imp)"></i>entrante</span></div>
+        </div>
+        <aside class="panel right" id="right"></aside>
+      </div>
+    </div>
+  </div>
+  <p class="note">Clique un fichier, puis une arête (le trait ou son libellé). Clic dans le vide pour désélectionner. La bascule PR / Explorer en haut du panneau gauche change ses outils. À droite de la barre du haut, un seul bouton ⚙ ouvre les paramètres : thème, langue, raccourcis clavier et documentation.</p>
+</section>
+</div>
+
+<script>
+(() => {
+/* ================= 1. ZOOM ================= */
+const SPEC = { system:{world:50,maxH:38,maxF:15}, module:{world:36,maxH:30,maxF:13}, file:{world:30,maxH:26,maxF:12} };
+const TH = { system:470, module:300, file:175 };
+const PAD = 12, GAP = 12, SYM = { w:150, h:34 };
+const files = (names, syms) => names.map((n,i) => ({ name:n, kind:'file', children:(syms[i]||['new','run','test']).map(s => ({name:s, kind:'sym'})) }));
+const tree = { name:'src/', kind:'system', children:[
+  { name:'analysis/', kind:'module', children:[
+    { name:'relief-git/', kind:'module', children:files(['lib.rs','source.rs','gix.rs','log.rs'],[['GitSource','RevSpec','open'],['resolve_range','tree'],['GixSource','blob','diff'],['log','CommitInfo']]) },
+    { name:'relief-index/', kind:'module', children:files(['lib.rs','cache.rs','build.rs'],[['Index','with_adapter'],['BlobCache','get','put'],['snapshot','walk']]) },
+    { name:'relief-detect/', kind:'module', children:files(['lib.rs','workspace.rs','folders.rs','packages.rs'],[['default_detectors'],['Workspace','detect'],['Folders','detect'],['Packages','detect']]) },
+    { name:'lang/', kind:'module', children:[
+      { name:'relief-lang-ts/', kind:'module', children:files(['lib.rs','imports.rs','calls.rs'],[['TsAdapter','extract'],['imports','resolve'],['calls','link']]) },
+      { name:'relief-lang-py/', kind:'module', children:files(['lib.rs','imports.rs'],[['PyAdapter','extract'],['imports','resolve']]) },
+    ]},
+  ]},
+  { name:'app/', kind:'module', children:[
+    { name:'relief-app/', kind:'module', children:files(['session.rs','error.rs','data_dir.rs','summary.rs'],[['Session','diff','meta'],['AppError'],['DataDir','open'],['review_summary']]) },
+  ]},
+  { name:'domain/', kind:'module', children:[
+    { name:'relief-model/', kind:'module', children:files(['node.rs','edge.rs','id.rs'],[['Node','NodeKind'],['Edge','EdgeKind'],['NodeId','parse']]) },
+    { name:'relief-diff/', kind:'module', children:files(['diff.rs','impact.rs','order.rs','aggregate.rs'],[['graph_diff'],['impact','Direction'],['reading_order'],['aggregate']]) },
+  ]},
+  { name:'ui/', kind:'module', children:files(['map.business.ts','layout.logic.ts','header.logic.ts','camera.logic.ts'],[['MapBusiness','zoomAt'],['layout','Rect'],['openHeader','minOpenScale'],['levelScales','fitScale']]) },
+]};
+function size(n){
+  if (n.kind === 'sym'){ n.w = SYM.w; n.h = SYM.h; return; }
+  n.children.forEach(size);
+  const cols = Math.ceil(Math.sqrt(n.children.length)), rows = Math.ceil(n.children.length / cols);
+  // shelf layout per row
+  n.rows = [];
+  for (let r = 0; r < rows; r++) n.rows.push(n.children.slice(r*cols, (r+1)*cols));
+  const hd = SPEC[n.kind].world;
+  n.w = Math.max(...n.rows.map(row => row.reduce((a,c) => a + c.w, 0) + GAP*(row.length-1))) + 2*PAD;
+  n.h = hd + PAD + n.rows.reduce((a,row) => a + Math.max(...row.map(c => c.h)), 0) + GAP*(rows-1) + PAD;
+}
+function place(n, x, y){
+  n.x = x; n.y = y;
+  if (!n.children) return;
+  let cy = y + SPEC[n.kind].world + PAD;
+  for (const row of n.rows){
+    let cx = x + PAD;
+    for (const c of row){ place(c, cx, cy); cx += c.w + GAP; }
+    cy += Math.max(...row.map(c => c.h)) + GAP;
+  }
+}
+size(tree); place(tree, 0, 0);
+
+const zmap = document.getElementById('zmap'), zscale = document.getElementById('zscale'), zread = document.getElementById('zread');
+let strat = 'tab', cam = { s:0, x:0, y:0 };
+const header = (kind, s) => { const sp = SPEC[kind]; const h = Math.min(sp.world*s, sp.maxH); const f = Math.min(sp.maxF, h*0.5); return { h, f }; };
+function opens(n, s, st){
+  if (!n.children || n.kind === 'sym') return false;
+  const wide = n.w * s >= TH[n.kind] - 1e-9;
+  if (st === 'u10') return wide && header(n.kind, s).f >= 8;
+  return wide;
+}
+function fitCam(){
+  const W = zmap.clientWidth, H = zmap.clientHeight;
+  const s = Math.min((W-40)/tree.w, (H-40)/tree.h);
+  cam = { s, x:(W - tree.w*s)/2, y:(H - tree.h*s)/2 };
+}
+function setScale(s, px, py){
+  const W = zmap.clientWidth, H = zmap.clientHeight;
+  px ??= W/2; py ??= H/2;
+  s = Math.max(Math.exp(-2.1), Math.min(Math.exp(1.1), s));
+  const wx = (px - cam.x)/cam.s, wy = (py - cam.y)/cam.s;
+  cam = { s, x: px - wx*s, y: py - wy*s };
+  zscale.value = Math.log(s).toFixed(2);
+  render();
+}
+function el(cls, r){ const d = document.createElement('div'); d.className = cls; Object.assign(d.style, { left:r.x+'px', top:r.y+'px', width:r.w+'px', height:r.h+'px' }); return d; }
+function render(){
+  zmap.textContent = '';
+  const s = cam.s, frag = document.createDocumentFragment(), wms = [];
+  let overlaps = 0;
+  const rect = n => ({ x: cam.x + n.x*s, y: cam.y + n.y*s, w: n.w*s, h: n.h*s });
+  function draw(n, depth){
+    const r = rect(n);
+    if (r.x > zmap.clientWidth || r.y > zmap.clientHeight || r.x + r.w < 0 || r.y + r.h < 0) return;
+    if (opens(n, s, strat)){
+      const d = el('zn open kind-'+n.kind+(strat==='before'?' before':''), r);
+      frag.appendChild(d);
+      n.children.forEach(c => draw(c, depth+1));
+      const { h, f } = header(n.kind, s), sp = SPEC[n.kind];
+      const hd = document.createElement('div'); hd.className = 'hd';
+      let hh = h, ff = f, showLabel = f >= 8;
+      if (strat === 'before'){ hh = sp.maxH; ff = sp.maxF; showLabel = true; if (sp.world*s < sp.maxH - 0.5) overlaps++; }
+      if (strat === 'tab'){ showLabel = f >= 11; }
+      let wmAlpha = 0;
+      if (strat === 'wm'){ const a = Math.max(0, Math.min(1, (f - 9) / 3)); showLabel = a > 0; hd.style.opacity = a; wmAlpha = 1 - a; }
+      hd.style.height = hh+'px'; hd.style.fontSize = ff+'px';
+      if (showLabel) hd.textContent = n.name;
+      if (hh >= 2) d.appendChild(hd);
+      if (strat === 'tab' && !showLabel){ const t = document.createElement('span'); t.className = 'tab'; t.textContent = n.name; d.appendChild(t); }
+      if (wmAlpha > 0){
+        const fs = Math.max(11, Math.min(r.w / (n.name.length * 0.72), r.h * 0.28, 84));
+        const w = el('wm', r); w.style.fontSize = fs+'px'; w.style.opacity = (wmAlpha * (depth === 0 ? .16 : depth === 1 ? .26 : .36)).toFixed(3);
+        w.textContent = n.name; wms.push(w);
+      }
+    } else {
+      const d = el('zn'+(n.kind==='sym'?' sym':''), r);
+      const lbl = document.createElement('div'); lbl.className = 'lbl';
+      const fits = r.w >= 28 && r.h >= 14;
+      if (strat === 'before' || fits){ lbl.textContent = n.name; lbl.style.fontSize = Math.min(12, Math.max(9, r.h*0.35))+'px'; if (strat==='before') { lbl.style.alignItems='flex-start'; lbl.style.paddingTop='6px'; } }
+      d.title = n.name; d.appendChild(lbl);
+      if (n.children){
+        for (const c of n.children){ const cr = rect(c); if (cr.w > 2 && cr.h > 2){ const g = el('zn ghost', { x:cr.x - r.x, y:cr.y - r.y, w:cr.w, h:cr.h }); d.appendChild(g); } }
+      }
+      frag.appendChild(d);
+    }
+  }
+  draw(tree, 0);
+  wms.forEach(w => frag.appendChild(w));
+  zmap.appendChild(frag);
+  const lvl = ['system','module','file'].filter(k => k==='system' ? opens(tree, s, strat) : anyOpen(tree, k, s));
+  zread.textContent = `échelle ${s.toFixed(2)} · ouverts : ${lvl.length ? lvl.join(', ') : 'rien'}` + (strat==='before' ? ` · ${overlaps} en-tête(s) recouvert(s)` : '');
+  renderTable();
+}
+function anyOpen(n, kind, s){ if (!n.children) return false; if (n.kind === kind && opens(n, s, strat)) return true; return opens(n, s, strat) && n.children.some(c => anyOpen(c, kind, s)); }
+function firstOpen(kind, st){
+  // smallest scale at which some node of this kind (with open ancestors) opens
+  for (let l = -2.1; l <= 1.1; l += 0.005){
+    const s = Math.exp(l);
+    const walk = n => { if (!n.children) return false; const o = opens(n, s, st); if (n.kind === kind && o) return true; return o && n.children.some(walk); };
+    if (walk(tree)) return s;
+  }
+  return null;
+}
+const NAMES = { before:'Avant U10', u10:'Actuel (U10)', tab:'A · Étiquette sur le bord', wm:'B · Filigrane' };
+const OVER = { before:'oui, sous 0,8', u10:'non', tab:'étiquettes sur les marges', wm:'non' };
+let tableCache = null;
+function renderTable(){
+  if (!tableCache){ tableCache = {}; for (const st of Object.keys(NAMES)) tableCache[st] = ['system','module','file'].map(k => firstOpen(k, st)); }
+  const tb = document.getElementById('ztbody'); tb.textContent = '';
+  for (const st of Object.keys(NAMES)){
+    const tr = document.createElement('tr'); if (st === strat) tr.className = 'on';
+    tr.innerHTML = `<td>${NAMES[st]}</td>` + tableCache[st].map(v => `<td class="num">${v ? v.toFixed(2) : '–'}</td>`).join('') + `<td>${OVER[st]}</td>`;
+    tb.appendChild(tr);
+  }
+}
+document.getElementById('zstrat').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  strat = b.dataset.s;
+  document.querySelectorAll('#zstrat button').forEach(x => x.setAttribute('aria-pressed', x === b));
+  render();
+});
+zscale.addEventListener('input', () => setScale(Math.exp(+zscale.value)));
+zmap.addEventListener('wheel', e => { e.preventDefault(); const r = zmap.getBoundingClientRect(); setScale(cam.s * Math.exp(-e.deltaY*0.0015), e.clientX - r.left, e.clientY - r.top); }, { passive:false });
+let drag = null;
+zmap.addEventListener('pointerdown', e => { drag = { x:e.clientX, y:e.clientY, cx:cam.x, cy:cam.y }; zmap.classList.add('drag'); zmap.setPointerCapture(e.pointerId); });
+zmap.addEventListener('pointermove', e => { if (!drag) return; cam.x = drag.cx + e.clientX - drag.x; cam.y = drag.cy + e.clientY - drag.y; render(); });
+zmap.addEventListener('pointerup', () => { drag = null; zmap.classList.remove('drag'); });
+fitCam(); setScale(0.36, zmap.clientWidth*0.3, zmap.clientHeight*0.25);
+new ResizeObserver(() => render()).observe(zmap);
+
+/* ================= 2. REFS ================= */
+const BR = [ { n:'develop', d:'il y a 3 min', ahead:'' }, { n:'main', d:'il y a 2 j', ahead:'' }, { n:'feat/zoom-watermark', d:'il y a 1 h', ahead:'' }, { n:'feat/ref-picker', d:'il y a 20 min', ahead:'' } ];
+const TG = [ { n:'v1.0.0', d:'il y a 2 j' }, { n:'v0.9.0', d:'il y a 6 j' } ];
+const CM = [
+  ['f766b88','feat(ui): hide external dependencies on the map, on by default','il y a 3 min'],
+  ['b775cab','fix(ui): a long path in the reading order wraps beside its checkbox','il y a 34 min'],
+  ['a691fff','feat(ui): panel controls like the mockup','il y a 40 min'],
+  ['9dd4e53','fix(ui): the map stays readable at every zoom','il y a 59 min'],
+  ['d33108b','feat(ui): Optimus theme on the relief tokens, top bar controls','il y a 2 h'],
+  ['2c1de3c','docs(tickets): U10-U12, zoom legibility, Optimus theme, panel controls','il y a 2 h'],
+  ['04ff7dd','feat(ui): edge labels and node headers like the mockup','il y a 2 h'],
+  ['7aa4665','feat(ui): left panel like the mockup','il y a 3 h'],
+  ['d62ec9f','feat(ui): top bar like the mockup','il y a 3 h'],
+  ['d355fc6','docs(tickets): U07-U09, the UI to the mockup','il y a 4 h'],
+  ['fbdced4','fix(detect): file folders outside systems, ignore fixture manifests','il y a 4 h'],
+  ['da86777','docs(install): an old cargo install shadows the packaged relief','il y a 5 h'],
+  ['f0d83b1','fix(packaging): resolve the bundle folder from the PKGBUILD folder','il y a 5 h'],
+  ['68beb9f','build(packaging): .deb, AppImage and an Arch package','il y a 5 h'],
+];
+// position in develop's log of each ref (index in CM, CM.length = older than the list)
+const POS = { 'develop':0, 'main':10, 'v1.0.0':11, 'v0.9.0':14, 'feat/zoom-watermark':3, 'feat/ref-picker':1, 'HEAD~1':1, WT:-1 };
+CM.forEach((c,i) => POS[c[0]] = i);
+const state = { base:{ ref:'main', type:'branch' }, head:{ ref:'develop', type:'branch' }, mb:true, open:null, tab:'branch', q:'', kb:0 };
+const pop = document.getElementById('pop'), tb = document.getElementById('tb');
+const icon = t => t === 'branch' ? '⎇' : t === 'tag' ? '◇' : t === 'wt' ? '✎' : '●';
+const label = side => side.type === 'wt' ? 'Working tree' : side.ref;
+function rangeCount(){
+  const b = POS[state.base.ref] ?? CM.length, h = state.head.type==='wt' ? 0 : (POS[state.head.ref] ?? 0);
+  return Math.max(0, b - h);
+}
+function paintBar(){
+  document.getElementById('baseV').textContent = label(state.base);
+  document.getElementById('baseIc').textContent = icon(state.base.type);
+  document.getElementById('headV').textContent = label(state.head);
+  document.getElementById('headIc').textContent = icon(state.head.type);
+  document.getElementById('dots').textContent = state.mb ? '···' : '··';
+  document.getElementById('dots').title = state.mb ? "Depuis l'ancêtre commun (base...head) : ce que head ajoute, comme une PR. Clic : diff direct" : "Diff direct (base..head) : les deux arbres comparés tels quels. Clic : depuis l'ancêtre commun";
+  const n = rangeCount();
+  document.getElementById('rcount').textContent = (state.head.type==='wt' ? 'non commité + ' : '') + n + ' commit' + (n>1?'s':'');
+  document.getElementById('sideBase').setAttribute('aria-expanded', state.open === 'base');
+  document.getElementById('sideHead').setAttribute('aria-expanded', state.open === 'head');
+  const spec = `${state.base.type==='commit'?state.base.ref:state.base.ref}${state.mb?'...':'..'}${state.head.type==='wt'?'(working tree)':state.head.ref}`;
+  document.getElementById('rangeHint').innerHTML = `Plage envoyée au cœur : <code>${spec}</code>. Clique « base » ou « head », ou utilise <kbd>b</kbd> / <kbd>h</kbd>.`;
+}
+function rowsFor(side){
+  const q = state.q.toLowerCase(), out = [];
+  if (state.tab === 'branch'){
+    if (side === 'head' && 'working tree'.includes(q)) out.push({ type:'wt', ref:'WT', main:'<span class="msg">Working tree</span> <span class="pill">non commité</span>', meta:'3 fichiers' });
+    BR.filter(b => b.n.includes(q)).forEach(b => out.push({ type:'branch', ref:b.n, main:`<span class="msg mono">${b.n}</span>${b.n==='develop'?' <span class="pill">HEAD</span>':''}`, meta:b.d }));
+  } else if (state.tab === 'tag'){
+    TG.filter(t => t.n.includes(q)).forEach(t => out.push({ type:'tag', ref:t.n, main:`<span class="msg mono">${t.n}</span>`, meta:t.d }));
+  } else {
+    CM.forEach((c,i) => { if (!q || c[0].includes(q) || c[1].toLowerCase().includes(q)) out.push({ type:'commit', ref:c[0], i, main:`<span class="sha">${c[0]}</span><span class="msg">${c[1]}</span>`, meta:c[2] }); });
+  }
+  return out;
+}
+function paintPop(){
+  if (!state.open){ pop.hidden = true; paintBar(); return; }
+  const side = state.open, other = side === 'base' ? 'head' : 'base';
+  const anchor = document.getElementById(side === 'base' ? 'sideBase' : 'sideHead');
+  pop.style.left = Math.max(8, anchor.offsetLeft - 4) + 'px';
+  const rows = rowsFor(side);
+  state.kb = Math.min(state.kb, Math.max(0, rows.length - 1));
+  const lo = state.head.type==='wt' ? 0 : (POS[state.head.ref] ?? 0), hi = POS[state.base.ref] ?? CM.length;
+  pop.innerHTML = `
+    <div class="ph"><span class="t">${side === 'base' ? 'Base' : 'Head'} <small>· ${side === 'base' ? 'le point de départ' : 'ce que tu relis'}</small></span>
+      <input class="q" id="refq" placeholder="Filtrer : branche, tag, sha, message" value="${state.q.replace(/"/g,'&quot;')}" aria-label="Filtrer les refs"></div>
+    <div class="chips">${side === 'base'
+      ? `<button class="chip" data-p="main">main</button><button class="chip" data-p="HEAD~1">HEAD~1 (dernier commit)</button><button class="chip" data-p="v1.0.0">dernier tag</button>`
+      : `<button class="chip" data-p="WT">Working tree</button><button class="chip" data-p="develop">HEAD</button>`}</div>
+    <div class="tabs" role="tablist">
+      <button role="tab" data-t="branch" aria-selected="${state.tab==='branch'}">Branches<span class="n">${BR.length}</span></button>
+      <button role="tab" data-t="tag" aria-selected="${state.tab==='tag'}">Tags<span class="n">${TG.length}</span></button>
+      <button role="tab" data-t="commit" aria-selected="${state.tab==='commit'}">Commits<span class="n">de ${state.head.type==='wt'?'develop':state.head.ref}</span></button>
+    </div>
+    <div class="list" role="listbox">${rows.map((r,k) => {
+      const isSel = (state[side].ref === r.ref) || (r.type==='wt' && state[side].type==='wt');
+      let cls = 'row' + (isSel ? ' sel' : '') + (k === state.kb ? ' kb' : '');
+      let tagEnd = '';
+      if (r.type === 'commit'){
+        if (r.i >= lo && r.i < hi) cls += ' inr';
+        if (r.i === hi) tagEnd = `<span class="end ${side==='base'?'':'other'}">BASE</span>`;
+        if (r.i === lo && state.head.type!=='wt') tagEnd = `<span class="end ${side==='head'?'':'other'}">HEAD</span>`;
+      }
+      const lead = r.type === 'commit' ? `<span class="rail"><i></i></span>` : `<span style="color:var(--muted)">${icon(r.type)}</span>`;
+      return `<button class="${cls}" role="option" aria-selected="${isSel}" data-k="${k}">${lead}<span class="main">${r.main}</span><span class="meta">${tagEnd || r.meta}</span></button>`;
+    }).join('') || '<div class="empty">Aucune ref ne correspond.</div>'}</div>
+    <div class="pf"><kbd>↑</kbd><kbd>↓</kbd> naviguer · <kbd>↵</kbd> choisir · <kbd>Tab</kbd> onglet suivant · <kbd>Échap</kbd> fermer
+      ${state.tab==='commit' ? '<span style="margin-left:auto">en bleu : les commits de la plage</span>' : ''}</div>`;
+  pop.hidden = false;
+  paintBar();
+  const q = document.getElementById('refq'); q.focus(); q.setSelectionRange(q.value.length, q.value.length);
+  pop._rows = rows;
+}
+function choose(r){
+  const side = state.open;
+  state[side] = { ref: r.type === 'wt' ? 'WT' : r.ref, type: r.type };
+  state.open = null; state.q = ''; paintPop();
+}
+function openSide(side){ state.open = state.open === side ? null : side; state.q = ''; state.kb = 0; state.tab = side === 'base' && state.base.type === 'commit' ? 'commit' : 'branch'; paintPop(); }
+document.getElementById('sideBase').onclick = () => openSide('base');
+document.getElementById('sideHead').onclick = () => openSide('head');
+document.getElementById('dots').onclick = () => { state.mb = !state.mb; paintBar(); };
+document.getElementById('swap').onclick = () => { if (state.base.type === 'wt') return; [state.base, state.head] = [state.head.type==='wt' ? { ref:'develop', type:'branch' } : state.head, state.base]; paintPop(); };
+pop.addEventListener('click', e => {
+  const t = e.target.closest('[data-t]'); if (t){ state.tab = t.dataset.t; state.kb = 0; paintPop(); return; }
+  const p = e.target.closest('[data-p]'); if (p){ const v = p.dataset.p; choose(v === 'WT' ? { type:'wt', ref:'WT' } : { type: v.startsWith('v') ? 'tag' : v.startsWith('HEAD~') ? 'commit' : 'branch', ref:v }); return; }
+  const r = e.target.closest('[data-k]'); if (r) choose(pop._rows[+r.dataset.k]);
+});
+pop.addEventListener('input', e => { if (e.target.id === 'refq'){ state.q = e.target.value; state.kb = 0; const pos = e.target.selectionStart; paintPop(); } });
+pop.addEventListener('keydown', e => {
+  const rows = pop._rows || [];
+  if (e.key === 'ArrowDown'){ e.preventDefault(); state.kb = Math.min(rows.length-1, state.kb+1); paintPop(); }
+  else if (e.key === 'ArrowUp'){ e.preventDefault(); state.kb = Math.max(0, state.kb-1); paintPop(); }
+  else if (e.key === 'Enter'){ e.preventDefault(); if (rows[state.kb]) choose(rows[state.kb]); }
+  else if (e.key === 'Tab'){ e.preventDefault(); const order = ['branch','tag','commit']; state.tab = order[(order.indexOf(state.tab) + (e.shiftKey?2:1)) % 3]; state.kb = 0; paintPop(); }
+  else if (e.key === 'Escape'){ state.open = null; paintPop(); }
+});
+document.addEventListener('pointerdown', e => { if (state.open && !pop.contains(e.target) && !e.target.closest('.side')){ state.open = null; paintPop(); } });
+document.addEventListener('keydown', e => {
+  if (state.open || e.target.closest('input')) return;
+  const r = document.getElementById('refs').getBoundingClientRect();
+  if (r.bottom < 0 || r.top > innerHeight) return;
+  if (e.key === 'b') { e.preventDefault(); openSide('base'); } else if (e.key === 'h') { e.preventDefault(); openSide('head'); }
+});
+paintBar();
+
+/* ================= 3 & 4. PANELS ================= */
+const N = [
+  { id:'page', f:'checkout-page.tsx', p:'web/src/pages/', x:30, y:40, st:'' , g:'web' },
+  { id:'hook', f:'use-cart.ts', p:'web/src/hooks/', x:30, y:170, st:'', g:'web' },
+  { id:'checkout', f:'checkout.ts', p:'api/src/orders/', x:250, y:40, st:'ch', g:'api' },
+  { id:'cart', f:'cart.ts', p:'api/src/orders/', x:250, y:170, st:'', g:'api' },
+  { id:'invoice', f:'invoice.ts', p:'api/src/billing/', x:250, y:300, st:'ch', g:'api' },
+  { id:'discount', f:'discount.ts', p:'api/src/billing/', x:250, y:410, st:'add', g:'api' },
+  { id:'money', f:'money.ts', p:'shared/src/', x:470, y:170, st:'', g:'shared' },
+  { id:'logger', f:'logger.ts', p:'shared/src/', x:470, y:300, st:'', g:'shared' },
+  { id:'stripe', f:'stripe.ts', p:'api/src/payments/', x:470, y:40, st:'', g:'api2' },
+];
+const E = [
+  { a:'page', b:'checkout', k:'http', l:'POST /checkout' },
+  { a:'page', b:'hook', k:'imports', l:'useCart' },
+  { a:'hook', b:'cart', k:'http', l:'GET /cart' },
+  { a:'checkout', b:'cart', k:'imports', l:'loadCart' },
+  { a:'checkout', b:'invoice', k:'calls', l:'computeTotal +1' },
+  { a:'checkout', b:'stripe', k:'calls', l:'charge' },
+  { a:'invoice', b:'discount', k:'imports', l:'applyDiscount', st:'add' },
+  { a:'invoice', b:'money', k:'imports', l:'Money, round' },
+  { a:'cart', b:'money', k:'imports', l:'Money' },
+  { a:'invoice', b:'logger', k:'imports', l:'log' },
+  { a:'stripe', b:'logger', k:'imports', l:'log' },
+  { a:'discount', b:'money', k:'imports', l:'Money', st:'add' },
+];
+const USES = {
+  'checkout>invoice': { prec:'resolved', syms:[
+    { s:'computeTotal', uses:[
+      { at:'checkout.ts:42', code:'const total = <mark>computeTotal</mark>(cart.lines, customer.region);', ctx:'dans placeOrder()' },
+      { at:'checkout.ts:88', code:'preview.total = <mark>computeTotal</mark>(draft.lines, region);', ctx:'dans previewOrder()' },
+      { at:'checkout.ts:131', code:'expect(<mark>computeTotal</mark>([], "FR")).toEqual(Money.zero);', ctx:'dans le test « empty cart »' },
+    ]},
+    { s:'InvoiceLine', uses:[
+      { at:'checkout.ts:12', code:'function toLines(items: Item[]): <mark>InvoiceLine</mark>[] {', ctx:'type de retour de toLines()' },
+    ]},
+  ]},
+  'invoice>discount': { prec:'resolved', syms:[
+    { s:'applyDiscount', uses:[
+      { at:'invoice.ts:27', code:'const net = <mark>applyDiscount</mark>(gross, customer.coupon);', ctx:'dans computeTotal()' },
+    ]},
+  ]},
+  'page>checkout': { prec:'heuristic', syms:[
+    { s:'POST /checkout', uses:[
+      { at:'checkout-page.tsx:58', code:'await api.<mark>post</mark>("/checkout", { cartId, coupon });', ctx:'dans onSubmit()' },
+    ]},
+  ]},
+};
+function usesOf(e){
+  const key = e.a + '>' + e.b;
+  if (USES[key]) return USES[key];
+  const a = N.find(n => n.id === e.a);
+  return { prec:'resolved', syms: e.l.split(/, | \+1/).filter(Boolean).map((s,i) => ({ s, uses:[{ at:`${a.f}:${14 + i*9}`, code:`… <mark>${s}</mark>(…)`, ctx:'exemple' }] })) };
+}
+const center = document.getElementById('center'), svg = document.getElementById('edges');
+const sel = { kind:null, id:null };
+const groups = [ { n:'@acme/web', x:16, y:22, w:196, h:240 }, { n:'@acme/api', x:236, y:22, w:204, h:470 }, { n:'@acme/shared', x:456, y:150, w:204, h:220 }, { n:'payments/', x:456, y:22, w:204, h:110 } ];
+groups.forEach(g => { const d = document.createElement('div'); d.className = 'mgroup'; Object.assign(d.style, { left:g.x+'px', top:g.y+'px', width:g.w+'px', height:g.h+'px' }); d.innerHTML = `<span>${g.n}</span>`; center.appendChild(d); });
+const nodeEls = {};
+N.forEach(n => {
+  const d = document.createElement('div'); d.className = 'mn ' + n.st; d.style.left = n.x+'px'; d.style.top = n.y+'px'; d.style.width = '172px';
+  d.innerHTML = `<div class="f">${n.f}</div><div class="d">${n.p}</div>`;
+  d.tabIndex = 0;
+  d.onclick = ev => { ev.stopPropagation(); select('node', n.id); };
+  d.onkeydown = ev => { if (ev.key === 'Enter') select('node', n.id); };
+  center.appendChild(d); nodeEls[n.id] = d; n.w = 172; n.h = 44;
+});
+function anchor(n, other){
+  const cx = n.x + n.w/2, cy = n.y + n.h/2, ox = other.x + other.w/2, oy = other.y + other.h/2;
+  if (Math.abs(ox - cx) > Math.abs(oy - cy) * 1.2) return { x: ox > cx ? n.x + n.w : n.x, y: cy, h:true };
+  return { x: cx, y: oy > cy ? n.y + n.h : n.y, h:false };
+}
+function drawEdges(){
+  const ns = 'http://www.w3.org/2000/svg';
+  svg.innerHTML = `<defs>${['faint','acc','imp'].map(c => `<marker id="ar-${c}" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="var(--${c})"/></marker>`).join('')}</defs>`;
+  E.forEach((e, i) => {
+    const A = N.find(n => n.id === e.a), B = N.find(n => n.id === e.b);
+    const p = anchor(A, B), q = anchor(B, A);
+    const dx = p.h ? (q.x - p.x)/2 : 0, dy = p.h ? 0 : (q.y - p.y)/2;
+    const dx2 = q.h ? (p.x - q.x)/2 : 0, dy2 = q.h ? 0 : (p.y - q.y)/2;
+    const d = `M${p.x},${p.y} C${p.x+dx},${p.y+dy} ${q.x+dx2},${q.y+dy2} ${q.x},${q.y}`;
+    let cls = 'e', mk = 'faint';
+    if (sel.kind === 'node'){
+      if (e.a === sel.id){ cls += ' out'; mk = 'acc'; } else if (e.b === sel.id){ cls += ' in'; mk = 'imp'; } else cls += ' dim';
+    } else if (sel.kind === 'edge'){
+      if (sel.id === i){ cls += ' picked'; mk = 'acc'; } else cls += ' dim';
+    }
+    if (e.st === 'add' && !cls.includes('dim') && mk === 'faint'){ }
+    const path = document.createElementNS(ns, 'path'); path.setAttribute('d', d); path.setAttribute('class', cls); path.setAttribute('marker-end', `url(#ar-${mk})`);
+    if (e.st === 'add') path.style.strokeDasharray = '0';
+    svg.appendChild(path);
+    const hit = document.createElementNS(ns, 'path'); hit.setAttribute('d', d); hit.setAttribute('class', 'hit');
+    hit.addEventListener('click', ev => { ev.stopPropagation(); select('edge', i); });
+    svg.appendChild(hit);
+    const mx = (p.x + q.x)/2, my = (p.y + q.y)/2;
+    const t = document.createElementNS(ns, 'text'); t.setAttribute('x', mx + 4); t.setAttribute('y', my - 4); t.setAttribute('class', 'lab' + (cls.includes('dim') ? ' dim' : '')); t.textContent = e.l; t.style.cursor = 'pointer';
+    t.addEventListener('click', ev => { ev.stopPropagation(); select('edge', i); });
+    svg.appendChild(t);
+  });
+  N.forEach(n => {
+    const el = nodeEls[n.id]; el.classList.remove('sel','dim');
+    if (sel.kind === 'node'){
+      if (n.id === sel.id) el.classList.add('sel');
+      else if (!E.some(e => (e.a === sel.id && e.b === n.id) || (e.b === sel.id && e.a === n.id))) el.classList.add('dim');
+    } else if (sel.kind === 'edge'){
+      const e = E[sel.id]; if (n.id !== e.a && n.id !== e.b) el.classList.add('dim');
+    }
+  });
+}
+center.addEventListener('click', () => select(null, null));
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && sel.kind) select(null, null); });
+const ICON_NODE = '<svg viewBox="0 0 12 12"><rect x="1.5" y="2.5" width="9" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>';
+const ICON_EDGE = '<svg viewBox="0 0 12 12"><circle cx="2.5" cy="9.5" r="1.8" fill="currentColor"/><circle cx="9.5" cy="2.5" r="1.8" fill="currentColor"/><path d="M3.8 8.2 8.2 3.8" stroke="currentColor" stroke-width="1.5"/></svg>';
+function select(kind, id){ sel.kind = kind; sel.id = id; drawEdges(); paintRight(); }
+function paintRight(){
+  const R = document.getElementById('right');
+  if (!sel.kind){
+    R.innerHTML = `<div class="ptitle"><span class="badge none">Vue d'ensemble</span><span class="sub">rien de sélectionné</span></div>
+      <div class="grp"><h4>Cette PR</h4><div class="list">
+        <a><span>billing/discount.ts</span><span>nouveau</span></a><a><span>billing/invoice.ts</span><span>2 symboles</span></a><a><span>orders/checkout.ts</span><span>signature</span></a></div></div>
+      <div class="grp"><h4>Couplages ajoutés</h4><div class="list"><a><span>billing → billing/discount</span><span>+2</span></a></div></div>
+      <div class="empty">Clique un nœud ou une arête de la carte pour l'inspecter ici.</div>`;
+    return;
+  }
+  if (sel.kind === 'node'){
+    const n = N.find(x => x.id === sel.id);
+    const out = E.filter(e => e.a === n.id), inc = E.filter(e => e.b === n.id);
+    const lk = e => { const i = E.indexOf(e); const o = N.find(x => x.id === (e.a === n.id ? e.b : e.a)); return `<a data-e="${i}"><span>${e.a === n.id ? '→' : '←'} ${o.f}</span><span>${e.l}</span></a>`; };
+    R.innerHTML = `<div class="ptitle"><span class="badge node">${ICON_NODE}Nœud</span><span class="sub">fichier</span><button class="x" aria-label="Fermer" style="margin-left:auto;border:0;background:transparent;color:var(--faint);cursor:pointer">✕</button></div>
+      <div class="insp-h"><div class="name">${n.f}</div><div class="path">${n.p}${n.f}</div>
+        <div class="kv"><span>${n.st==='ch'?'modifié':n.st==='add'?'ajouté':'inchangé'}</span><span>TypeScript</span><span>${out.length} sortantes</span><span>${inc.length} entrantes</span></div></div>
+      <div class="grp"><h4><i style="width:10px;height:3px;background:var(--acc);display:inline-block;border-radius:2px"></i>Dépend de<span class="r">${out.length}</span></h4><div class="list">${out.map(lk).join('') || '<span style="color:var(--faint)">rien</span>'}</div></div>
+      <div class="grp"><h4><i style="width:10px;height:3px;background:var(--imp);display:inline-block;border-radius:2px"></i>Utilisé par<span class="r">${inc.length}</span></h4><div class="list">${inc.map(lk).join('') || '<span style="color:var(--faint)">rien</span>'}</div></div>
+      <div class="grp"><h4>Diff, impact, règles</h4><span style="color:var(--muted)">Inchangés par rapport à aujourd'hui, sous cet en-tête.</span></div>`;
+  } else {
+    const e = E[sel.id], A = N.find(x => x.id === e.a), B = N.find(x => x.id === e.b), u = usesOf(e);
+    const total = u.syms.reduce((a,s) => a + s.uses.length, 0);
+    R.innerHTML = `<div class="ptitle"><span class="badge edge">${ICON_EDGE}Arête</span><span class="sub">${e.k}</span><button class="x" aria-label="Fermer" style="margin-left:auto;border:0;background:transparent;color:var(--faint);cursor:pointer">✕</button></div>
+      <div class="insp-h">
+        <div class="ends"><span class="end" data-n="${A.id}" title="${A.p}${A.f}">${A.f}</span><span class="arr">→</span><span class="end" data-n="${B.id}" title="${B.p}${B.f}">${B.f}</span></div>
+        <div class="kv"><span>${e.k}</span><span>${u.prec === 'heuristic' ? 'heuristique' : 'résolue'}</span>${e.st==='add'?'<span style="color:var(--add);border-color:var(--add)">ajoutée par la PR</span>':''}<span>${u.syms.length} symbole${u.syms.length>1?'s':''}</span><span>${total} utilisation${total>1?'s':''}</span></div>
+      </div>
+      <div class="grp"><h4>Utilisations dans ${A.f}</h4>
+        ${u.syms.map(s => `<div class="use"><div class="uh"><b>${s.s}</b><span class="n">${s.uses.length} utilisation${s.uses.length>1?'s':''}</span></div>
+          <ul class="ul">${s.uses.map(x => `<li><span class="ln">${x.at.split(':')[1]}</span><code>${x.code}</code><span class="ctx">${x.ctx}</span></li>`).join('')}</ul></div>`).join('')}
+      </div>
+      <div class="grp"><h4>Import</h4><code style="color:var(--muted)">import { ${u.syms.map(s=>s.s).filter(s=>!s.includes('/')).join(', ')} } from '${B.p.replace(/^.*src\//,'../')}${B.f.replace('.ts','')}';</code></div>`;
+  }
+  R.querySelectorAll('[data-e]').forEach(a => a.onclick = () => select('edge', +a.dataset.e));
+  R.querySelectorAll('[data-n]').forEach(a => a.onclick = () => select('node', a.dataset.n));
+  const x = R.querySelector('.x'); if (x) x.onclick = () => select(null, null);
+}
+let mode = 'pr';
+function tog(label, on, sub){ return `<div class="tog${on?' on':''}"><span class="sw"></span><span>${label}</span>${sub?`<span style="margin-left:auto;color:var(--faint);font-size:11px">${sub}</span>`:''}</div>`; }
+function paintLeft(){
+  const L = document.getElementById('left');
+  const tools = mode === 'pr' ? `
+    <div class="ptitle">Outils <span class="sub">· relecture de PR</span></div>
+    <div class="grp"><h4>main...feat/discounts<span class="r">4 commits</span></h4>
+      <div class="stats"><span class="p">+182</span><span class="m">−37</span><span style="color:var(--muted)">· 1 ajouté · 2 modifiés</span></div>
+      <div class="bar"><i></i></div><div style="color:var(--faint);font-size:11px;margin-top:4px">2 sur 5 vus</div></div>
+    <div class="grp"><h4>Ordre de lecture<span class="r">par dépendances</span></h4>
+      <div class="item done"><span class="cb"></span><span class="p">shared/src/money.ts</span></div>
+      <div class="item done"><span class="cb"></span><span class="p">billing/discount.ts</span></div>
+      <div class="item"><span class="cb"></span><span class="p">billing/invoice.ts</span></div>
+      <div class="item"><span class="cb"></span><span class="p">orders/checkout.ts</span></div>
+      <div class="item"><span class="cb"></span><span class="p">pages/checkout-page.tsx</span></div></div>
+    <div class="grp"><h4>Signaux</h4><div class="list"><a><span>signature changée</span><span>computeTotal</span></a><a><span>nouveau couplage</span><span>billing → discount</span></a></div></div>`
+  : `
+    <div class="ptitle">Outils <span class="sub">· exploration</span></div>
+    <div class="grp"><h4>Points d'entrée<span class="r">6</span></h4><div class="list"><a><span>POST /checkout</span><span>route</span></a><a><span>GET /cart</span><span>route</span></a><a><span>/checkout</span><span>page</span></a></div></div>
+    <div class="grp"><h4>Hotspots<span class="r">churn × complexité</span></h4><div class="list"><a><span>invoice.ts</span><span>0,82</span></a><a><span>checkout.ts</span><span>0,64</span></a><a><span>cart.ts</span><span>0,31</span></a></div></div>
+    <div class="grp"><h4>Règles<span class="r">1 violation</span></h4><div class="list"><a><span>web ↛ api (imports)</span><span>ok</span></a><a><span>billing ↛ orders</span><span style="color:var(--del)">1</span></a></div></div>`;
+  L.innerHTML = `<div class="grp" style="padding-block:12px"><div class="seg modeseg" id="mode" role="group" aria-label="Mode" style="display:flex"><button data-m="pr" style="flex:1" aria-pressed="${mode==='pr'}">Relecture de PR</button><button data-m="ex" style="flex:1" aria-pressed="${mode==='ex'}">Explorer</button></div></div>` + tools + `
+    <div class="ptitle" style="position:static;border-top:1px solid var(--line)">Affichage <span class="sub">· commun aux deux modes</span></div>
+    <div class="grp"><h4>Calques</h4>
+      ${mode==='pr' ? tog('Diff', true) + tog('Focus sur le changé', false) : ''}
+      ${tog('Impact du nœud sélectionné', true)}${tog('Arêtes inchangées', true)}${tog('Règles', mode==='ex')}${mode==='ex' ? tog('Risque', true) + tog('Co-change', false) : ''}</div>
+    <div class="grp"><h4>Carte</h4>${tog('Masquer les dépendances externes', true)}${tog('Libellés des arêtes', true)}</div>
+    <div class="grp"><h4>Disposition<span class="r">3 croisements</span></h4><div class="seg"><button aria-pressed="true">Auto</button><button aria-pressed="false">Couches</button><button aria-pressed="false">Grille</button></div></div>`;
+}
+document.getElementById('left').addEventListener('click', e => {
+  const b = e.target.closest('#mode button'); if (!b) return; mode = b.dataset.m; paintLeft();
+});
+/* settings menu */
+const menu = document.createElement('div'); menu.className = 'pop setmenu'; menu.hidden = true; menu.setAttribute('role', 'menu');
+const prefs = { theme:'system', lang:'fr' };
+function paintMenu(){
+  menu.innerHTML = `
+    <div class="mi"><span>Thème</span><div class="seg">${[['light','Clair'],['dark','Sombre'],['system','Système']].map(([v,l]) => `<button data-th="${v}" aria-pressed="${prefs.theme===v}">${l}</button>`).join('')}</div></div>
+    <div class="mi"><span>Langue</span><div class="seg">${[['en','English'],['fr','Français']].map(([v,l]) => `<button data-lg="${v}" aria-pressed="${prefs.lang===v}">${l}</button>`).join('')}</div></div>
+    <div class="msep"></div>
+    <button class="mrow" role="menuitem"><span>Raccourcis clavier</span><kbd>?</kbd></button>
+    <button class="mrow" role="menuitem"><span>Documentation</span><span style="color:var(--faint)">↗</span></button>`;
+}
+document.querySelectorAll('.gear').forEach(g => g.addEventListener('click', e => {
+  e.stopPropagation();
+  const host = g.closest('.tb'); const open = menu.parentElement === host && !menu.hidden;
+  document.querySelectorAll('.gear').forEach(x => x.setAttribute('aria-expanded', 'false'));
+  if (open){ menu.hidden = true; return; }
+  host.appendChild(menu); paintMenu(); menu.hidden = false; g.setAttribute('aria-expanded', 'true');
+}));
+menu.addEventListener('click', e => {
+  e.stopPropagation();
+  const t = e.target.closest('[data-th]'), l = e.target.closest('[data-lg]');
+  if (t){ prefs.theme = t.dataset.th; if (prefs.theme === 'system') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', prefs.theme); paintMenu(); }
+  if (l){ prefs.lang = l.dataset.lg; paintMenu(); }
+  if (e.target.closest('.mrow')){ menu.hidden = true; }
+});
+document.addEventListener('pointerdown', e => { if (!menu.hidden && !menu.contains(e.target) && !e.target.closest('.gear')){ menu.hidden = true; document.querySelectorAll('.gear').forEach(x => x.setAttribute('aria-expanded', 'false')); } });
+paintLeft(); drawEdges(); select('node', 'invoice');
+})();
+</script>
+
+</body>
+</html>

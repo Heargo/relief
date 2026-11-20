@@ -1,0 +1,21 @@
+[package]
+name = "relief-integration"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dev-dependencies]
+insta = { version = "1", features = ["json"] }
+relief-adapter-api = { path = "../../src/analysis/relief-adapter-api" }
+relief-detect = { path = "../../src/analysis/relief-detect" }
+relief-fixtures = { path = "../relief-fixtures" }
+relief-git = { path = "../../src/analysis/relief-git" }
+relief-index = { path = "../../src/analysis/relief-index" }
+relief-lang-ts = { path = "../../src/analysis/lang/relief-lang-ts" }
+relief-model = { path = "../../src/domain/relief-model" }
+serde_json = "1"
+tempfile = "3"
