@@ -1,9 +1,12 @@
-/** Ref whose snapshot is shown: the head side of the range, else the first branch. */
-export function displayRef(range: string | null | undefined, branches: string[]): string {
-  if (range) {
-    const parts = range.split(/\.{2,3}/);
-    const head = parts[parts.length - 1];
-    if (head) return head;
-  }
-  return branches[0] ?? 'HEAD';
+/**
+ * Ref whose snapshot is the head of a range, as the core resolves it: the working tree without a
+ * range or for a single revision, the index or the working tree for those names, else the right
+ * side of `A...B` / `A..B`.
+ */
+export function headRef(range: string | null | undefined): string {
+  if (!range) return 'WORKTREE';
+  const parts = range.split(/\.{2,3}/);
+  if (parts.length < 2) return range === 'INDEX' ? 'INDEX' : 'WORKTREE';
+  // `A..` and `A...` (a side missing): the core refuses the range, its diff fails; nothing to show.
+  return parts[parts.length - 1] || 'WORKTREE';
 }

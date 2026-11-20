@@ -125,7 +125,8 @@ it('changing the range in the selector reloads the diff and updates the URL', as
   await $('//*[@data-testid="range-option"][normalize-space(.)="main"]').click();
 
   await expect(tid('pr-stats')).toHaveAttribute('data-files', '0');
-  await expect(node(DISCOUNT)).toHaveAttribute('data-diff-status', 'unchanged');
+  // The map follows the head of the range: main has no discount.ts.
+  await expect(node(DISCOUNT)).not.toBeExisting();
   expect(new URL(await browser.getUrl()).searchParams.get('range')).toBe('feat/promo-codes...main');
 });
 

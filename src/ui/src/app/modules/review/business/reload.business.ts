@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 
-import { displayRef } from '../../map/helpers/repo.logic';
+import { headRef } from '../../map/helpers/repo.logic';
 import { MapBusiness } from '../../map/business/map.business';
 import { RepoBusiness } from '../../map/business/repo.business';
 import { isReloadable } from '../helpers/reload.logic';
@@ -26,7 +26,7 @@ export class ReloadBusiness {
     this.running = true;
     try {
       const range = this.diff.range();
-      const ref = displayRef(range, this.repo.meta()?.branches ?? []);
+      const ref = headRef(range);
       await this.repo.refreshSnapshot(ref);
       await this.diff.reload();
       await this.reading.load(range, this.diff.diff()?.diff.base, true);

@@ -80,6 +80,7 @@ Le prochain ticket est la première ligne non cochée dont tous les bloquants so
 | ✓ | 32m | **U19** Barre du haut : choisir base et head | Comparer deux branches ou deux commits quelconques ; commande `log` côté cœur. | U15 |
 | ✓ | 32n | **U20** Inspecteur d'arête : les utilisations dans le code | Où et comment A se sert de ce qu'il importe de B. | U17 |
 | ✓ | 32o | **U21** Utilisations d'arête : imports par défaut et `* as` | Ils affichaient « jamais utilisé » ; résolus comme à l'indexation (workspace compris). | U20 |
+| ✓ | 32p | **U22** Un fichier ajouté n'apparaît pas sur la carte | Bug (retour du 2026-11-20). | aucun |
 
 ## Phase 5 : relire une PR
 

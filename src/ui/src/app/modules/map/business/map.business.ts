@@ -48,9 +48,9 @@ import {
   readLayoutMode,
   writeLayoutMode,
 } from '../helpers/layout-mode.logic';
-import { interpolateLayout, layoutGraph, type MapLayout } from '../helpers/layout.logic';
+import { interpolateLayout, layoutGraph, type MapLayout, type Rect } from '../helpers/layout.logic';
 import { buildNodeInfos, type NodeInfo } from '../helpers/node-info.logic';
-import { displayRef } from '../helpers/repo.logic';
+import { headRef } from '../helpers/repo.logic';
 import { containerToLoad, zoomedBox } from '../helpers/subgraph.logic';
 import {
   DEFAULT_HIDE_EXTERNAL,
@@ -574,7 +574,7 @@ export class MapBusiness {
     try {
       const meta = await this.api.meta();
       this._repoName.set(meta.repo);
-      const snapshot = await this.api.snapshot(displayRef(meta.range, meta.branches));
+      const snapshot = await this.api.snapshot(headRef(meta.range));
       this.show(snapshot.graph);
     } catch {
       this._status.set('error');
@@ -600,6 +600,7 @@ export class MapBusiness {
       raw: layoutCrossings(layouts.raw, graph),
     });
     const layout = layouts[layoutKey(this._layoutMode())];
+    const before = this._targetLayout().bounds;
     this._layout.set(layout);
     this._targetLayout.set(layout);
     this._graph.set(graph);
@@ -612,6 +613,9 @@ export class MapBusiness {
     if (keepView) {
       if (!graph.nodes.some((n) => n.id === this._selectedNodeId())) this._selectedNodeId.set(null);
       this._status.set('ready');
+      // The map grew or shrank while a level is forced: aim at the level again, on the new layout.
+      const level = this._forcedLevel();
+      if (level !== null && level > 0 && !sameRect(before, layout.bounds)) this.setLevel(level);
       for (const action of later) action();
       return;
     }
@@ -838,4 +842,8 @@ function linkCounts(
     else if (status === 'moved') counts.moved++;
   }
   return counts;
+}
+
+function sameRect(a: Rect, b: Rect): boolean {
+  return a.x === b.x && a.y === b.y && a.w === b.w && a.h === b.h;
 }

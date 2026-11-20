@@ -3,6 +3,9 @@ import { Router } from '@angular/router';
 
 import type { DiffResponse, GraphSnapshot } from '../../../core/models/contract';
 import { ReliefApiService } from '../../../core/services/relief-api.service';
+import { MapBusiness } from '../../map/business/map.business';
+import { RepoBusiness } from '../../map/business/repo.business';
+import { headRef } from '../../map/helpers/repo.logic';
 import { exploreView } from '../../explore/helpers/explore.logic';
 import { prStats } from '../helpers/diff-layer.logic';
 import { hasStructuralChange } from '../helpers/diff-panel.logic';
@@ -15,6 +18,8 @@ export class DiffBusiness {
   private readonly api = inject(ReliefApiService);
   private readonly router = inject(Router);
   private readonly pending = inject(PendingTasks);
+  private readonly repo = inject(RepoBusiness, { optional: true });
+  private readonly map = inject(MapBusiness, { optional: true });
 
   private readonly _status = signal<DiffLoadStatus>('loading');
   private readonly _error = signal<string | null>(null);
@@ -69,6 +74,21 @@ export class DiffBusiness {
       replaceUrl: true,
     });
     await this.fetch(range);
+    await this.followHead(range);
+  }
+
+  /** The map draws the head of the new range, keeping its view. */
+  private async followHead(range: string): Promise<void> {
+    if (!this.repo || !this.map || this._range() !== range) return;
+    try {
+      await this.repo.refreshSnapshot(headRef(range));
+      const snapshot = this.repo.snapshot();
+      if (snapshot && this._range() === range) {
+        this.map.show(this.graphWithBase(snapshot.graph), true);
+      }
+    } catch {
+      // The map stays as it was.
+    }
   }
 
   /** Reads the diff of the current range again. */
