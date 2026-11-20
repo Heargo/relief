@@ -106,6 +106,4 @@ La section **Disposition**, dans la barre de gauche, choisit comment les boîtes
 
 - **Moins de croisements** (par défaut) : relief change l'ordre des enfants de chaque boîte pour que les flèches se croisent moins aux niveaux Modules, Fichiers et Symboles. La grille et la taille des boîtes ne changent pas, seul l'ordre change. Le calcul est limité à 300 ms : sur un gros dépôt, relief garde le meilleur ordre trouvé dans ce délai. La première boîte de premier niveau reste à sa place.
 - **Grille brute** : les boîtes sont rangées par ordre alphabétique.
-- **Croisements, tous niveaux** : la ligne grise sous les deux choix donne le total pour chaque disposition, en additionnant les niveaux Modules, Fichiers et Symboles. Sur acme-shop, il passe de 586 en grille brute à 157. Un croisement compte deux flèches qui se coupent, en traçant chaque flèche d'un centre de boîte à l'autre.
-- **À l'écran** : à droite du titre de la section, le nombre de croisements entre les flèches dessinées en ce moment.
 - Passer d'une disposition à l'autre déplace les boîtes avec une animation. Le choix est retenu pour la prochaine ouverture.

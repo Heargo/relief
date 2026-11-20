@@ -64,11 +64,7 @@
     "layout": {
       "title": "Disposition",
       "fewerCrossings": "Moins de croisements",
-      "rawGrid": "Grille brute",
-      "optimizedTotal": "Moins de croisements : {{count}}",
-      "rawTotal": "Grille brute : {{count}}",
-      "visible": "À l'écran : {{count}}",
-      "totals": "Croisements, tous niveaux"
+      "rawGrid": "Grille brute"
     },
     "breadcrumbs": "Fil d'Ariane",
     "history": {

@@ -64,11 +64,7 @@
     "layout": {
       "title": "Layout",
       "fewerCrossings": "Fewer crossings",
-      "rawGrid": "Raw grid",
-      "optimizedTotal": "Fewer crossings: {{count}}",
-      "rawTotal": "Raw grid: {{count}}",
-      "visible": "On screen: {{count}}",
-      "totals": "Crossings, all levels"
+      "rawGrid": "Raw grid"
     },
     "breadcrumbs": "Breadcrumbs",
     "history": {

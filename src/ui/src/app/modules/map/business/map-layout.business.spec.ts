@@ -10,8 +10,6 @@ import { MapBusiness } from './map.business';
 //  - layoutMode(): 'fewer-crossings' | 'raw-grid' (readonly signal, default 'fewer-crossings');
 //  - setLayoutMode(mode): re-lays the map out (animated); stored in localStorage `relief.layout`
 //    (value = the mode string);
-//  - crossingTotals(): { optimized, raw }, sums of levels 1..3 of both layouts, whatever the mode;
-//  - visibleCrossings(): crossings among the edges drawn now, for the current layout.
 // "raw-grid" is the nested grid with the children of each container sorted by id.
 const SNAPSHOT = acmeShop as unknown as SnapshotResponse;
 const META: MetaResponse = {
@@ -68,17 +66,6 @@ describe('MapBusiness layout mode', () => {
     expect(business.layoutMode()).toBe('fewer-crossings');
   });
 
-  it('reports the totals of both layouts: raw is 586, optimized has at least 50% fewer', async () => {
-    const business = await loaded();
-    const totals = business.crossingTotals();
-    expect(totals.raw).toBe(586);
-    expect(totals.optimized).toBeLessThanOrEqual(293);
-    // the totals do not depend on the mode
-    business.setLayoutMode('raw-grid');
-    settle();
-    expect(business.crossingTotals()).toEqual(totals);
-  });
-
   it('moves the nodes when the mode changes, and back when it changes again', async () => {
     const business = await loaded();
     const optimized = positions(business);
@@ -89,14 +76,6 @@ describe('MapBusiness layout mode', () => {
     business.setLayoutMode('fewer-crossings');
     settle();
     expect(positions(business)).toEqual(optimized);
-  });
-
-  it('counts the crossings on screen: in "raw-grid", whole map, the center-to-center crossing between the top-level boxes', async () => {
-    const business = await loaded();
-    business.setLayoutMode('raw-grid');
-    settle();
-    expect(business.level()).toBe(0);
-    expect(business.visibleCrossings()).toBe(1);
   });
 
   it('remembers the choice in localStorage and restores it for a new business', async () => {

@@ -106,6 +106,4 @@ The **Layout** section, in the left sidebar, chooses how boxes are arranged insi
 
 - **Fewer crossings** (default): relief reorders the children of each box so that arrows cross less at the Modules, Files and Symbols levels. The grid and the box sizes stay the same; only the order changes. The computation is capped at 300 ms: on a large repository, relief keeps the best order found in that time. The first top-level box stays in place.
 - **Raw grid**: boxes are arranged in alphabetical order.
-- **Crossings, all levels**: the grey line under the two choices gives the total for each layout, summed over the Modules, Files and Symbols levels. On acme-shop, it goes from 586 in the raw grid to 157. A crossing is two arrows that cut each other, with each arrow drawn from one box centre to the other.
-- **On screen**: right of the section title, the number of crossings among the arrows drawn right now.
 - Switching layouts moves the boxes with an animation. The choice is remembered for the next visit.

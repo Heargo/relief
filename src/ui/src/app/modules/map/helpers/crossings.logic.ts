@@ -1,5 +1,5 @@
 import type { GraphSnapshot } from '../../../core/models/contract';
-import { type AggregatedEdge, aggregateEdges } from './edges.logic';
+import { aggregateEdges } from './edges.logic';
 import { isLeafKind, type MapLayout } from './layout.logic';
 import { levelOfKind } from './visibility.logic';
 
@@ -72,14 +72,6 @@ export function crossingsOfPairs(layout: MapLayout, pairs: readonly BoxPair[]): 
     });
   }
   return countSegmentCrossings(segments);
-}
-
-/** Crossings among aggregated edges already computed for the layout (the ones drawn on screen). */
-export function crossingsOfEdges(layout: MapLayout, edges: readonly AggregatedEdge[]): number {
-  return crossingsOfPairs(
-    layout,
-    edges.map((e): BoxPair => [e.from, e.to]),
-  );
 }
 
 /** Crossings of the aggregated edges when the map is open down to `level` (0 to 3). */

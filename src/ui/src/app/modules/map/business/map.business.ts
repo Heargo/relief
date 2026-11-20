@@ -40,7 +40,7 @@ import {
   type NodeMark,
 } from '../../review/helpers/diff-layer.logic';
 import { breadcrumbTrail, type Crumb } from '../helpers/breadcrumb.logic';
-import { crossingsOfEdges, layoutCrossings } from '../helpers/crossings.logic';
+import { layoutCrossings } from '../helpers/crossings.logic';
 import { alphabeticalOrder, optimizeOrder } from '../helpers/layout-optimize.logic';
 import {
   DEFAULT_LAYOUT_MODE,
@@ -142,12 +142,6 @@ export interface CoChangeLine {
   shape: EdgeShape;
 }
 
-/** Crossings of the aggregated edges (module, file and symbol levels) of the two layouts. */
-export interface CrossingTotals {
-  optimized: number;
-  raw: number;
-}
-
 interface Layouts {
   optimized: MapLayout;
   raw: MapLayout;
@@ -198,7 +192,6 @@ export class MapBusiness {
   );
   /** The graph as received, before the display filters. */
   private sourceGraph: GraphSnapshot = EMPTY_GRAPH;
-  private readonly _crossingTotals = signal<CrossingTotals>({ optimized: 0, raw: 0 });
   private readonly _infos = signal<Map<string, NodeInfo>>(new Map());
   private readonly _camera = signal<Camera>({ scale: 1, tx: 0, ty: 0 });
   /** The camera the modes, headers and edge shapes were computed for (it lags during a zoom). */
@@ -255,7 +248,6 @@ export class MapBusiness {
   readonly status = this._status.asReadonly();
   readonly layoutMode = this._layoutMode.asReadonly();
   readonly hideExternal = this._hideExternal.asReadonly();
-  readonly crossingTotals = this._crossingTotals.asReadonly();
   readonly camera = this._camera.asReadonly();
   /** The whole camera, as the CSS transform of the layer that holds the nodes and the edges. */
   readonly layerTransform = computed(() => layerTransform(this._camera()));
@@ -592,9 +584,6 @@ export class MapBusiness {
     }),
   );
 
-  /** Crossings among the edges drawn now, for the layout the map is at (not the one in flight). */
-  readonly visibleCrossings = computed(() => crossingsOfEdges(this._targetLayout(), this.edges()));
-
   selectEdge(from: string, to: string): void {
     this.applyEdge(from, to);
     this.record();
@@ -845,10 +834,6 @@ export class MapBusiness {
     }
     const layouts = this.buildLayouts(graph);
     this._layouts.set(layouts);
-    this._crossingTotals.set({
-      optimized: layoutCrossings(layouts.optimized, graph),
-      raw: layoutCrossings(layouts.raw, graph),
-    });
     const layout = layouts[layoutKey(this._layoutMode())];
     const before = this._targetLayout().bounds;
     this._layout.set(layout);
