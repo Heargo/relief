@@ -7,6 +7,7 @@ import {
   ElementRef,
   inject,
   input,
+  signal,
   untracked,
   viewChild,
   ViewEncapsulation,
@@ -42,6 +43,7 @@ import {
 import type { ReadingNodeState } from '../../../review/business/reading-order.business';
 import { isClick } from '../../helpers/pointer.logic';
 import { mergedEdgesPath, nearestEdge } from '../../helpers/edge-culling.logic';
+import { Canvas2dPainter, hitNode, PROTO_RENDERER, type ProtoPainter } from './proto-renderer';
 
 /** Distance, in screen pixels, within which a click picks a merged edge. */
 const MERGED_PICK_PX = 6;
@@ -102,6 +104,9 @@ export class MapCanvasComponent {
   private readonly edgeElements = new Map<string, SVGGElement>();
   private readonly coChangeElements = new Map<string, SVGGElement>();
   private mergedElement: SVGPathElement | null = null;
+  // PROTOTYPE (S14): a painter other than the DOM, picked by `?renderer=`.
+  private readonly proto = PROTO_RENDERER !== 'dom';
+  private readonly painter = signal<ProtoPainter | null>(null);
 
   constructor() {
     effect(() => {
@@ -135,6 +140,7 @@ export class MapCanvasComponent {
       this.edgesLayer().nativeElement.style.transform = transform;
     });
     effect(() => {
+      if (this.proto) return;
       const nodes = this.map.visibleNodes();
       const lang = this.language.current();
       const impact = this.impact();
@@ -150,6 +156,7 @@ export class MapCanvasComponent {
       });
     });
     effect(() => {
+      if (this.proto) return;
       // The selection dims nodes and edges: it follows the selection, not the camera.
       const { nodes } = this.map.emphasis();
       this.map.visibleNodes();
@@ -161,26 +168,116 @@ export class MapCanvasComponent {
       untracked(() => this.map.setImpact(impact));
     });
     effect(() => {
+      if (this.proto) return;
       const lines = this.map.mergedEdgeLines();
       // What is left in the common path is what a selection dims.
       const dim = this.map.selection() !== null;
       untracked(() => measured('syncMergedEdges', () => this.syncMergedEdges(lines, dim)));
     });
     effect(() => {
+      if (this.proto) return;
       const lines = this.map.edgeLines();
       const impact = this.impact();
       untracked(() => measured('syncEdges', () => this.syncEdges(lines, impact)));
     });
     effect(() => {
+      if (this.proto) return;
       const { edges } = this.map.emphasis();
       this.map.edgeLines();
       untracked(() => measured('syncEdgeEmphasis', () => this.syncEdgeEmphasis(edges)));
     });
     effect(() => {
+      if (this.proto) return;
       const lines = this.map.coChangeLines();
       untracked(() => measured('syncCoChange', () => this.syncCoChange(lines)));
     });
+    effect(() => {
+      const painter = this.painter();
+      if (!painter) return;
+      const nodes = this.map.visibleNodes();
+      const lines = this.map.edgeLines();
+      const merged = this.map.mergedEdgeLines();
+      const emphasis = this.map.emphasis();
+      const camera = this.map.camera();
+      const { width, height } = this.map.viewport();
+      this.language.current();
+      untracked(() =>
+        measured('syncProto', () =>
+          painter.draw({
+            nodes,
+            lines,
+            merged,
+            nodeEmphasis: emphasis.nodes,
+            edgeEmphasis: emphasis.edges,
+            edgeKey: (l) => edgeKey(l.edge.from, l.edge.to),
+            camera,
+            width,
+            height,
+            label: (n) => {
+              const info = this.map.info(n.id);
+              return (info && nodeContent(info, n.mode, 'medium')?.label) || '';
+            },
+          }),
+        ),
+      );
+    });
     afterNextRender(() => this.listen());
+  }
+
+  /** PROTOTYPE (S14): the node under a client point, by geometry instead of the DOM. */
+  private protoHit(clientX: number, clientY: number): string | null {
+    const rect = this.canvas().nativeElement.getBoundingClientRect();
+    const { scale, tx, ty } = this.map.camera();
+    const x = (clientX - rect.left - tx) / scale;
+    const y = (clientY - rect.top - ty) / scale;
+    return hitNode(this.map.visibleNodes(), x, y)?.id ?? null;
+  }
+
+  /** PROTOTYPE (S14): selects the full edge nearest to a client point. */
+  private protoPickEdge(clientX: number, clientY: number): boolean {
+    const lines = this.map.edgeLines();
+    if (lines.length === 0) return false;
+    const rect = this.canvas().nativeElement.getBoundingClientRect();
+    const { scale, tx, ty } = this.map.camera();
+    const point = { x: (clientX - rect.left - tx) / scale, y: (clientY - rect.top - ty) / scale };
+    const found = nearestEdge(
+      lines.map((l) => ({ d: l.shape.d, edge: l.edge })),
+      point,
+      MERGED_PICK_PX / Math.abs(scale),
+    );
+    if (!found) return false;
+    this.map.selectEdge(found.edge.from, found.edge.to);
+    return true;
+  }
+
+  /** PROTOTYPE (S14): mounts the painter and the scene API the bench reads. */
+  private mountProto(root: HTMLElement): void {
+    const el = document.createElement('canvas');
+    el.className = 'map-proto';
+    el.setAttribute('data-testid', 'map-proto');
+    el.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;';
+    root.insertBefore(el, root.firstChild?.nextSibling ?? null);
+    this.painter.set(new Canvas2dPainter(el));
+    const w = window as unknown as { __reliefScene?: () => unknown };
+    w.__reliefScene = () => {
+      const rect = root.getBoundingClientRect();
+      const { scale, tx, ty } = this.map.camera();
+      return {
+        renderer: PROTO_RENDERER,
+        edges: this.map.edgeLines().length + this.map.mergedEdgeLines().length,
+        nodes: this.map.visibleNodes().map((n) => ({
+          id: n.id,
+          left: rect.left + n.x * scale + tx,
+          top: rect.top + n.y * scale + ty,
+          width: n.w * scale,
+          height: n.h * scale,
+        })),
+      };
+    };
+    this.destroyRef.onDestroy(() => {
+      this.painter()?.destroy();
+      delete w.__reliefScene;
+    });
   }
 
   protected crumbText(crumb: Crumb): string {
@@ -195,7 +292,9 @@ export class MapCanvasComponent {
   protected onDoubleClick(event: MouseEvent): void {
     const target = event.target instanceof Element ? event.target : null;
     if (target?.closest('.map-levels, .map-crumbs, .map-legend')) return;
-    const id = target?.closest<HTMLElement>('[data-node-id]')?.dataset['nodeId'];
+    const id = this.proto
+      ? this.protoHit(event.clientX, event.clientY)
+      : target?.closest<HTMLElement>('[data-node-id]')?.dataset['nodeId'];
     if (id) this.map.dive(id);
   }
 
@@ -210,7 +309,10 @@ export class MapCanvasComponent {
       return;
     // The strokes of the common path are thin, and nodes may lie under them: pick by proximity.
     if (this.pickMerged(at.x, at.y)) return;
-    const id = target.closest<HTMLElement>('[data-node-id]')?.dataset['nodeId'];
+    if (this.proto && this.protoPickEdge(at.x, at.y)) return;
+    const id = this.proto
+      ? this.protoHit(at.x, at.y)
+      : target.closest<HTMLElement>('[data-node-id]')?.dataset['nodeId'];
     if (id) this.map.selectNode(id);
     else this.map.deselectNode();
   }
@@ -269,6 +371,7 @@ export class MapCanvasComponent {
 
   private listen(): void {
     const root = this.canvas().nativeElement;
+    if (this.proto) this.mountProto(root);
     const measure = () => this.map.setViewport(root.clientWidth, root.clientHeight);
     measure();
     if (typeof ResizeObserver !== 'undefined') {

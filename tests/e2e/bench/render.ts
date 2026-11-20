@@ -17,6 +17,7 @@ export interface Stat {
   max: number;
 }
 export interface PhaseResult {
+  worst?: unknown[];
   steps: number;
   frame: Stat;
   work: Stat;
@@ -33,6 +34,8 @@ export interface BenchResult {
 }
 
 const SIZE = { width: 1600, height: 900 };
+// PROTOTYPE (S14): the painter under test (`dom`, `canvas`, `webgl`), passed as `?renderer=`.
+const RENDERER = process.env['RELIEF_RENDERER'] ?? 'dom';
 
 /** Runs in the page. `scenario`: pan | zoom | select. Returns the raw per-step samples. */
 function runScenario(scenario: string, steps: number, done: (r: unknown) => void): void {
@@ -60,10 +63,36 @@ function runScenario(scenario: string, steps: number, done: (r: unknown) => void
   if (api) longObserver.observe({ type: 'longtask' });
 
   let down = false;
-  const targets: HTMLElement[] = [];
+  type Target = { x: number; y: number; el: Element };
+  const targets: Target[] = [];
   if (scenario === 'select') {
-    const nodes = Array.from(document.querySelectorAll<HTMLElement>('.map-node')).filter((el) => {
-      const r = el.getBoundingClientRect();
+    const scene = (
+      window as unknown as {
+        __reliefScene?: () => {
+          nodes: { left: number; top: number; width: number; height: number }[];
+        };
+      }
+    ).__reliefScene?.();
+    const rects = scene
+      ? scene.nodes.map((n) => ({
+          r: {
+            left: n.left,
+            top: n.top,
+            right: n.left + n.width,
+            bottom: n.top + n.height,
+            x: n.left,
+            y: n.top,
+            width: n.width,
+            height: n.height,
+          },
+          el: canvas as Element,
+        }))
+      : Array.from(document.querySelectorAll<HTMLElement>('.map-node')).map((el) => ({
+          r: el.getBoundingClientRect(),
+          el: el as Element,
+        }));
+    // Smallest boxes first in the DOM order is not guaranteed: keep the order, filter by size.
+    const nodes = rects.filter(({ r }) => {
       return (
         r.width > 24 &&
         r.height > 14 &&
@@ -74,8 +103,10 @@ function runScenario(scenario: string, steps: number, done: (r: unknown) => void
       );
     });
     const stride = Math.max(1, Math.floor(nodes.length / steps));
-    for (let i = 0; i < nodes.length && targets.length < steps; i += stride)
-      targets.push(nodes[i] as HTMLElement);
+    for (let i = 0; i < nodes.length && targets.length < steps; i += stride) {
+      const { r, el } = nodes[i] as (typeof nodes)[number];
+      targets.push({ x: r.x + r.width / 2, y: r.y + Math.min(r.height / 2, 10), el });
+    }
   }
   const total = scenario === 'select' ? targets.length : steps;
 
@@ -125,10 +156,7 @@ function runScenario(scenario: string, steps: number, done: (r: unknown) => void
         }),
       );
     } else {
-      const el = targets[i] as HTMLElement;
-      const r = el.getBoundingClientRect();
-      const x = r.x + r.width / 2;
-      const y = r.y + Math.min(r.height / 2, 10);
+      const { x, y, el } = targets[i] as Target;
       el.dispatchEvent(
         new PointerEvent('pointerdown', { bubbles: true, button: 0, clientX: x, clientY: y }),
       );
@@ -183,7 +211,17 @@ async function scenario(name: string, steps: number): Promise<PhaseResult> {
   }
   // Without the Long Tasks API (WebKitGTK), a task is a step whose frame took more than 50 ms.
   const longs = raw.api ? raw.longTasks : raw.samples.map((s) => s.work).filter((w) => w > 50);
+  // PROTOTYPE (S14): the three worst steps with their marks, to see what the long frames hold.
+  const worst = [...raw.samples]
+    .sort((a, b) => b.work - a.work)
+    .slice(0, 3)
+    .map((s) => ({
+      work: s.work,
+      layout: s.layout,
+      measures: Object.fromEntries(Object.entries(s.measures).filter(([, v]) => v >= 1)),
+    }));
   return {
+    worst,
     steps: raw.samples.length,
     frame: stat(raw.samples.slice(1).map((s) => s.frame)),
     work: stat(raw.samples.map((s) => s.work)),
@@ -201,10 +239,16 @@ async function scenario(name: string, steps: number): Promise<PhaseResult> {
 }
 
 const counts = () =>
-  browser.execute(() => ({
-    nodes: document.querySelectorAll('[data-testid="map-node"]').length,
-    edges: document.querySelectorAll('[data-testid="map-edge"]').length,
-  }));
+  browser.execute(() => {
+    const scene = (
+      window as unknown as { __reliefScene?: () => { nodes: unknown[]; edges: number } }
+    ).__reliefScene?.();
+    if (scene) return { nodes: scene.nodes.length, edges: scene.edges };
+    return {
+      nodes: document.querySelectorAll('[data-testid="map-node"]').length,
+      edges: document.querySelectorAll('[data-testid="map-edge"]').length,
+    };
+  });
 
 /** Wheel zoom on the centre until `wanted` nodes are in the DOM (or 60 steps). */
 async function zoomToFiles(wanted: number): Promise<void> {
@@ -231,10 +275,15 @@ async function zoomToFiles(wanted: number): Promise<void> {
 
 export function benchRepository(name: string): void {
   it(`measures the map render on ${name}`, async () => {
-    await openRelief({ size: SIZE });
-    await browser.$('[data-testid="map-node"]').waitForExist({ timeout: 120_000 });
+    await openRelief({ size: SIZE, query: RENDERER === 'dom' ? '' : `?renderer=${RENDERER}` });
+    await browser.waitUntil(async () => (await counts()).nodes > 0, { timeout: 120_000 });
     await browser.pause(2000);
-    const result: BenchResult = { repo: name, size: SIZE, states: {} };
+    const result: BenchResult & { renderer: string } = {
+      repo: name,
+      renderer: RENDERER,
+      size: SIZE,
+      states: {},
+    };
     for (const [state, wanted] of [
       ['overview', 0],
       ['files', 400],
@@ -257,7 +306,7 @@ export function benchRepository(name: string): void {
     }
     const dir = join(root, 'target/bench-ui');
     mkdirSync(dir, { recursive: true });
-    writeFileSync(join(dir, `${name}.json`), JSON.stringify(result, null, 2));
-    console.log(`bench-ui ${name}: ${JSON.stringify(result)}`);
+    writeFileSync(join(dir, `${name}-${RENDERER}.json`), JSON.stringify(result, null, 2));
+    console.log(`bench-ui ${name} ${RENDERER}: ${JSON.stringify(result)}`);
   });
 }

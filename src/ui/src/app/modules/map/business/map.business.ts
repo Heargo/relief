@@ -832,7 +832,7 @@ export class MapBusiness {
       this.stopAnimation();
       this.pendingSettle = null;
     }
-    const layouts = this.buildLayouts(graph);
+    const layouts = measured('buildLayouts', () => this.buildLayouts(graph));
     this._layouts.set(layouts);
     const layout = layouts[layoutKey(this._layoutMode())];
     const before = this._targetLayout().bounds;

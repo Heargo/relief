@@ -45,3 +45,62 @@ Contraintes à vérifier pour chaque option :
 - [ ] Le spike chiffre au moins deux options sur `dense` et excalidraw (pan, zoom, sélection, p50 / p95) dans `docs/bench.md`.
 - [ ] Un ADR est accepté par l'utilisateur.
 - [ ] Les tickets d'implémentation sont écrits, avec un budget à tenir : 60 fps au pan et au zoom, sélection < 100 ms, sur `dense` et excalidraw.
+
+## Spike
+
+Branche `feat/s14-map-renderer-spike`. Prototype jetable, marqué `PROTOTYPE (S14)` :
+
+- `src/ui/src/app/modules/map/components/map-canvas/proto-renderer.ts` : peintre Canvas 2D (boîtes, arêtes en `Path2D` depuis `shape.d`, texte en pixels écran, emphase par `globalAlpha`), hit-testing par géométrie (`hitNode`, `nearestEdge`). Choisi par `?renderer=canvas` ; `dom` reste le défaut.
+- `map-canvas.component.ts` : en mode prototype, les effets `sync*` du DOM ne tournent pas, un seul effet `syncProto` dessine depuis les mêmes signaux de `MapBusiness`. `window.__reliefScene()` expose nœuds (rectangles écran) et arêtes au banc.
+- `tests/e2e/bench/render.ts` : `RELIEF_RENDERER=dom|canvas`, résultats dans `target/bench-ui/<repo>-<renderer>.json`, avec les 3 pires frames et leurs marques (`worst`). `bench/probe.bench.ts` sonde la webview.
+- Marques ajoutées : `visibleCrossings`, `buildLayouts`, `layoutCrossings`.
+
+### Webview (WebKitGTK, `bench/probe.bench.ts`)
+
+| | Xvfb | Écran réel (Wayland, GPU) |
+| --- | --- | --- |
+| WebGL 1 / 2 | oui / oui (texture max 16 384) | oui / oui (texture max 32 768) |
+| `OffscreenCanvas` 2D / WebGL 2, `transferControlToOffscreen`, workers | oui | oui |
+| WebGPU | non | non |
+| Canvas 2D, 5 000 courbes + 1 500 boîtes avec texte | 18 ms / frame | 12 ms / frame |
+
+### Chiffres, Xvfb, `work` p50 / p95 en ms (max entre parenthèses quand il domine)
+
+| Scénario | dense DOM ajusté / zoomé | dense Canvas | excalidraw DOM | excalidraw Canvas |
+| --- | --- | --- | --- | --- |
+| Pan | 8/10, 10/13 | 4/5, 3/3 | 2/3, 6/7 | 2/2, 3/3 |
+| Zoom | 3/44, 3/202 (1 315) | 4/18, 3/196 (1 275) | 3/108, 8/104 | 2/92, 3/82 |
+| Sélection | 97/156, 104/134 | 30/35, 25/51 | 111/155, 87/143 | 18/51, 18/41 |
+
+Le dessin Canvas lui-même (`syncProto`) coûte 2 à 7 ms p95 dans tous les cas, sans culling des arêtes fusionnées.
+
+### Ce que ça dit
+
+- **Sélection** : le moteur est la cause. Canvas tient le budget (< 100 ms) partout, le DOM non (134 à 156). Le coût DOM était le restyle des ~1 300 éléments à chaque changement d'emphase.
+- **Pan** : tenu par les deux ; Canvas divise par 2 à 4.
+- **Zoom** : le p95 ne dépend presque pas du moteur. Les frames lourdes sont du calcul sur le thread principal, identique en DOM et en Canvas :
+  - `visibleCrossings` (compteur du panneau Disposition, `countSegmentCrossings` en O(n²) sur les arêtes agrégées) : 160 à 194 ms sur `dense`, ~62 ms sur excalidraw, à chaque franchissement de seuil. L'analyse « After S08 » l'attribuait à tort au style et au layout du navigateur.
+  - Chargement d'un sous-graphe pendant le zoom (`containerToLoad`) : `buildLayouts` ~710 ms + `layoutCrossings` ~350 ms dans une seule frame (≈ 1,3 s), c'est le terrain de S09.
+  - Le reste (`allEdges`, `edgeStates`, `edgeLines`, `visibleNodes`) : 25 à 45 ms au pire.
+- Conséquence pour le découpage : 60 fps au zoom demandera, en plus du moteur, de sortir `visibleCrossings` du chemin du zoom (incrémental, différé au repos, ou en worker) et le layout du thread principal (S09).
+
+### Décisions (utilisateur, 2026-11-21)
+
+- **Moteur : Canvas 2D.** Pas de WebGL : le dessin Canvas coûte 2 à 7 ms p95, un moteur WebGL ne gagnerait presque rien, au prix d'une dépendance et d'un rendu de texte par atlas.
+- **Compteur de croisements supprimé** (pas une info utile, et il coûtait 60 à 190 ms à chaque franchissement de seuil). Retirés : `visibleCrossings`, `crossingTotals`, `crossingsOfEdges`, les trois affichages de la section Disposition (`crossings-visible`, `crossings-optimized`, `crossings-raw`), leurs clés i18n, leurs tests et deux lignes de `docs/user` `map` (FR + EN). La disposition « Moins de croisements » reste : `layoutCrossings` sert encore à choisir entre l'ordre cherché et l'ordre du snapshot dans `buildLayouts`.
+
+### Canvas sans le compteur, Xvfb, `work` p50 / p95 en ms
+
+| Scénario | dense ajusté / zoomé | excalidraw ajusté / zoomé |
+| --- | --- | --- |
+| Pan | 5/5, 3/3 | 2/2, 3/4 |
+| Zoom | 4/18, 3/27 (max 758) | 2/28, 3/27 |
+| Sélection | 31/35, 23/47 | 18/53, 18/40 |
+
+- Sélection < 100 ms et zoom < 33 ms p95 tenus partout ; 60 fps (16 ms) au zoom pas encore : les frames de seuil restent à 25 à 35 ms de calcul d'arêtes (`allEdges`, `edgeStates`, `edgeLines`), et le chargement d'un sous-graphe garde une frame de ~760 ms (`buildLayouts` ~700 ms, S09).
+
+### Reste à faire
+
+1. Banc sur le vrai GPU (hors Xvfb), et chiffres dans `docs/bench.md` (section « S14 »).
+2. ADR qui amende 0002 (Canvas 2D, stratégie e2e par `__reliefScene` ou couche DOM minimale, accessibilité), mise à jour de la décision « Écarté » de `scale/spec.md`.
+3. Découpage en tickets (moteur et caméra, boîtes et texte complets, arêtes et étiquettes, hit-testing et infobulles, migration des e2e, retrait du rendu DOM), plus un ticket hors moteur pour les ~30 ms de calcul d'arêtes au seuil.
