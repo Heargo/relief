@@ -102,6 +102,8 @@ pub struct DiffAnalysis {
     pub head: GraphSnapshot,
     pub diff: GraphDiff,
     pub renames: Vec<FileRename>,
+    /// Short SHA of the base really compared.
+    pub base_resolved: String,
     /// Cache warnings raised while indexing.
     pub warnings: Vec<String>,
 }
@@ -113,6 +115,7 @@ impl DiffAnalysis {
             format_only: format_only_summary(&self.diff),
             renames: self.renames,
             diff: self.diff,
+            base_resolved: self.base_resolved,
             graph: None,
         }
     }
@@ -1129,6 +1132,7 @@ impl Session {
             head,
             diff,
             renames,
+            base_resolved: sides.old.to_string().chars().take(7).collect(),
             warnings,
         })
     }

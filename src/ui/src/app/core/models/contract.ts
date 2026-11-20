@@ -315,6 +315,11 @@ export interface SnapshotMeta {
  * Response of `GET /api/diff`.
  */
 export interface DiffResponse {
+  /**
+   * Short SHA (7 characters) of the base really compared: the merge base for `...`, the base
+   * as is for `..`, HEAD for the working tree.
+   */
+  baseResolved?: string;
   diff: GraphDiff;
   formatOnly: FormatOnlySummary;
   /**

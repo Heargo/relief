@@ -81,7 +81,7 @@ Le prochain ticket est la première ligne non cochée dont tous les bloquants so
 | ✓ | 32n | **U20** Inspecteur d'arête : les utilisations dans le code | Où et comment A se sert de ce qu'il importe de B. | U17 |
 | ✓ | 32o | **U21** Utilisations d'arête : imports par défaut et `* as` | Ils affichaient « jamais utilisé » ; résolus comme à l'indexation (workspace compris). | U20 |
 | ✓ | 32p | **U22** Un fichier ajouté n'apparaît pas sur la carte | Bug (retour du 2026-11-20). | aucun |
-| ☐ | 32q | **U23** Choix base / head : quelle est la référence ? | On ne sait pas dans quel sens se lit la comparaison ; maquette d'abord. | U19 |
+| ✓ | 32q | **U23** Choix base / head : quelle est la référence ? | On ne sait pas dans quel sens se lit la comparaison ; maquette d'abord. | U19 |
 | ✓ | 32r | **U24** Masquer les dépendances internes du nœud sélectionné | Elles encombrent la sélection ; masquées à la sélection. | U18 |
 
 ## Phase 5 : relire une PR

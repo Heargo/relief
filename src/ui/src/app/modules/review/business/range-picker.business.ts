@@ -14,7 +14,9 @@ import {
   parseRange,
   type RangeParts,
   type RangeTab,
+  rangeArrow,
   rangeCount,
+  readingLine,
   shortcutRefs,
 } from '../helpers/range.logic';
 import { DiffBusiness } from './diff.business';
@@ -57,6 +59,12 @@ export class RangePickerBusiness {
 
   readonly parts = computed<RangeParts>(() => parseRange(currentRange(this.diff.range())));
   readonly headIsWorktree = computed(() => this.parts().head === WORKTREE_RANGE);
+  readonly arrow = computed(() => rangeArrow(this.parts().mergeBase));
+  /** What the map shows for the range; null until the diff is loaded. */
+  readonly reading = computed(() => {
+    const resolved = this.diff.diff()?.baseResolved;
+    return resolved ? readingLine(this.parts(), resolved) : null;
+  });
   /** Number of commits of the range; null while unknown. */
   readonly count = computed(() => {
     const { base, head } = this._shas();

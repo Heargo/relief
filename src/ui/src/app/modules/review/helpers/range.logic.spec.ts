@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { LogEntry } from '../../../core/models/contract';
 import { WORKTREE_RANGE } from './diff-layer.logic';
-import { formatRange, inRange, parseRange } from './range.logic';
+import { formatRange, inRange, parseRange, rangeArrow, readingLine } from './range.logic';
 
 // API expected (range.logic.ts):
 //  - parseRange(range: string): { base: string; head: string; mergeBase: boolean }
@@ -100,5 +100,43 @@ describe('inRange', () => {
 
   it('marks nothing in range when base is head', () => {
     expect(inRange(log, 'e3', 'e3')).toEqual(['out', 'out', 'head', 'out', 'out']);
+  });
+});
+
+// U23, API expected (range.logic.ts):
+//  - readingLine(parts: RangeParts, baseResolved: string): { key: string; params: Record<string, string> }
+//      three-dot -> key 'review.range.reading.mergeBase', params { head, base, sha: baseResolved };
+//      two-dot -> 'review.range.reading.direct', params { base };
+//      working tree head -> 'review.range.reading.worktree', params { base: 'HEAD', sha: baseResolved }.
+//  - rangeArrow(mergeBase: boolean): '···→' (three-dot) or '→' (two-dot).
+describe('readingLine', () => {
+  it('names head, base and the merge base for a three-dot range', () => {
+    expect(readingLine({ base: 'main', head: 'develop', mergeBase: true }, '4e1a9c2')).toEqual({
+      key: 'review.range.reading.mergeBase',
+      params: { head: 'develop', base: 'main', sha: '4e1a9c2' },
+    });
+  });
+
+  it('says the base is compared as is for a two-dot range', () => {
+    expect(readingLine({ base: 'main', head: 'develop', mergeBase: false }, '4e1a9c2')).toEqual({
+      key: 'review.range.reading.direct',
+      params: { base: 'main' },
+    });
+  });
+
+  it('reads the working tree against HEAD with its sha', () => {
+    expect(
+      readingLine({ base: 'HEAD', head: WORKTREE_RANGE, mergeBase: false }, 'a7c03f1'),
+    ).toEqual({
+      key: 'review.range.reading.worktree',
+      params: { base: 'HEAD', sha: 'a7c03f1' },
+    });
+  });
+});
+
+describe('rangeArrow', () => {
+  it('is ···→ from the merge base and → for a direct diff', () => {
+    expect(rangeArrow(true)).toBe('···→');
+    expect(rangeArrow(false)).toBe('→');
   });
 });

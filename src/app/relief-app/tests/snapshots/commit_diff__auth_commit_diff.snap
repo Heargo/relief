@@ -3,6 +3,7 @@ source: src/app/relief-app/tests/commit_diff.rs
 expression: "serde_json::to_value(&response).unwrap()"
 ---
 {
+  "baseResolved": "78cfe29",
   "diff": {
     "base": "78cfe2941145879d4fed70c07d149fe7a306d116",
     "edges": [

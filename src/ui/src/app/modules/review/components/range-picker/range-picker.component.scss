@@ -7,7 +7,7 @@
 .range {
   position: relative;
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 4px;
   min-width: 0;
   font:
@@ -163,4 +163,38 @@ li {
     font-weight: 700;
     color: var(--relief-accent);
   }
+}
+
+.slot {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.role {
+  font:
+    10px system-ui,
+    sans-serif;
+  color: var(--relief-muted);
+  white-space: nowrap;
+
+  .head > & {
+    color: var(--relief-accent);
+    text-decoration: underline;
+  }
+}
+
+.reading {
+  flex: 0 1 auto;
+  min-width: 0;
+  align-self: center;
+  overflow: clip;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding-inline: 8px;
+  color: var(--relief-muted);
+  font:
+    12px system-ui,
+    sans-serif;
 }

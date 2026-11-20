@@ -57,6 +57,10 @@ pub struct DiffResponse {
     pub diff: GraphDiff,
     pub renames: Vec<FileRename>,
     pub format_only: FormatOnlySummary,
+    /// Short SHA (7 characters) of the base really compared: the merge base for `...`, the base
+    /// as is for `..`, HEAD for the working tree.
+    #[serde(default)]
+    pub base_resolved: String,
     /// Head subgraph of the review (changed nodes, their neighbours and ancestors); only when a
     /// budget was asked for.
     #[serde(default, skip_serializing_if = "Option::is_none")]
