@@ -1,6 +1,6 @@
 # S14 Refondre le rendu de la carte : canvas, WebGL ou autre
 
-Status: needs-triage
+Status: resolved
 Type: task
 Blocked by: S08
 UI: oui
@@ -42,9 +42,9 @@ Contraintes à vérifier pour chaque option :
 
 ## Critères d'acceptation
 
-- [ ] Le spike chiffre au moins deux options sur `dense` et excalidraw (pan, zoom, sélection, p50 / p95) dans `docs/bench.md`.
-- [ ] Un ADR est accepté par l'utilisateur.
-- [ ] Les tickets d'implémentation sont écrits, avec un budget à tenir : 60 fps au pan et au zoom, sélection < 100 ms, sur `dense` et excalidraw.
+- [x] Le spike chiffre au moins deux options sur `dense` et excalidraw (pan, zoom, sélection, p50 / p95) dans `docs/bench.md`.
+- [x] Un ADR est accepté par l'utilisateur.
+- [x] Les tickets d'implémentation sont écrits, avec un budget à tenir : 60 fps au pan et au zoom, sélection < 100 ms, sur `dense` et excalidraw.
 
 ## Spike
 
@@ -99,8 +99,10 @@ Le dessin Canvas lui-même (`syncProto`) coûte 2 à 7 ms p95 dans tous les cas,
 
 - Sélection < 100 ms et zoom < 33 ms p95 tenus partout ; 60 fps (16 ms) au zoom pas encore : les frames de seuil restent à 25 à 35 ms de calcul d'arêtes (`allEdges`, `edgeStates`, `edgeLines`), et le chargement d'un sous-graphe garde une frame de ~760 ms (`buildLayouts` ~700 ms, S09).
 
-### Reste à faire
 
-1. Banc sur le vrai GPU (hors Xvfb), et chiffres dans `docs/bench.md` (section « S14 »).
-2. ADR qui amende 0002 (Canvas 2D, stratégie e2e par `__reliefScene` ou couche DOM minimale, accessibilité), mise à jour de la décision « Écarté » de `scale/spec.md`.
-3. Découpage en tickets (moteur et caméra, boîtes et texte complets, arêtes et étiquettes, hit-testing et infobulles, migration des e2e, retrait du rendu DOM), plus un ticket hors moteur pour les ~30 ms de calcul d'arêtes au seuil.
+## Answer
+
+- Spike : peintre Canvas 2D jetable derrière `?renderer=canvas`, banc `just bench-ui` paramétré par `RELIEF_RENDERER`, sonde de la webview (`tests/e2e/bench/probe.bench.ts`). Chiffres dans `docs/bench.md` (« S14 spike »).
+- Décisions de l'utilisateur : Canvas 2D (pas de WebGL), compteur de croisements supprimé (commit `78ef3f0`), pas de banc sur vrai GPU.
+- ADR `docs/adr/0009-carte-en-canvas-2d.md` (amende 0002) : Canvas 2D, scène pure, e2e par `window.__reliefScene()`, couche DOM minimale pour l'accessibilité, migration à côté du DOM. Décision « Écarté » de `scale/spec.md` mise à jour.
+- Tickets : S15 (API de scène), S16 (e2e sur la scène), S17 (peintre : nœuds), S18 (peintre : arêtes), S19 (interactions), S20 (Canvas seul), S21 (arêtes au seuil < 16 ms). S13 repris par S20.

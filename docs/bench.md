@@ -192,6 +192,31 @@ The state and the shape of an edge are made on demand, for the edges that meet t
 - Pan: budget held on both, except dense fit at 14 ms in run A (12 ms zoomed), still under 16.
 - Zoom: the budget (p95 < 33 ms) is still not held. The marked work is now small (`edgeStates` 2 to 8 ms, `edgeLines` 4 to 18, `syncNodes` 4 to 9, `allEdges` 4 to 10; `compute` 19 to 23 ms in total, `dom` 5 to 12, `layout` 11 to 15). What is left, 40 to 200 ms, is outside the marks: the browser's style recalculation and paint-side work on the 1,300 to 1,500 nodes (dense zoomed: 1,379 nodes, 30 edges) at each threshold crossing, which changes the content of every open box. Taking it needs fewer node rewrites per crossing (nodes, not edges), which is not in S08.
 
+### S14 spike (renderer: DOM + SVG against Canvas 2D)
+
+`just bench-ui` takes `RELIEF_RENDERER=dom|canvas` (prototype painter behind `?renderer=canvas`) and writes `target/bench-ui/<repo>-<renderer>.json`, with the three worst steps of each scenario and their marks (`worst`). Same harness otherwise, Xvfb. `work` p50 / p95 in ms, fit / zoomed:
+
+| Scenario   | dense DOM       | dense Canvas | excalidraw DOM  | excalidraw Canvas |
+| ---------- | --------------- | ------------ | --------------- | ----------------- |
+| Pan        | 8/10, 10/13     | 4/5, 3/3     | 2/3, 6/7        | 2/2, 3/3          |
+| Wheel zoom | 3/44, 3/202     | 4/18, 3/196  | 3/108, 8/104    | 2/92, 3/82        |
+| Selection  | 97/156, 104/134 | 30/35, 25/51 | 111/155, 87/143 | 18/51, 18/41      |
+
+- Drawing a Canvas frame (`syncProto`) costs 2 to 7 ms p95 in every case.
+- Selection: the renderer was the cost (style recalculation of ~1,300 elements on each emphasis change). Canvas holds the 100 ms budget everywhere.
+- Wheel zoom: the heavy frames were computation, the same with both renderers. The on-screen crossings counter (`visibleCrossings`, O(n²) over the aggregated edges) cost 160 to 194 ms on `dense` and ~62 ms on excalidraw at each threshold crossing; the "After S08" reading (browser style and layout) was wrong. A subgraph loaded during the zoom adds one frame of ~1.3 s (`buildLayouts` ~710 ms, `layoutCrossings` ~350 ms for the two layout totals).
+
+After removing the crossings counter and the layout totals (Canvas, fit / zoomed):
+
+| Scenario   | dense        | excalidraw   |
+| ---------- | ------------ | ------------ |
+| Pan        | 5/5, 3/3     | 2/2, 3/4     |
+| Wheel zoom | 4/18, 3/27   | 2/28, 3/27   |
+| Selection  | 31/35, 23/47 | 18/53, 18/40 |
+
+- Selection < 100 ms and zoom < 33 ms p95 on both. Not yet 60 fps at zoom: a threshold frame still spends 25 to 35 ms on `allEdges`, `edgeStates` and `edgeLines`; a subgraph loaded during the zoom keeps one frame of ~760 ms (`buildLayouts`, S09).
+- Decision: the map moves to Canvas 2D (ADR 0009).
+
 ## Shallow clones
 
 The clones are shallow (`--depth 400`). `repo_id` (the name of the data folder when it falls back to the user cache, and a cache key) is the SHA of the oldest stored commit, so it is not the same as in a full clone of the same repository, nor between clones of different depths. Churn and co-change ignore the commit at the shallow boundary (no parent to compare it with). The measures above (indexing, `analyse`, budgeted snapshot) do not depend on either, so they were not run again.

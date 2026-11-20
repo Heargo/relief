@@ -21,3 +21,7 @@ Mesure après S07 (`docs/bench.md`) : sélectionner un nœud sur `dense` coûte 
 
 - [ ] `just bench-ui` : sélection p95 < 100 ms sur `dense`, vue d'ensemble et zoomée.
 - [ ] Tous les tests existants passent sans changement de rendu.
+
+## Comments
+
+- 2026-11-21 (S14) : le spike Canvas tient la sélection à 35 à 53 ms p95 ; le coût était le restyle du DOM. Le critère est repris par S20 (Canvas seul rendu). À fermer quand S20 est résolu.

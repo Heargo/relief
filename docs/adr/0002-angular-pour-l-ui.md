@@ -1,6 +1,6 @@
 # 0002. Angular pour l'UI
 
-Status: accepted (2026-11-18, choix de l'utilisateur ; remplace la proposition Svelte 5)
+Status: accepted (2026-11-18, choix de l'utilisateur ; remplace la proposition Svelte 5) ; rendu de la carte amendé par 0009 (Canvas 2D)
 
 ## Contexte
 
