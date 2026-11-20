@@ -139,7 +139,9 @@ Le prochain ticket est la première ligne non cochée dont tous les bloquants so
 | ✓ | 48a | **F06** e2e : choisir la fixture par spec | Les e2e de `tiny` et `wide` ; un état « vu » propre entre specs. | N09 |
 | ✓ | 49 | **X04** Couplage logique (co-change) | Des arêtes pour **n'importe quel langage**, même sans adapter. **Jalon G : comprendre un repo inconnu.** | X03, F06 |
 
-## Phase 10 : passage à l'échelle
+## Phase 10 : passage à l'échelle et performances
+
+Brainstorm du 2026-11-20 : la carte rame sur un gros écran et les budgets de S02 ne sont pas tenus. Décisions dans `scale/spec.md` (« Phase 10 »). Mesurer avant d'optimiser : S05 fixe le budget de rendu.
 
 | ✓ | # | Ticket | Pourquoi maintenant | Bloqué par |
 | - | - | --- | --- | --- |
@@ -147,7 +149,14 @@ Le prochain ticket est la première ligne non cochée dont tous les bloquants so
 | ☐ | 50a | **S03** Relecture d'un gros dépôt : l'UI lit le sous-graphe de relecture | Suite de S01 : les changés visibles sans zoom, budget IPC aussi en relecture. | S01 |
 | ✓ | 51 | **S02** Benchmarks sur de vrais dépôts | Des budgets mesurés, pas supposés. | S01 |
 | ☐ | 51a | **S04** Garder l'index de fichier en cache | Suite de S02 : les budgets à chaud et de diff ne sont pas tenus faute de cet index en cache. | S02 |
-| ☐ | 51b | **S05** Rendu fluide avec beaucoup de nœuds et d'arêtes | La carte rame sur un gros écran ; mesurer avant d'optimiser. | S02 |
+| ☐ | 51b | **S05** Mesurer le rendu de la carte | La carte rame sur un gros écran ; fixture `dense`, `just bench-ui` et budget de rendu. | S02 |
+| ☐ | 51c | **S06** Caméra en un seul transform | Un pan ne recalcule plus rien ; le zoom recalcule au repos. | S05 |
+| ☐ | 51d | **S07** Ne recalculer à chaque frame que ce qui suit la caméra | Modes, état des arêtes, emphase et étiquettes recalculés à chaque frame. | S05 |
+| ☐ | 51e | **S08** Arêtes : hors de la vue et niveau de détail | Toutes les arêtes du niveau sont dans le DOM. | S06 |
+| ☐ | 51f | **S09** Disposition et croisements hors du thread principal | Seulement si S05 trouve une longue tâche au chargement. | S05 |
+| ☐ | 51g | **S10** Indexation parallèle | Indexation mono-thread : n8n 54 s à froid. | S04 |
+| ☐ | 51h | **S11** Analyse incrémentale d'une plage | Diff d'une PR : 3,1 s et 65 s pour un budget de 1 s. | S04 |
+| ☐ | 51i | **S12** Afficher la carte avant la fin de l'indexation | Seulement si un gros dépôt reste lent à froid après S10 et S11. | S10, S11 |
 
 ## Phase 11 : second langage et paquets
 
@@ -158,11 +167,30 @@ Le prochain ticket est la première ligne non cochée dont tous les bloquants so
 | ✓ | 53 | **P01** Paquets `.deb` et AppImage | Installer relief sans compiler (`tauri build`). **Jalon H : relief v1.** | L01 |
 | ☐ | 53b | **N10** Icône cassée dans le gestionnaire de tâches | Icône générique sous KDE/Wayland (`app_id` ≠ `relief.desktop` ?). | aucun |
 
-## Phase 12 : multirepo
+## Phase 12 : multirepo (nouvelles fonctionnalités)
 
 | ✓ | # | Ticket | Pourquoi maintenant | Bloqué par |
 | - | - | --- | --- | --- |
 | ☐ | 54 | **K01** Cadrer le multirepo | Un changement full stack sur plusieurs dépôts ; un niveau « dépôt » au-dessus du système. Spec `.scratch/multi-repo/spec.md`. | aucun |
+
+## Phase 13 : confort de relecture (nouvelles fonctionnalités)
+
+Brainstorm du 2026-11-20 (`quicknotes.md`) : en relecture on se perd dans les dépendances transitives, on veut garder ce qu'on pense en lisant et ranger la carte et les panneaux à sa main. Décisions dans `review-ui/spec.md` (« Phase 13 »). Volontairement en dernier : polir l'existant avant d'ajouter des fonctionnalités.
+
+| ✓ | # | Ticket | Pourquoi maintenant | Bloqué par |
+| - | - | --- | --- | --- |
+| ☐ | 55 | **R09** Notes de relecture ancrées sur la carte | Garder ce qu'on pense en lisant ; note, question, à corriger. | R05 |
+| ☐ | 56 | **R11** Suivre les dépendances transitives sans se perdre | Où suis-je, revenir à l'entrée en cours, « vérifié » hors diff. | R05, R04 |
+| ☐ | 57 | **U25** Historique de navigation : précédent / suivant | Revenir au nœud d'avant après avoir suivi des arêtes. | U05 |
+| ☐ | 58 | **R12** Profondeur du rayon d'impact sur la carte | Un symbole très utilisé rend toute la carte orange. | R04 |
+| ☐ | 59 | **R15** Diff lisible : coloration et contexte | Le diff n'est pas coloré, son contexte est fixe. | R02 |
+| ☐ | 60 | **R14** Naviguer depuis le code | Un appel dans le diff n'est que du texte. | R02, U20 |
+| ☐ | 61 | **R13** Chemin entre deux nœuds | « Pourquoi A dépend de B » sans suivre les arêtes une à une. | E06 |
+| ☐ | 62 | **U27** Masquer des éléments de la carte | Modules générés ou d'outillage qui encombrent. | U13 |
+| ☐ | 63 | **R10** Exporter la relecture en Markdown | Coller notes et signaux dans la PR. | R09 |
+| ☐ | 64 | **U26** Mini-carte | Savoir où on est, zoomé dans un gros dépôt. | U02, S06 |
+| ☐ | 65 | **U28** Ranger la carte à la main | Disposition personnelle ; maquette d'abord. | U04, U27 |
+| ☐ | 66 | **N11** Détacher un panneau dans sa propre fenêtre | Multi-écran : la carte d'un côté, le code de l'autre ; maquette d'abord. | N05 |
 
 ## Plus tard (pas encore de tickets)
 
