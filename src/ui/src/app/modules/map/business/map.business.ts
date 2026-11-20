@@ -51,6 +51,13 @@ import {
 import { interpolateLayout, layoutGraph, type MapLayout, type Rect } from '../helpers/layout.logic';
 import { createBoxGrid } from '../helpers/box-grid.logic';
 import { edgeState, type EdgeState } from '../helpers/edge-state.logic';
+import {
+  edgeBounds,
+  edgeInView,
+  partitionEdges,
+  type EdgeDetail,
+} from '../helpers/edge-culling.logic';
+import { onImpactPath, type ImpactMarks } from '../../review/helpers/impact.logic';
 import { buildNodeInfos, type NodeInfo } from '../helpers/node-info.logic';
 import { headRef } from '../helpers/repo.logic';
 import { containerToLoad, zoomedBox } from '../helpers/subgraph.logic';
@@ -62,7 +69,13 @@ import {
 } from '../helpers/external.logic';
 import { buildSearchIndex, searchNodes, type SearchResult } from '../helpers/search.logic';
 import { edgesAround, nodeEdges } from '../helpers/node-edges.logic';
-import { edgeEmphasis, nodeEmphasis, type Selection } from '../helpers/emphasis.logic';
+import {
+  edgeEmphasis,
+  edgeKey,
+  nodeEmphasis,
+  type EdgeEmphasis,
+  type Selection,
+} from '../helpers/emphasis.logic';
 import {
   canGoBack,
   canGoForward,
@@ -120,6 +133,8 @@ export interface EdgeLine extends EdgeState {
   shape: EdgeShape;
   selected: boolean;
 }
+
+interface DetailedEdgeLine extends EdgeLine, EdgeDetail {}
 
 /** A logical coupling edge placed in the world. */
 export interface CoChangeLine {
@@ -449,66 +464,116 @@ export class MapBusiness {
     }),
   );
 
-  /** What each edge says apart from its shape: diff, rules, counts, label, tooltip. */
-  private readonly edgeStates = computed(() =>
-    measured('edgeStates', () => {
-      const translate = this._translate().t;
-      const diff = this._diff()?.diff;
-      const violations = this._violations();
-      const context = {
-        diff,
-        violations,
-        words: {
-          new: translate('map.edges.new'),
-          moved: translate('map.edges.moved'),
-        },
-        label: (id: string) => this.label(id),
-        unit: (count: number) =>
-          translate(count === 1 ? 'map.edges.links_one' : 'map.edges.links', { count }),
-      };
-      const states = new Map<string, EdgeState>();
-      for (const edge of this.edges())
-        states.set(pairKey(edge.from, edge.to), edgeState(edge, context));
-      return states;
-    }),
-  );
+  /**
+   * What each edge says apart from its shape (diff, rules, counts, label, tooltip). The states are
+   * made on demand, for the edges in view only, and kept until the inputs change.
+   */
+  private readonly edgeStates = computed(() => {
+    const translate = this._translate().t;
+    const diff = this._diff()?.diff;
+    const violations = this._violations();
+    const context = {
+      diff,
+      violations,
+      words: {
+        new: translate('map.edges.new'),
+        moved: translate('map.edges.moved'),
+      },
+      label: (id: string) => this.label(id),
+      unit: (count: number) =>
+        translate(count === 1 ? 'map.edges.links_one' : 'map.edges.links', { count }),
+    };
+    this.edges();
+    const cache = new Map<string, EdgeState>();
+    // Makes the missing states of `wanted` (one measure per batch) and returns them by edge.
+    return (wanted: readonly AggregatedEdge[]): ((edge: AggregatedEdge) => EdgeState) => {
+      const missing = wanted.filter((edge) => !cache.has(pairKey(edge.from, edge.to)));
+      if (missing.length > 0) {
+        measured('edgeStates', () => {
+          for (const edge of missing)
+            cache.set(pairKey(edge.from, edge.to), edgeState(edge, context));
+        });
+      }
+      return (edge) => cache.get(pairKey(edge.from, edge.to)) as EdgeState;
+    };
+  });
 
-  /** The shape of each edge: follows the layout, the scale of the last rest and the boxes. */
+  /** The shape of an edge, made on demand: follows the layout, the last rest scale and the boxes. */
   private readonly edgeShapes = computed(() => {
     const layout = this._layout();
     const scale = this.modesScale();
     const boxes = this.boxGrid();
-    const shapes = new Map<string, EdgeShape>();
-    for (const edge of this.edges()) {
-      const a = layout.nodes.get(edge.from);
-      const b = layout.nodes.get(edge.to);
-      if (a && b) shapes.set(pairKey(edge.from, edge.to), edgeShape(a, b, boxes, scale));
-    }
-    return shapes;
+    this.edges();
+    const cache = new Map<string, EdgeShape>();
+    return (edge: AggregatedEdge, a: Rect, b: Rect): EdgeShape => {
+      const key = pairKey(edge.from, edge.to);
+      let shape = cache.get(key);
+      if (!shape) {
+        shape = edgeShape(a, b, boxes, scale);
+        cache.set(key, shape);
+      }
+      return shape;
+    };
   });
 
-  /** Edges in world units: they follow the camera through the transform of their layer. */
-  readonly edgeLines = computed<EdgeLine[]>(() =>
+  /** The impact radius painted on the map: its edges keep their full rendering. */
+  private readonly _impact = signal<ImpactMarks | null>(null);
+
+  /** The edges that meet the screen (and its render margin), with what decides their rendering. */
+  private readonly viewEdges = computed<DetailedEdgeLine[]>(() =>
     measured('edgeLines', () => {
       const shapes = this.edgeShapes();
       const states = this.edgeStates();
       const selected = this.selectedEdge();
-      const lines: EdgeLine[] = [];
+      const impact = this._impact();
+      const emphasis = this.selection() ? this.emphasis().edges : null;
+      const layout = this._layout();
+      const camera = this._cullCamera();
+      const viewport = this._viewport();
+      // Until the view is measured there is nothing to cut the edges against.
+      const measuredView = viewport.width > 0 && viewport.height > 0;
+      const inView: { edge: AggregatedEdge; a: Rect; b: Rect }[] = [];
       for (const edge of this.edges()) {
-        const key = pairKey(edge.from, edge.to);
-        const shape = shapes.get(key);
-        const state = states.get(key);
-        if (!shape || !state) continue;
+        const a = layout.nodes.get(edge.from);
+        const b = layout.nodes.get(edge.to);
+        if (!a || !b) continue;
+        if (measuredView && !edgeInView(edgeBounds(a, b), camera, viewport, RENDER_MARGIN))
+          continue;
+        inView.push({ edge, a, b });
+      }
+      const stateOf = states(inView.map((v) => v.edge));
+      const lines: DetailedEdgeLine[] = [];
+      for (const { edge, a, b } of inView) {
+        const shape = shapes(edge, a, b);
+        const state = stateOf(edge);
+        const isSelected =
+          selected !== null && selected.from === edge.from && selected.to === edge.to;
         lines.push({
           edge,
           shape,
-          selected: selected !== null && selected.from === edge.from && selected.to === edge.to,
+          selected: isSelected,
           ...state,
+          changed: edge.changed || state.status !== 'unchanged',
+          // An edge the selection singles out (linked, picked, folded) keeps its full rendering,
+          // so that the common path only holds edges the selection dims.
+          onImpactPath: onImpactPath(impact, edge.from, edge.to) || singledOut(edge, emphasis),
         });
       }
       return lines;
     }),
   );
+
+  private readonly partitionedEdges = computed(() => partitionEdges(this.viewEdges()));
+
+  /** Edges in world units, in full rendering: they follow the camera through their layer. */
+  readonly edgeLines = computed<EdgeLine[]>(() => this.partitionedEdges().full);
+
+  /** The unchanged edges drawn in one common path once many are on screen. */
+  readonly mergedEdgeLines = computed<EdgeLine[]>(() => this.partitionedEdges().merged);
+
+  setImpact(impact: ImpactMarks | null): void {
+    this._impact.set(impact);
+  }
 
   /** How the selection dims the nodes and the edges; it follows the selection, not the camera. */
   readonly emphasis = computed(() =>
@@ -741,8 +806,17 @@ export class MapBusiness {
   }
 
   setViewport(width: number, height: number): void {
+    const unmeasured = this._viewport().width === 0 || this._viewport().height === 0;
     this._viewport.set({ width, height });
-    if (this.pristine && this._layout().roots.length > 0) this.setCamera(this.fitCamera(), true);
+    if (this._layout().roots.length === 0) return;
+    if (this.pristine) this.setCamera(this.fitCamera(), true);
+    // A level chosen before the first measure was aimed at an empty view: aim at it again. The
+    // camera is fitted first: the flight to the level starts from the current camera, and
+    // interpolating from the one made for the empty view (negative scale) gives NaN.
+    else if (unmeasured && width > 0 && height > 0) {
+      this.setCamera(this.fitCamera(), true);
+      this.setLevel(this._forcedLevel() ?? 0);
+    }
   }
 
   async load(): Promise<void> {
@@ -1041,6 +1115,15 @@ export class MapBusiness {
     };
     this.animation = requestAnimationFrame(step);
   }
+}
+
+/** Whether the selection singles the edge out (linked, picked or folded), rather than dims it. */
+function singledOut(
+  edge: AggregatedEdge,
+  emphasis: ReadonlyMap<string, EdgeEmphasis> | null,
+): boolean {
+  const state = emphasis?.get(edgeKey(edge.from, edge.to));
+  return state !== undefined && state !== 'dim' && state !== 'normal';
 }
 
 function pairKey(from: string, to: string): string {

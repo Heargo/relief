@@ -415,6 +415,18 @@
     transform-origin: 0 0;
   }
 
+  .merged-edges {
+    fill: none;
+    stroke: var(--relief-faint);
+    vector-effect: non-scaling-stroke;
+    opacity: 0.6;
+    pointer-events: stroke;
+
+    &.dim {
+      opacity: 0.12;
+    }
+  }
+
   .edge {
     --edge-color: var(--relief-faint);
 

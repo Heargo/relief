@@ -41,6 +41,11 @@ import {
 } from '../../../review/helpers/impact.logic';
 import type { ReadingNodeState } from '../../../review/business/reading-order.business';
 import { isClick } from '../../helpers/pointer.logic';
+import { mergedEdgesPath, nearestEdge } from '../../helpers/edge-culling.logic';
+
+/** Distance, in screen pixels, within which a click picks a merged edge. */
+const MERGED_PICK_PX = 6;
+const MERGED_TESTID = 'map-edges-merged';
 
 /**
  * The map. Node positions are written straight into the DOM on every frame (one div per visible
@@ -96,6 +101,7 @@ export class MapCanvasComponent {
   private readonly elements = new Map<string, HTMLElement>();
   private readonly edgeElements = new Map<string, SVGGElement>();
   private readonly coChangeElements = new Map<string, SVGGElement>();
+  private mergedElement: SVGPathElement | null = null;
 
   constructor() {
     effect(() => {
@@ -151,6 +157,16 @@ export class MapCanvasComponent {
       untracked(() => measured('syncNodeEmphasis', () => this.syncNodeEmphasis(nodes, impact)));
     });
     effect(() => {
+      const impact = this.impact();
+      untracked(() => this.map.setImpact(impact));
+    });
+    effect(() => {
+      const lines = this.map.mergedEdgeLines();
+      // What is left in the common path is what a selection dims.
+      const dim = this.map.selection() !== null;
+      untracked(() => measured('syncMergedEdges', () => this.syncMergedEdges(lines, dim)));
+    });
+    effect(() => {
       const lines = this.map.edgeLines();
       const impact = this.impact();
       untracked(() => measured('syncEdges', () => this.syncEdges(lines, impact)));
@@ -184,15 +200,44 @@ export class MapCanvasComponent {
   }
 
   /** A click without drag: a node box selects it, empty map deselects (edges have their own). */
-  private onClick(target: Element | null): void {
-    if (!target || target.closest('.map-levels, .map-crumbs, .map-legend, [data-from]')) return;
+  private onClick(target: Element | null, at: { x: number; y: number }): void {
+    if (
+      !target ||
+      target.closest(
+        `.map-levels, .map-crumbs, .map-legend, [data-from], [data-testid="${MERGED_TESTID}"]`,
+      )
+    )
+      return;
+    // The strokes of the common path are thin, and nodes may lie under them: pick by proximity.
+    if (this.pickMerged(at.x, at.y)) return;
     const id = target.closest<HTMLElement>('[data-node-id]')?.dataset['nodeId'];
     if (id) this.map.selectNode(id);
     else this.map.deselectNode();
   }
 
+  /** Selects the merged edge nearest to a client point, if one is within reach. */
+  private pickMerged(clientX: number, clientY: number): boolean {
+    const lines = this.map.mergedEdgeLines();
+    if (lines.length === 0) return false;
+    const rect = this.canvas().nativeElement.getBoundingClientRect();
+    const { scale, tx, ty } = this.map.camera();
+    const point = { x: (clientX - rect.left - tx) / scale, y: (clientY - rect.top - ty) / scale };
+    const found = nearestEdge(
+      lines.map((l) => ({ d: l.shape.d, edge: l.edge })),
+      point,
+      MERGED_PICK_PX / Math.abs(scale),
+    );
+    if (!found) return false;
+    this.map.selectEdge(found.edge.from, found.edge.to);
+    return true;
+  }
+
   protected onEdgesClick(event: MouseEvent): void {
     const target = event.target instanceof Element ? event.target : null;
+    if (target?.getAttribute('data-testid') === MERGED_TESTID) {
+      this.pickMerged(event.clientX, event.clientY);
+      return;
+    }
     const edge = target?.closest<SVGElement>('[data-from]');
     const { from, to } = edge?.dataset ?? {};
     if (from && to) this.map.selectEdge(from, to);
@@ -213,7 +258,8 @@ export class MapCanvasComponent {
     const down = { x: event.clientX, y: event.clientY };
     const up = (ev: PointerEvent) => {
       root.classList.remove('panning');
-      if (isClick(down, { x: ev.clientX, y: ev.clientY })) this.onClick(target);
+      if (isClick(down, { x: ev.clientX, y: ev.clientY }))
+        this.onClick(target, { x: ev.clientX, y: ev.clientY });
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', up);
     };
@@ -384,6 +430,23 @@ export class MapCanvasComponent {
       group.remove();
       this.coChangeElements.delete(key);
     }
+  }
+
+  /** The unchanged edges of a crowded screen: one path, no arrow, label or hit zone. */
+  private syncMergedEdges(lines: EdgeLine[], dim: boolean): void {
+    if (lines.length === 0) {
+      this.mergedElement?.remove();
+      this.mergedElement = null;
+      return;
+    }
+    if (!this.mergedElement) {
+      const path = svgEl('path', 'merged-edges');
+      path.setAttribute('data-testid', MERGED_TESTID);
+      this.edgesLayer().nativeElement.prepend(path);
+      this.mergedElement = path;
+    }
+    this.mergedElement.classList.toggle('dim', dim);
+    this.mergedElement.setAttribute('d', mergedEdgesPath(lines.map((l) => l.shape.d)));
   }
 
   private syncEdges(lines: EdgeLine[], impact: ImpactMarks | null): void {

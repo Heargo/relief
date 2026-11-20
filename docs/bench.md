@@ -165,6 +165,33 @@ Nodes and edges are in world units in two layers that carry the same `translate(
 - Zoom: the marked computations are now under 3 ms p95 (`edgeLines` 2, `edgeStates` 0 to 1, `emphasis` 1), but a scale threshold crossing still changes the shape of every edge (bend, arrow head and label room are in screen pixels), so every edge is rewritten: `edgeWrite` 56 ms p95 per frame with a write, `syncEdges` 24 ms p95. The p95 < 33 ms budget is not held: drawing fewer edges and a level of detail are S08.
 - Selection: the marked work is about 11 ms (`syncNodes` 6, `selectedNodeEdges` 3, emphasis 1, `syncNodeEmphasis` 1; `selectedEdge` is not run). The other ~100 ms (estimated by subtraction, not measured) are outside the marks: Angular change detection of the side panel and the node edges, then the browser's style recalculation of the `data-emph` and class changes on 1,349 nodes and 4,500 edges. The p95 < 100 ms budget is not held and this part is taken by S13 (selection under the budget).
 
+### After S08 (edges out of the view and level of detail)
+
+Edges whose box (the two boxes they join, `edgeBounds`) does not meet the view plus the 120 px render margin are not created. Beyond 500 edges on screen (`EDGE_MERGE_THRESHOLD`), the unchanged edges are one `path` (`map-edges-merged`, no arrow, label or hit zone); changed, violating, selected and impact-path edges keep the full rendering. A click is matched to a merged edge by `nearestEdge` (6 px, pure function). `work` p95 in ms, same harness, fit / zoomed (excalidraw: fit / zoomed). Two runs differ a lot on the zoom lines (the zoom p95 rests on a few frames above 100 ms), both are given:
+
+| Scenario   | dense before (S07) | dense after (run 1 / run 2) | excalidraw before (S06) | excalidraw after (run 1 / run 2) |
+| ---------- | ------------------ | --------------------------- | ----------------------- | -------------------------------- |
+| Pan        | 126 / 12           | 11 / 11 and 10 / 11         | 53 / 32                 | 11 / 7 and 3 / 7                 |
+| Wheel zoom | 174 / 341          | 40 / 62 and 38 / 220        | 625 / 296               | 401 / 110 and 120 / 114          |
+| Selection  | 166 / 140          | 171 / 144 and 163 / 136     | 253 / 248               | 106 / 104 and 151 / 135          |
+
+- Pan: the budget (p95 < 16 ms) is held on both repositories, fit and zoomed.
+- Zoom: the budget (p95 < 33 ms) is not held. What is left: `allEdges` (7 to 10 ms) and `edgeStates` (15 to 19 ms on excalidraw) are recomputed for every edge at each threshold crossing, whatever the view; `syncNodes` 9 to 12 ms; the rest is style and layout of the browser. Computing the states and the shapes of the edges in view only is the next step.
+- Selection: not in the scope of S08 (S13).
+
+#### S08, second step (states and shapes of the edges in view only)
+
+The state and the shape of an edge are made on demand, for the edges that meet the view plus the render margin, and kept per edge until `edges`, `diff`, `violations`, the language, the layout or the scale change. The edges a selection singles out (linked, picked, folded) keep their full rendering, so the common path only holds edges the selection dims; it is dimmed (`dim`) while something is selected. `work` p95 in ms, two passes (run A / run B), fit / zoomed:
+
+| Scenario   | dense                   | excalidraw              |
+| ---------- | ----------------------- | ----------------------- |
+| Pan        | 14 / 12 and 11 / 11     | 3 / 9 and 3 / 7         |
+| Wheel zoom | 49 / 204 and 41 / 202   | 116 / 106 and 111 / 100 |
+| Selection  | 160 / 148 and 163 / 136 | 170 / 142 and 157 / 146 |
+
+- Pan: budget held on both, except dense fit at 14 ms in run A (12 ms zoomed), still under 16.
+- Zoom: the budget (p95 < 33 ms) is still not held. The marked work is now small (`edgeStates` 2 to 8 ms, `edgeLines` 4 to 18, `syncNodes` 4 to 9, `allEdges` 4 to 10; `compute` 19 to 23 ms in total, `dom` 5 to 12, `layout` 11 to 15). What is left, 40 to 200 ms, is outside the marks: the browser's style recalculation and paint-side work on the 1,300 to 1,500 nodes (dense zoomed: 1,379 nodes, 30 edges) at each threshold crossing, which changes the content of every open box. Taking it needs fewer node rewrites per crossing (nodes, not edges), which is not in S08.
+
 ## Shallow clones
 
 The clones are shallow (`--depth 400`). `repo_id` (the name of the data folder when it falls back to the user cache, and a cache key) is the SHA of the oldest stored commit, so it is not the same as in a full clone of the same repository, nor between clones of different depths. Churn and co-change ignore the commit at the shallow boundary (no parent to compare it with). The measures above (indexing, `analyse`, budgeted snapshot) do not depend on either, so they were not run again.

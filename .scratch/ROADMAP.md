@@ -152,7 +152,7 @@ Brainstorm du 2026-11-20 : la carte rame sur un gros écran et les budgets de S0
 | ✓ | 51b | **S05** Mesurer le rendu de la carte | La carte rame sur un gros écran ; fixture `dense`, `just bench-ui` et budget de rendu. | S02 |
 | ✓ | 51c | **S06** Caméra en un seul transform | Un pan ne recalcule plus rien ; le zoom recalcule au repos. | S05 |
 | ✓ | 51d | **S07** Ne recalculer à chaque frame que ce qui suit la caméra | Modes, état des arêtes, emphase et étiquettes recalculés à chaque frame. | S05 |
-| ☐ | 51e | **S08** Arêtes : hors de la vue et niveau de détail | Toutes les arêtes du niveau sont dans le DOM. | S06 |
+| ✓ | 51e | **S08** Arêtes : hors de la vue et niveau de détail | Toutes les arêtes du niveau sont dans le DOM. | S06 |
 | ☐ | 51f | **S09** Disposition et croisements hors du thread principal | Seulement si S05 trouve une longue tâche au chargement. | S05 |
 | ☐ | 51g | **S10** Indexation parallèle | Indexation mono-thread : n8n 54 s à froid. | S04 |
 | ☐ | 51h | **S11** Analyse incrémentale d'une plage | Diff d'une PR : 3,1 s et 65 s pour un budget de 1 s. | S04 |

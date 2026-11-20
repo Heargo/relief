@@ -98,6 +98,8 @@ Au-delà d'environ 2 000 nœuds, relief n'envoie pas tout le graphe à l'écran 
 
 En relecture, relief n'envoie que ce qui sert à la relecture : les nœuds changés, leurs voisins directs et leurs ancêtres ; les autres conteneurs restent fermés. La carte démarre au niveau Fichiers, si bien que les fichiers changés sont visibles sans zoomer.
 
+Sur une carte qui montre beaucoup d'arêtes à la fois (plus de 500 à l'écran), relief ne dessine en entier que celles qui comptent : changées, en violation, sélectionnées ou sur le rayon d'impact. Les autres sont tracées en traits fins, sans flèche ni étiquette ; un clic sur l'un de ces traits sélectionne quand même l'arête et ouvre son inspecteur. Les arêtes dont aucune partie n'est à l'écran ne sont pas dessinées.
+
 ## Disposition
 
 La section **Disposition**, dans la barre de gauche, choisit comment les boîtes sont rangées dans leur conteneur.

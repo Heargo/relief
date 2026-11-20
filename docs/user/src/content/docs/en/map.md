@@ -98,6 +98,8 @@ Beyond about 2,000 nodes, relief does not send the whole graph to the screen at 
 
 In review, relief only sends what the review needs: the changed nodes, their direct neighbours and their ancestors; the other containers stay closed. The map starts at the Files level, so the changed files are visible without zooming.
 
+On a map that shows many edges at once (over 500 on screen), relief only draws in full the ones that matter: changed, breaking a rule, selected or on the impact radius. The others are drawn as thin lines, without arrow or label; clicking one of those lines still selects the edge and opens its inspector. Edges with no part on screen are not drawn.
+
 ## Layout
 
 The **Layout** section, in the left sidebar, chooses how boxes are arranged inside their container.
