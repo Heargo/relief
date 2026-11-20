@@ -7,6 +7,7 @@ import {
   effect,
   ElementRef,
   inject,
+  PendingTasks,
   OnInit,
   signal,
   untracked,
@@ -393,17 +394,24 @@ export class MapPageComponent implements OnInit {
     });
   }
 
+  private readonly pending = inject(PendingTasks);
+
   ngOnInit(): void {
-    void this.repo.load().then(() =>
-      this.review.load(this.repo.range()).then(() => {
-        // A big repository: the review subgraph holds the changed files, shown without a zoom.
-        const diff = this.review.diff();
-        if (diff?.graph && diff.diff.nodes.length > 0 && isPartial(diff.graph)) {
-          this.map.whenShown(() => this.map.setLevel(CHANGED_FILES_LEVEL));
-        }
-        this.diffSettled.set(true);
-      }),
-    );
+    void this.repo.load().then(() => {
+      // The page is stable once the map is drawn, not as soon as the diff is read.
+      const done = this.pending.add();
+      return this.review
+        .load(this.repo.range())
+        .then(() => {
+          // A big repository: the review subgraph holds the changed files, shown without a zoom.
+          const diff = this.review.diff();
+          if (diff?.graph && diff.diff.nodes.length > 0 && isPartial(diff.graph)) {
+            this.map.whenShown(() => this.map.setLevel(CHANGED_FILES_LEVEL));
+          }
+          this.diffSettled.set(true);
+        })
+        .finally(done);
+    });
   }
 
   protected readonly settingsOpen = signal(false);

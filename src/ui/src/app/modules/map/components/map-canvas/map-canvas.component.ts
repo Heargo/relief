@@ -23,21 +23,15 @@ import {
   type VisibleNode,
 } from '../../business/map.business';
 import type { Crumb } from '../../helpers/breadcrumb.logic';
-import {
-  edgeLabel,
-  edgeLabelClass,
-  edgeLabelVisible,
-  type EdgeLabelClass,
-  edgeThickness,
-  edgeTooltip,
-} from '../../helpers/edges.logic';
+import { edgeSyncKey } from '../../helpers/edge-state.logic';
+import { edgeLabelVisible, edgeThickness } from '../../helpers/edges.logic';
 import {
   closedLabelVisible,
   headerStyle,
   headerLayout,
   type HeaderLayout,
 } from '../../helpers/header.logic';
-import { edgeEmphasis, edgeKey, nodeEmphasis } from '../../helpers/emphasis.logic';
+import { type EdgeEmphasis, edgeKey, type NodeEmphasis } from '../../helpers/emphasis.logic';
 import { nodeContent, sizeClass } from '../../helpers/node-content.logic';
 import {
   type ImpactMarks,
@@ -46,7 +40,6 @@ import {
   onImpactPath,
 } from '../../../review/helpers/impact.logic';
 import type { ReadingNodeState } from '../../../review/business/reading-order.business';
-import type { Selection } from '../../helpers/emphasis.logic';
 import { isClick } from '../../helpers/pointer.logic';
 
 /**
@@ -121,6 +114,11 @@ export class MapCanvasComponent {
       untracked(() => this.map.setViolations(violations));
     });
     effect(() => {
+      // A new object per language: the texts written on the edges follow it.
+      this.language.current();
+      untracked(() => this.map.setTranslator((key, params) => this.language.t(key, params)));
+    });
+    effect(() => {
       const name = this.repoName();
       untracked(() => this.map.setRepoName(name));
     });
@@ -139,23 +137,28 @@ export class MapCanvasComponent {
       const archi = this.archi();
       const risk = this.risk();
       const loading = this.loading();
-      const selection = this.map.selection();
       untracked(() => {
         measured('syncNodes', () =>
           this.sync(nodes, lang, impact, reading, focus, archi, risk, loading),
         );
-        measured('syncNodeEmphasis', () => this.syncNodeEmphasis(nodes, impact, selection));
       });
     });
     effect(() => {
-      const lines = this.map.edgeLines();
-      const lang = this.language.current();
+      // The selection dims nodes and edges: it follows the selection, not the camera.
+      const { nodes } = this.map.emphasis();
+      this.map.visibleNodes();
       const impact = this.impact();
-      const selection = this.map.selection();
-      untracked(() => {
-        measured('syncEdges', () => this.syncEdges(lines, lang, impact));
-        measured('syncEdgeEmphasis', () => this.syncEdgeEmphasis(lines, selection));
-      });
+      untracked(() => measured('syncNodeEmphasis', () => this.syncNodeEmphasis(nodes, impact)));
+    });
+    effect(() => {
+      const lines = this.map.edgeLines();
+      const impact = this.impact();
+      untracked(() => measured('syncEdges', () => this.syncEdges(lines, impact)));
+    });
+    effect(() => {
+      const { edges } = this.map.emphasis();
+      this.map.edgeLines();
+      untracked(() => measured('syncEdgeEmphasis', () => this.syncEdgeEmphasis(edges)));
     });
     effect(() => {
       const lines = this.map.coChangeLines();
@@ -238,6 +241,11 @@ export class MapCanvasComponent {
       );
     };
     root.addEventListener('wheel', wheel, { passive: false });
+    const hover = (event: Event) => this.ensureTooltip(event);
+    this.edgesLayer().nativeElement.addEventListener('pointerover', hover);
+    this.destroyRef.onDestroy(() =>
+      this.edgesLayer().nativeElement.removeEventListener('pointerover', hover),
+    );
     this.destroyRef.onDestroy(() => root.removeEventListener('wheel', wheel));
   }
 
@@ -326,40 +334,29 @@ export class MapCanvasComponent {
 
   /** Selection dimming of the nodes; it never touches `data-faded` (the focus layer's). */
   private syncNodeEmphasis(
-    nodes: VisibleNode[],
+    states: ReadonlyMap<string, NodeEmphasis>,
     impact: ImpactMarks | null,
-    selection: Selection | null,
   ): void {
-    const keep = new Set<string>(impact ? [...impact.reached, ...impact.scope] : []);
-    const states = nodeEmphasis(
-      nodes.map((n) => n.id),
-      this.map.edgeLines().map((l) => l.edge),
-      selection,
-      (id) => this.map.visibleOf(id),
-      keep,
-      (id, box) => this.map.within(id, box),
-    );
-    for (const [id, state] of states) {
-      const el = this.elements.get(id);
-      if (!el) continue;
-      if (state === 'dim') el.dataset['emph'] = 'dim';
-      else delete el.dataset['emph'];
+    for (const [id, el] of this.elements) {
+      const kept = !!impact && (impact.reached.has(id) || impact.scope.has(id));
+      const dim = states.get(id) === 'dim' && !kept;
+      if (dim) {
+        if (el.dataset['emph'] !== 'dim') el.dataset['emph'] = 'dim';
+      } else if (el.dataset['emph'] !== undefined) delete el.dataset['emph'];
     }
   }
 
   /** Selection classes on the edge groups: out / in / picked / dim / hidden. */
-  private syncEdgeEmphasis(lines: EdgeLine[], selection: Selection | null): void {
-    const states = edgeEmphasis(
-      lines.map((l) => l.edge),
-      selection,
-      (id) => this.map.visibleOf(id),
-      (id, box) => this.map.within(id, box),
-    );
-    for (const { edge } of lines) {
-      const group = this.edgeElements.get(`${edge.from}>${edge.to}`);
-      const state = states.get(edgeKey(edge.from, edge.to)) ?? 'normal';
-      for (const cls of ['out', 'in', 'picked', 'dim', 'hidden'])
-        group?.classList.toggle(cls, cls === state);
+  private syncEdgeEmphasis(states: ReadonlyMap<string, EdgeEmphasis>): void {
+    for (const [key, group] of this.edgeElements) {
+      this.applyEdgeEmphasis(group, states.get(emphasisKey(key)) ?? 'normal');
+    }
+  }
+
+  private applyEdgeEmphasis(group: SVGGElement, state: EdgeEmphasis): void {
+    for (const cls of EMPHASIS_CLASSES) {
+      const on = cls === state;
+      if (group.classList.contains(cls) !== on) group.classList.toggle(cls, on);
     }
   }
 
@@ -389,94 +386,85 @@ export class MapCanvasComponent {
     }
   }
 
-  private syncEdges(lines: EdgeLine[], lang: string, impact: ImpactMarks | null): void {
+  private syncEdges(lines: EdgeLine[], impact: ImpactMarks | null): void {
     const svg = this.edgesLayer().nativeElement;
     const scale = this.map.modesScale();
+    const emphasis = this.map.emphasis().edges;
     const seen = new Set<string>();
-    for (const {
-      edge,
-      shape,
-      selected,
-      status,
-      violations,
-      added,
-      removed,
-      moved,
-      review,
-    } of lines) {
+    for (const line of lines) {
+      const { edge, shape, selected, status, violations, label } = line;
       const key = `${edge.from}>${edge.to}`;
       seen.add(key);
-      let group = this.edgeElements.get(key);
-      const tip = edgeTooltip(
-        edge,
-        (id) => this.map.label(id),
-        (count) =>
-          this.language.t(count === 1 ? 'map.edges.links_one' : 'map.edges.links', { count }),
-      );
-      if (!group) {
-        group = svgEl('g', 'edge');
-        group.append(
-          svgEl('path', 'hit'),
-          svgEl('path', 'line'),
-          svgEl('path', 'arrow'),
-          svgEl('g', 'tag'),
-        );
-        const tag = group.lastElementChild as SVGGElement;
-        tag.setAttribute('data-testid', 'map-edge');
-        svg.appendChild(group);
-        this.edgeElements.set(key, group);
-      }
-      const [hit, line, arrow, tag] = Array.from(group.children) as SVGElement[];
-      group.setAttribute(
-        'class',
-        `edge st-${status}${selected ? ' sel' : ''}${edge.changed ? ' changed' : ''}${onImpactPath(impact, edge.from, edge.to) ? ' imp-path' : ''}${violations.introduced > 0 ? ' viol-new' : violations.existing > 0 ? ' viol-old' : ''}`,
-      );
-      tag?.setAttribute('data-status', status);
-      for (const el of [hit, tag]) {
-        el?.setAttribute('data-from', edge.from);
-        el?.setAttribute('data-to', edge.to);
-      }
-      tag?.setAttribute('data-count', String(edge.count));
-      tag?.classList.toggle('covered', shape.covered);
-      hit?.setAttribute('d', shape.d);
-      line?.setAttribute('d', shape.d);
-      line?.setAttribute('stroke-width', String(edgeThickness(edge.count)));
-      arrow?.setAttribute('d', shape.arrow);
-      const classInput = { count: edge.count, added, removed, moved, violations, review };
-      const cls = edgeLabelClass(classInput) as EdgeLabelClass;
       const hl = onImpactPath(impact, edge.from, edge.to);
-      const label = edgeLabel(
-        { count: edge.count, added, removed, moved, cls, review },
-        { new: this.language.t('map.edges.new'), moved: this.language.t('map.edges.moved') },
-      );
-      let text = tag?.querySelector('text');
-      if (tag && edgeLabelVisible(label, shape.length)) {
-        if (!text) {
-          text = svgEl('text', '');
-          tag.appendChild(text);
+      const syncKey = `${edgeSyncKey(shape, line, selected, scale)}|${edge.count}|${edge.changed}|${hl}`;
+      let group = this.edgeElements.get(key);
+      if (group?.dataset['key'] === syncKey) continue;
+      measured('edgeWrite', () => {
+        if (!group) {
+          group = svgEl('g', 'edge');
+          group.append(
+            svgEl('path', 'hit'),
+            svgEl('path', 'line'),
+            svgEl('path', 'arrow'),
+            svgEl('g', 'tag'),
+          );
+          const tag = group.lastElementChild as SVGGElement;
+          tag.setAttribute('data-testid', 'map-edge');
+          svg.appendChild(group);
+          this.edgeElements.set(key, group);
         }
-        text.setAttribute('class', `el ${edgeLabelClass({ ...classInput, highlighted: hl })}`);
-        text.textContent = label;
-        // Drawn in screen pixels at the scale of the last rest, whatever the layer's scale.
-        text.setAttribute('transform', `translate(${shape.mx} ${shape.my}) scale(${1 / scale})`);
-      } else {
-        text?.remove();
-      }
-      if (group.dataset['tip'] !== `${tip}|${lang}`) {
-        group.dataset['tip'] = `${tip}|${lang}`;
+        group.dataset['key'] = syncKey;
+        const [hit, path, arrow, tag] = Array.from(group.children) as SVGElement[];
+        group.setAttribute(
+          'class',
+          `edge st-${status}${selected ? ' sel' : ''}${edge.changed ? ' changed' : ''}${hl ? ' imp-path' : ''}${violations.introduced > 0 ? ' viol-new' : violations.existing > 0 ? ' viol-old' : ''}`,
+        );
+        this.applyEdgeEmphasis(group, emphasis.get(edgeKey(edge.from, edge.to)) ?? 'normal');
+        tag?.setAttribute('data-status', status);
         for (const el of [hit, tag]) {
-          el?.querySelector('title')?.remove();
-          const title = svgEl('title', '');
-          title.textContent = tip;
-          el?.prepend(title);
+          el?.setAttribute('data-from', edge.from);
+          el?.setAttribute('data-to', edge.to);
         }
-      }
+        tag?.setAttribute('data-count', String(edge.count));
+        tag?.classList.toggle('covered', shape.covered);
+        hit?.setAttribute('d', shape.d);
+        path?.setAttribute('d', shape.d);
+        path?.setAttribute('stroke-width', String(edgeThickness(edge.count)));
+        arrow?.setAttribute('d', shape.arrow);
+        let text = tag?.querySelector('text');
+        if (tag && edgeLabelVisible(label, shape.length)) {
+          if (!text) {
+            text = svgEl('text', '');
+            tag.appendChild(text);
+          }
+          text.setAttribute('class', `el ${hl ? 'hl' : line.cls}`);
+          text.textContent = label;
+          // Drawn in screen pixels at the scale of the last rest, whatever the layer's scale.
+          text.setAttribute('transform', `translate(${shape.mx} ${shape.my}) scale(${1 / scale})`);
+        } else {
+          text?.remove();
+        }
+        // The tooltip is made when the pointer first comes over the edge.
+        group.dataset['tip'] = line.tooltip;
+        for (const el of [hit, tag]) el?.querySelector('title')?.remove();
+      });
     }
     for (const [key, group] of this.edgeElements) {
       if (seen.has(key)) continue;
       group.remove();
       this.edgeElements.delete(key);
     }
+  }
+
+  /** Gives the edge under the pointer its `<title>` (written on the first hover only). */
+  private ensureTooltip(event: Event): void {
+    const target = event.target instanceof Element ? event.target : null;
+    const el = target?.closest<SVGElement>('[data-from]');
+    const tip = el?.closest<SVGGElement>('g.edge')?.dataset['tip'];
+    if (!el || tip === undefined || el.querySelector(':scope > title')) return;
+    const title = svgEl('title', '');
+    title.textContent = tip;
+    el.prepend(title);
   }
 
   /** Diff attributes and classes of a node; the former place of a moved node is its own thing. */
@@ -585,6 +573,14 @@ export class MapCanvasComponent {
     }
     el.appendChild(head);
   }
+}
+
+const EMPHASIS_CLASSES = ['out', 'in', 'picked', 'dim', 'hidden'];
+
+/** The emphasis key (`from\0to`) of an edge element key (`from>to`). */
+function emphasisKey(key: string): string {
+  const at = key.indexOf('>');
+  return edgeKey(key.slice(0, at), key.slice(at + 1));
 }
 
 function span(className: string, text: string): HTMLElement {

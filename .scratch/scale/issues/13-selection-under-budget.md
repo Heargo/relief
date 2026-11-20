@@ -1,0 +1,23 @@
+# S13 Sélection sous le budget
+
+Status: needs-triage
+Type: task
+Blocked by: S07
+UI: oui
+Doc: aucune (`docs/bench.md` complété)
+
+Spec: `../spec.md` (Décisions, phase 10)
+
+## Constat
+
+Mesure après S07 (`docs/bench.md`) : sélectionner un nœud sur `dense` coûte ~160 ms p95 en vue d'ensemble, ~140 ms zoomée, pour un budget de 100 ms. Les marques `relief:*` n'en expliquent que ~15 ms (`syncNodes` 6, `selectedNodeEdges` 3, emphase ~1). Le reste est hors marques : détection de changement d'Angular sur le panneau droit (inspecteur, listes d'arêtes du nœud) et recalcul de style du navigateur sur `data-emph` et les classes de 4 500 arêtes.
+
+## À faire
+
+- Marquer le rendu du panneau droit et mesurer la part du recalcul de style (Performance panel ou `performance.measure` autour du frame suivant).
+- Pistes selon la mesure : emphase portée par une seule classe sur le calque (`.has-selection`) et quelques classes sur les arêtes concernées au lieu d'un attribut sur chaque arête ; listes du panneau en `@for` avec `track` et rendu différé des longues listes ; composants du panneau en `OnPush`.
+
+## Critères d'acceptation
+
+- [ ] `just bench-ui` : sélection p95 < 100 ms sur `dense`, vue d'ensemble et zoomée.
+- [ ] Tous les tests existants passent sans changement de rendu.

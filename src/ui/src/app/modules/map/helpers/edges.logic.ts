@@ -1,4 +1,5 @@
 import type { Edge, EdgeKind } from '../../../core/models/contract';
+import type { BoxGrid } from './box-grid.logic';
 import type { Rect } from './layout.logic';
 
 /** The fine edges between two visible boxes, merged into one directed pair. */
@@ -218,7 +219,7 @@ const ARROW_HALF_WIDTH = 4;
  * what is drawn in screen pixels (bend cap, arrow head, label room), so that the shape is
  * the screen one mapped back to the world.
  */
-export function edgeShape(a: Rect, b: Rect, avoid: Rect[] = [], scale = 1): EdgeShape {
+export function edgeShape(a: Rect, b: Rect, avoid: Rect[] | BoxGrid = [], scale = 1): EdgeShape {
   const ca = { x: a.x + a.w / 2, y: a.y + a.h / 2 };
   const cb = { x: b.x + b.w / 2, y: b.y + b.h / 2 };
   const p0 = borderPoint(a, cb);
@@ -245,13 +246,15 @@ export function edgeShape(a: Rect, b: Rect, avoid: Rect[] = [], scale = 1): Edge
   // The count tag sits mid-curve, slid along it off the boxes it would otherwise hide.
   const free = LABEL_POSITIONS.find((t) => {
     const m = at(t);
-    return !avoid.some(
-      (r) =>
-        m.x + LABEL_HALF_WIDTH / scale > r.x &&
-        m.x - LABEL_HALF_WIDTH / scale < r.x + r.w &&
-        m.y + LABEL_HALF_HEIGHT / scale > r.y &&
-        m.y - LABEL_HALF_HEIGHT / scale < r.y + r.h,
-    );
+    return !(Array.isArray(avoid)
+      ? avoid.some(
+          (r) =>
+            m.x + LABEL_HALF_WIDTH / scale > r.x &&
+            m.x - LABEL_HALF_WIDTH / scale < r.x + r.w &&
+            m.y + LABEL_HALF_HEIGHT / scale > r.y &&
+            m.y - LABEL_HALF_HEIGHT / scale < r.y + r.h,
+        )
+      : (avoid as BoxGrid).hits(m.x, m.y, LABEL_HALF_WIDTH / scale, LABEL_HALF_HEIGHT / scale));
   });
   const mid = at(free ?? 0.5);
   return {

@@ -18,6 +18,10 @@ Toutes les arêtes agrégées du niveau courant sont dans le DOM (4 éléments S
 - Au-delà d'un seuil d'arêtes à l'écran (fixé par la mesure de S05) : les arêtes inchangées sont dessinées dans un seul `path`, sans flèche, sans étiquette ni zone de clic ; les arêtes changées, en violation, sélectionnées ou sur le rayon d'impact gardent leur rendu complet.
 - Une arête du `path` commun reste sélectionnable : clic sur le trait retrouvé par une recherche de proximité (fonction pure), pas par le DOM.
 
+## Reprise de S07
+
+Budget de zoom transféré de S07 : au franchissement d'un seuil d'ouverture, la forme de chaque arête change (courbure, flèche et étiquette en pixels écran), donc toutes sont réécrites (`edgeWrite` 56 ms p95, `syncEdges` 24 ms p95 sur `dense`). Zoom p95 après S07 : 174 / 341 ms pour 33.
+
 ## Critères d'acceptation
 
 - [ ] Budget de S05 tenu au pan et au zoom sur excalidraw.

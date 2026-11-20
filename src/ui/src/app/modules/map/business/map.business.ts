@@ -9,7 +9,7 @@ import type {
   Violation,
   ViolationEdge,
 } from '../../../core/models/contract';
-import { edgeViolations, type Split } from '../../rules/helpers/rules.logic';
+import type { Split } from '../../rules/helpers/rules.logic';
 import { ReliefApiService } from '../../../core/services/relief-api.service';
 import {
   type Camera,
@@ -34,7 +34,6 @@ import {
   visibleAncestor,
 } from '../helpers/edges.logic';
 import {
-  aggregateEdgeStatus,
   diffMarks,
   type DiffStatus,
   edgeStatus,
@@ -50,6 +49,8 @@ import {
   writeLayoutMode,
 } from '../helpers/layout-mode.logic';
 import { interpolateLayout, layoutGraph, type MapLayout, type Rect } from '../helpers/layout.logic';
+import { createBoxGrid } from '../helpers/box-grid.logic';
+import { edgeState, type EdgeState } from '../helpers/edge-state.logic';
 import { buildNodeInfos, type NodeInfo } from '../helpers/node-info.logic';
 import { headRef } from '../helpers/repo.logic';
 import { containerToLoad, zoomedBox } from '../helpers/subgraph.logic';
@@ -61,7 +62,7 @@ import {
 } from '../helpers/external.logic';
 import { buildSearchIndex, searchNodes, type SearchResult } from '../helpers/search.logic';
 import { edgesAround, nodeEdges } from '../helpers/node-edges.logic';
-import type { Selection } from '../helpers/emphasis.logic';
+import { edgeEmphasis, nodeEmphasis, type Selection } from '../helpers/emphasis.logic';
 import {
   canGoBack,
   canGoForward,
@@ -114,20 +115,10 @@ export interface VisibleNode {
 }
 
 /** An aggregated edge placed in the world. */
-export interface EdgeLine {
+export interface EdgeLine extends EdgeState {
   edge: AggregatedEdge;
   shape: EdgeShape;
   selected: boolean;
-  /** Diff status of the edge (unchanged while the layer is off). */
-  status: DiffStatus;
-  /** Violating fine links of the edge; zeros while the rules layer is off. */
-  violations: Split<number>;
-  /** Fine links added, removed and moved by the diff; zeros while the layer is off. */
-  added: number;
-  removed: number;
-  moved: number;
-  /** The diff layer is on. */
-  review: boolean;
 }
 
 /** A logical coupling edge placed in the world. */
@@ -215,6 +206,10 @@ export class MapBusiness {
   private readonly _listedEdge = signal<AggregatedEdge | null>(null);
   private readonly _showUnchangedEdges = signal(true);
   private readonly _diff = signal<DiffResponse | null>(null);
+  /** The language of the edge texts: the translator changes with the language. */
+  private readonly _translate = signal<{
+    t: (key: string, params?: Record<string, unknown>) => string;
+  }>({ t: (key) => key });
   private readonly _violations = signal<readonly Violation[]>([]);
   /** A violating fine edge picked from a rule: the aggregated edge holding it is selected. */
   private readonly _selectedFine = signal<ViolationEdge | null>(null);
@@ -277,7 +272,9 @@ export class MapBusiness {
 
   /** What each node shows (open, box, ghost), for the scale of the last rest or threshold. */
   private readonly modes = computed(() =>
-    computeModes(this._layout(), { scale: this.modesScale(), tx: 0, ty: 0 }, this._cap() ?? 3),
+    measured('modes', () =>
+      computeModes(this._layout(), { scale: this.modesScale(), tx: 0, ty: 0 }, this._cap() ?? 3),
+    ),
   );
 
   readonly visibleNodes = computed<VisibleNode[]>(() =>
@@ -316,15 +313,19 @@ export class MapBusiness {
     }),
   );
 
-  /** The closed boxes, wherever they are: the edge labels slide off them. */
-  private readonly boxRects = computed<Rect[]>(() => {
-    const modes = this.modes();
-    const boxes: Rect[] = [];
-    for (const node of this._layout().nodes.values()) {
-      if (modes.get(node.id) === 'box') boxes.push(node);
-    }
-    return boxes;
-  });
+  /** The closed boxes, wherever they are (camera-free): the edge labels slide off them. */
+  private readonly visibleBoxes = computed<Rect[]>(() =>
+    measured('visibleBoxes', () => {
+      const modes = this.modes();
+      const boxes: Rect[] = [];
+      for (const node of this._layout().nodes.values()) {
+        if (modes.get(node.id) === 'box') boxes.push(node);
+      }
+      return boxes;
+    }),
+  );
+
+  private readonly boxGrid = computed(() => createBoxGrid(this.visibleBoxes()));
 
   /** The closed container the user zooms into, whose content is to be loaded; null for none. */
   readonly containerToLoad = computed<string | null>(() => {
@@ -334,10 +335,11 @@ export class MapBusiness {
     const point = this._zoomPoint();
     if (!point) return containerToLoad(graph, this._diveTarget());
     const camera = this._camera();
-    const boxes = this.visibleNodes()
-      .filter((n) => n.mode === 'box')
+    const layout = this._layout();
+    const boxes = (this.visibleBoxes() as Array<Rect & { id: string }>)
+      .filter((n) => layout.nodes.has(n.id))
       .map((n) => ({
-        ...n,
+        id: n.id,
         x: n.x * camera.scale + camera.tx,
         y: n.y * camera.scale + camera.ty,
         w: n.w * camera.scale,
@@ -373,7 +375,7 @@ export class MapBusiness {
     measured('coChangeLines', () => {
       const layout = this._layout();
       const scale = this.modesScale();
-      const boxes = this.boxRects();
+      const boxes = this.boxGrid();
       const lines: CoChangeLine[] = [];
       for (const edge of aggregateEdges(this._coChangeEdges(), this._parents(), this.boxIds())) {
         const a = layout.nodes.get(edge.from);
@@ -414,62 +416,114 @@ export class MapBusiness {
       level: this.level(),
     }),
   );
-  readonly selectedEdge = computed<AggregatedEdge | null>(() => {
-    const fine = this._selectedFine();
-    if (fine) {
+  readonly selectedEdge = computed<AggregatedEdge | null>(() =>
+    measured('selectedEdge', () => {
+      const fine = this._selectedFine();
+      if (fine) {
+        return (
+          this.allEdges().find((e) =>
+            e.links.some((l) => l.from === fine.from && l.to === fine.to && l.kind === fine.kind),
+          ) ?? null
+        );
+      }
+      const key = this._selectedEdgeKey();
+      if (key === null) return null;
+      const listed = this._listedEdge();
       return (
-        this.allEdges().find((e) =>
-          e.links.some((l) => l.from === fine.from && l.to === fine.to && l.kind === fine.kind),
-        ) ?? null
+        this.allEdges().find((e) => pairKey(e.from, e.to) === key) ??
+        (listed && pairKey(listed.from, listed.to) === key ? listed : null)
       );
-    }
-    const key = this._selectedEdgeKey();
-    if (key === null) return null;
-    const listed = this._listedEdge();
-    return (
-      this.allEdges().find((e) => pairKey(e.from, e.to) === key) ??
-      (listed && pairKey(listed.from, listed.to) === key ? listed : null)
-    );
-  });
+    }),
+  );
 
   /** The edges of the selected node (its descendants folded in), at its own level. */
-  readonly selectedNodeEdges = computed(() => {
-    const id = this._selectedNodeId();
-    if (!id) return nodeEdges([], '');
-    const diff = this._diff()?.diff;
-    const around = edgesAround(this._edges(), this._parents(), this.boxIds(), id, (edge) => {
-      return diff !== undefined && edgeStatus(edge, diff) !== 'unchanged';
-    });
-    return nodeEdges(filterEdges(around, this._showUnchangedEdges()), id);
+  readonly selectedNodeEdges = computed(() =>
+    measured('selectedNodeEdges', () => {
+      const id = this._selectedNodeId();
+      if (!id) return nodeEdges([], '');
+      const diff = this._diff()?.diff;
+      const around = edgesAround(this._edges(), this._parents(), this.boxIds(), id, (edge) => {
+        return diff !== undefined && edgeStatus(edge, diff) !== 'unchanged';
+      });
+      return nodeEdges(filterEdges(around, this._showUnchangedEdges()), id);
+    }),
+  );
+
+  /** What each edge says apart from its shape: diff, rules, counts, label, tooltip. */
+  private readonly edgeStates = computed(() =>
+    measured('edgeStates', () => {
+      const translate = this._translate().t;
+      const diff = this._diff()?.diff;
+      const violations = this._violations();
+      const context = {
+        diff,
+        violations,
+        words: {
+          new: translate('map.edges.new'),
+          moved: translate('map.edges.moved'),
+        },
+        label: (id: string) => this.label(id),
+        unit: (count: number) =>
+          translate(count === 1 ? 'map.edges.links_one' : 'map.edges.links', { count }),
+      };
+      const states = new Map<string, EdgeState>();
+      for (const edge of this.edges())
+        states.set(pairKey(edge.from, edge.to), edgeState(edge, context));
+      return states;
+    }),
+  );
+
+  /** The shape of each edge: follows the layout, the scale of the last rest and the boxes. */
+  private readonly edgeShapes = computed(() => {
+    const layout = this._layout();
+    const scale = this.modesScale();
+    const boxes = this.boxGrid();
+    const shapes = new Map<string, EdgeShape>();
+    for (const edge of this.edges()) {
+      const a = layout.nodes.get(edge.from);
+      const b = layout.nodes.get(edge.to);
+      if (a && b) shapes.set(pairKey(edge.from, edge.to), edgeShape(a, b, boxes, scale));
+    }
+    return shapes;
   });
 
   /** Edges in world units: they follow the camera through the transform of their layer. */
   readonly edgeLines = computed<EdgeLine[]>(() =>
     measured('edgeLines', () => {
-      const layout = this._layout();
-      const scale = this.modesScale();
+      const shapes = this.edgeShapes();
+      const states = this.edgeStates();
       const selected = this.selectedEdge();
-      const diff = this._diff()?.diff;
-      const violations = this._violations();
       const lines: EdgeLine[] = [];
-      const boxes = this.boxRects();
       for (const edge of this.edges()) {
-        const a = layout.nodes.get(edge.from);
-        const b = layout.nodes.get(edge.to);
-        if (!a || !b) continue;
+        const key = pairKey(edge.from, edge.to);
+        const shape = shapes.get(key);
+        const state = states.get(key);
+        if (!shape || !state) continue;
         lines.push({
           edge,
-          shape: edgeShape(a, b, boxes, scale),
+          shape,
           selected: selected !== null && selected.from === edge.from && selected.to === edge.to,
-          status: diff
-            ? aggregateEdgeStatus(edge.links.map((link) => edgeStatus(link, diff)))
-            : 'unchanged',
-          violations: edgeViolations(edge.links, violations),
-          ...linkCounts(edge.links, diff),
-          review: diff !== undefined,
+          ...state,
         });
       }
       return lines;
+    }),
+  );
+
+  /** How the selection dims the nodes and the edges; it follows the selection, not the camera. */
+  readonly emphasis = computed(() =>
+    measured('emphasis', () => {
+      const selection = this.selection();
+      const edges = this.edges();
+      const modes = this.modes();
+      const ids: string[] = [];
+      for (const [id, mode] of modes) if (mode !== 'hidden') ids.push(id);
+      const visibleOf = (id: string) => this.visibleOf(id);
+      const within = (id: string, box: string) => this.within(id, box);
+      return {
+        nodes: nodeEmphasis(ids, edges, selection, visibleOf, new Set(), within),
+        edges: edgeEmphasis(edges, selection, visibleOf, within),
+      };
     }),
   );
 
@@ -535,6 +589,11 @@ export class MapBusiness {
   /** Applies a diff on the map, or none (the map alone). */
   setDiff(diff: DiffResponse | null): void {
     this._diff.set(diff);
+  }
+
+  /** Gives the map the translator of the current language (it writes the edge labels). */
+  setTranslator(t: (key: string, params?: Record<string, unknown>) => string): void {
+    this._translate.set({ t });
   }
 
   /** Colours only these files (the replay of one commit), or everything the diff says (null). */
@@ -990,21 +1049,6 @@ function pairKey(from: string, to: string): string {
 
 function layoutKey(mode: LayoutMode): keyof Layouts {
   return mode === 'raw-grid' ? 'raw' : 'optimized';
-}
-
-function linkCounts(
-  links: Edge[],
-  diff: GraphDiff | undefined,
-): { added: number; removed: number; moved: number } {
-  const counts = { added: 0, removed: 0, moved: 0 };
-  if (!diff) return counts;
-  for (const link of links) {
-    const status = edgeStatus(link, diff);
-    if (status === 'added') counts.added++;
-    else if (status === 'removed') counts.removed++;
-    else if (status === 'moved') counts.moved++;
-  }
-  return counts;
 }
 
 function sameRect(a: Rect, b: Rect): boolean {

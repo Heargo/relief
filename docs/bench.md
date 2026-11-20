@@ -151,6 +151,20 @@ Nodes and edges are in world units in two layers that carry the same `translate(
 - Zoom: no better, and worse where many edges are on screen: each rest or threshold crossing rewrites all the edges (`syncEdges`, 70 to 75 ms p95) and the browser lays out the layer again. S07 (edge drawing) and S08 have to take that: draw fewer edges, do not rewrite unchanged ones.
 - Selection is not in the scope of S06.
 
+### After S07 (only what follows the camera is recomputed)
+
+`computeModes` and the visible boxes are one `computed` each, off the camera; the state of each edge (diff status, violations, counts, label, class, tooltip) is computed once per `edges`, `diff`, `violations` and language (`edgeStates`); the shapes are apart (`edgeShapes`) and the label placement uses a grid of the boxes; the emphasis of the selection (`emphasis`) follows the selection, not the camera; `syncEdges` writes an edge only when its key (shape, state, selection, scale, impact path) changed, and its `<title>` is made on the first hover. `work` p95 in ms, same harness, `dense` fit / zoomed:
+
+| Scenario   | dense before (S06) | dense after (S07) |
+| ---------- | ------------------ | ----------------- |
+| Pan        | 127 / 12           | 126 / 12          |
+| Wheel zoom | 227 / 371          | 174 / 341         |
+| Selection  | 160 / 142          | 166 / 140         |
+
+- Pan: no change, as expected (nothing is computed nor written during a pan; style and layout of the 4,500 paths are what is left).
+- Zoom: the marked computations are now under 3 ms p95 (`edgeLines` 2, `edgeStates` 0 to 1, `emphasis` 1), but a scale threshold crossing still changes the shape of every edge (bend, arrow head and label room are in screen pixels), so every edge is rewritten: `edgeWrite` 56 ms p95 per frame with a write, `syncEdges` 24 ms p95. The p95 < 33 ms budget is not held: drawing fewer edges and a level of detail are S08.
+- Selection: the marked work is about 11 ms (`syncNodes` 6, `selectedNodeEdges` 3, emphasis 1, `syncNodeEmphasis` 1; `selectedEdge` is not run). The other ~100 ms (estimated by subtraction, not measured) are outside the marks: Angular change detection of the side panel and the node edges, then the browser's style recalculation of the `data-emph` and class changes on 1,349 nodes and 4,500 edges. The p95 < 100 ms budget is not held and this part is taken by S13 (selection under the budget).
+
 ## Shallow clones
 
 The clones are shallow (`--depth 400`). `repo_id` (the name of the data folder when it falls back to the user cache, and a cache key) is the SHA of the oldest stored commit, so it is not the same as in a full clone of the same repository, nor between clones of different depths. Churn and co-change ignore the commit at the shallow boundary (no parent to compare it with). The measures above (indexing, `analyse`, budgeted snapshot) do not depend on either, so they were not run again.
