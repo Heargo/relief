@@ -20,6 +20,22 @@ pub trait LanguageAdapter: Send + Sync {
     fn handles(&self, lang: &str) -> bool;
     /// Symbols, edges and warnings of `file`, a node of the graph, given its bytes.
     fn extract(&self, file: &Node, bytes: &[u8]) -> Extraction;
+    /// Like `extract`, plus an opaque, serialised per-file index that the index keeps in its
+    /// cache next to the extraction and hands back to `link_indexed`, so `link` does not
+    /// parse the file again. `None`: this adapter keeps nothing.
+    fn extract_indexed(&self, file: &Node, bytes: &[u8]) -> (Extraction, Option<String>) {
+        (self.extract(file, bytes), None)
+    }
+    /// Like `link`, given what `extract_indexed` returned for the same bytes (if anything).
+    fn link_indexed(
+        &self,
+        file: &Node,
+        bytes: &[u8],
+        _index: Option<&str>,
+        ctx: &LinkContext<'_>,
+    ) -> Extraction {
+        self.link(file, bytes, ctx)
+    }
     /// Second pass, once every file has been extracted: cross-file edges
     /// (imports) and the nodes they need (external packages).
     fn link(&self, _file: &Node, _bytes: &[u8], _ctx: &LinkContext<'_>) -> Extraction {
@@ -93,6 +109,9 @@ pub struct LinkContext<'a> {
     pub routes: &'a HashMap<NodeId, String>,
     /// Root node of the repository.
     pub repo: &'a NodeId,
+    /// Serialised per-file index (`extract_indexed`) of the files of this adapter, by path;
+    /// empty when unknown.
+    pub indexes: &'a HashMap<String, String>,
 }
 
 /// What an adapter extracts from one file.

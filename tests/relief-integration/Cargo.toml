@@ -17,5 +17,6 @@ relief-git = { path = "../../src/analysis/relief-git" }
 relief-index = { path = "../../src/analysis/relief-index" }
 relief-lang-ts = { path = "../../src/analysis/lang/relief-lang-ts" }
 relief-model = { path = "../../src/domain/relief-model" }
+rusqlite = { version = "0.43.0", features = ["bundled"] }
 serde_json = "1"
 tempfile = "3"

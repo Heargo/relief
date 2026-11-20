@@ -1,13 +1,14 @@
 //! Language adapter for TypeScript, TSX, JavaScript and JSX (tree-sitter).
 
 use std::collections::{HashMap, HashSet};
-use std::sync::OnceLock;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{Arc, Mutex, OnceLock};
 
 use relief_adapter_api::{EntryPoint, Extraction, LanguageAdapter, LinkContext, ResolveEnv, Usage};
 use relief_model::{
     Edge, EdgeKind, Node, NodeId, NodeKind, Precision, SignatureVerdict, Span, Visibility,
 };
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use streaming_iterator::StreamingIterator;
 use tree_sitter::{Language, Parser, Query, QueryCursor, QueryError};
@@ -28,7 +29,7 @@ const SYMBOLS_QUERY: &str = include_str!("../queries/symbols.scm");
 const LANGS: [&str; 6] = ["ts", "tsx", "js", "jsx", "mts", "cts"];
 
 /// A symbol declared in a file.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Symbol {
     /// `Class.method` for a method.
@@ -48,7 +49,7 @@ pub struct Symbol {
 }
 
 /// An import of another module.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Import {
     /// The module specifier as written.
@@ -59,7 +60,7 @@ pub struct Import {
 }
 
 /// Result of indexing one file.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FileIndex {
     /// In source order, methods right after their class.
@@ -73,14 +74,40 @@ pub struct FileIndex {
     /// Top-level `const x = new Class()`.
     pub instances: Vec<Instance>,
     /// Client calls with a literal path.
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub http_calls: Vec<HttpCall>,
     pub warnings: Vec<String>,
 }
 
 /// Adapter for the TypeScript family of languages.
-#[derive(Debug, Default, Clone, Copy)]
-pub struct TsAdapter;
+///
+/// Clones share one parse counter (`parses`).
+#[derive(Debug, Default, Clone)]
+pub struct TsAdapter {
+    parses: Arc<AtomicUsize>,
+    /// Signature texts of the files indexed so far, by content: asking for them again
+    /// (diff of a changed file already indexed) does not parse the file a second time.
+    signatures: Arc<Mutex<HashMap<(bool, u64), Signatures>>>,
+}
+
+type Signatures = Arc<Vec<(String, String)>>;
+
+/// Memo key of a file: grammar (TSX or not) and a hash of its bytes.
+fn content_key(path: &str, bytes: &[u8]) -> (bool, u64) {
+    use std::hash::{Hash, Hasher};
+    let ext = path.rsplit_once('.').map_or("", |(_, e)| e);
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    bytes.hash(&mut hasher);
+    (!matches!(ext, "ts" | "mts" | "cts"), hasher.finish())
+}
+
+fn signature_pairs(index: &FileIndex) -> Vec<(String, String)> {
+    index
+        .symbols
+        .iter()
+        .filter_map(|s| Some((s.name.clone(), s.signature.clone()?)))
+        .collect()
+}
 
 /// The grammar and the symbols query, compiled once per grammar.
 fn symbols_query(tsx: bool) -> (Language, &'static Result<Query, QueryError>) {
@@ -97,7 +124,12 @@ fn symbols_query(tsx: bool) -> (Language, &'static Result<Query, QueryError>) {
 
 impl TsAdapter {
     pub fn new() -> Self {
-        Self
+        Self::default()
+    }
+
+    /// Number of tree-sitter parses made so far by this adapter and its clones.
+    pub fn parses(&self) -> usize {
+        self.parses.load(Ordering::Relaxed)
     }
 
     /// Symbols and warnings of one file. Never fails: a file that does not
@@ -110,6 +142,7 @@ impl TsAdapter {
         if parser.set_language(&language).is_err() {
             return warn_only(path, "grammar unavailable");
         }
+        self.parses.fetch_add(1, Ordering::Relaxed);
         let Some(tree) = parser.parse(bytes, None) else {
             return warn_only(path, "could not be parsed");
         };
@@ -205,11 +238,16 @@ impl LanguageAdapter for TsAdapter {
         if !handled {
             return Vec::new();
         }
-        self.index_file(path, bytes)
-            .symbols
-            .into_iter()
-            .filter_map(|s| Some((s.name, s.signature?)))
-            .collect()
+        let key = content_key(path, bytes);
+        if let Some(hit) = self
+            .signatures
+            .lock()
+            .ok()
+            .and_then(|m| m.get(&key).cloned())
+        {
+            return hit.as_ref().clone();
+        }
+        signature_pairs(&self.index_file(path, bytes))
     }
 
     fn complexity(&self, path: &str, bytes: &[u8]) -> Vec<(String, u32)> {
@@ -219,14 +257,14 @@ impl LanguageAdapter for TsAdapter {
             .into_iter()
             .map(|s| (s.name, s.span))
             .collect();
-        complexity::per_symbol(path, bytes, &spans)
+        complexity::per_symbol(path, bytes, &spans, &self.parses)
     }
 
     fn usages(&self, path: &str, bytes: &[u8], bindings: &[String]) -> Option<Vec<Usage>> {
         let handled = path
             .rsplit_once('.')
             .is_some_and(|(_, ext)| LANGS.contains(&ext));
-        handled.then(|| usages::usages(path, bytes, bindings))
+        handled.then(|| usages::usages(path, bytes, bindings, &self.parses))
     }
 
     fn module_usages(
@@ -239,7 +277,7 @@ impl LanguageAdapter for TsAdapter {
         let handled = path
             .rsplit_once('.')
             .is_some_and(|(_, ext)| LANGS.contains(&ext));
-        handled.then(|| usages::module_usages(path, bytes, target, env))
+        handled.then(|| usages::module_usages(path, bytes, target, env, &self.parses))
     }
 
     fn compare_signatures(&self, before: &str, after: &str) -> SignatureVerdict {
@@ -247,9 +285,17 @@ impl LanguageAdapter for TsAdapter {
     }
 
     fn extract(&self, file: &Node, bytes: &[u8]) -> Extraction {
+        self.extract_indexed(file, bytes).0
+    }
+
+    fn extract_indexed(&self, file: &Node, bytes: &[u8]) -> (Extraction, Option<String>) {
         let id = file.id.to_string();
         let path = id.split_once("::file:").map_or(id.as_str(), |(_, p)| p);
         let index = self.index_file(path, bytes);
+        let serialised = serde_json::to_string(&index).ok();
+        if let Ok(mut memo) = self.signatures.lock() {
+            memo.insert(content_key(path, bytes), Arc::new(signature_pairs(&index)));
+        }
         let nodes = index
             .symbols
             .into_iter()
@@ -271,16 +317,29 @@ impl LanguageAdapter for TsAdapter {
                 child_count: None,
             })
             .collect();
-        Extraction {
+        let extraction = Extraction {
             nodes,
             edges: Vec::<Edge>::new(),
             warnings: index.warnings,
             entries: Vec::new(),
-        }
+        };
+        (extraction, serialised)
     }
 
     fn link(&self, file: &Node, bytes: &[u8], ctx: &LinkContext<'_>) -> Extraction {
-        let index = self.index_file(ctx.path, bytes);
+        self.link_indexed(file, bytes, None, ctx)
+    }
+
+    fn link_indexed(
+        &self,
+        file: &Node,
+        bytes: &[u8],
+        index: Option<&str>,
+        ctx: &LinkContext<'_>,
+    ) -> Extraction {
+        let index = index
+            .and_then(|json| serde_json::from_str::<FileIndex>(json).ok())
+            .unwrap_or_else(|| self.index_file(ctx.path, bytes));
         let mut out = Extraction::default();
         let edge = |to: NodeId, out: &mut Extraction| {
             let e = Edge {
@@ -296,7 +355,7 @@ impl LanguageAdapter for TsAdapter {
             }
         };
         let memo = JsonMemo::default();
-        link_refs(file, &index, ctx, &memo, &mut out);
+        link_refs(self, file, &index, ctx, &memo, &mut out);
         for import in index.imports {
             match resolve(&import.specifier, ctx, &memo) {
                 Resolution::File(path) => {
@@ -338,6 +397,7 @@ impl LanguageAdapter for TsAdapter {
 /// Symbol-to-symbol edges for the refs of `index`, resolved by scope: the
 /// symbols of the file first, then the names it imports.
 fn link_refs(
+    adapter: &TsAdapter,
     file: &Node,
     index: &FileIndex,
     ctx: &LinkContext<'_>,
@@ -351,7 +411,7 @@ fn link_refs(
         let to = if ctx.nodes.contains(&local) {
             Some(local)
         } else {
-            resolve_import(&r.name, index, ctx, memo, &mut instances)
+            resolve_import(adapter, &r.name, index, ctx, memo, &mut instances)
         };
         let Some(to) = to.filter(|t| *t != from) else {
             continue;
@@ -437,6 +497,7 @@ fn link_http(file: &Node, index: &FileIndex, ctx: &LinkContext<'_>, out: &mut Ex
 }
 
 fn resolve_import(
+    adapter: &TsAdapter,
     name: &str,
     index: &FileIndex,
     ctx: &LinkContext<'_>,
@@ -458,8 +519,15 @@ fn resolve_import(
         (Some(method), "*") => method.to_owned(),
         (Some(method), imported) => {
             let found = cache.entry(path.clone()).or_insert_with(|| {
-                (ctx.read)(&path)
-                    .map(|b| TsAdapter.index_file(&path, &b).instances)
+                #[derive(Deserialize)]
+                struct Instances {
+                    instances: Vec<Instance>,
+                }
+                ctx.indexes
+                    .get(&path)
+                    .and_then(|json| serde_json::from_str::<Instances>(json).ok())
+                    .map(|i| i.instances)
+                    .or_else(|| (ctx.read)(&path).map(|b| adapter.index_file(&path, &b).instances))
                     .unwrap_or_default()
             });
             let class = &found.iter().find(|i| i.name == imported)?.class;

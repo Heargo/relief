@@ -4446,6 +4446,7 @@ dependencies = [
  "relief-index",
  "relief-lang-ts",
  "relief-model",
+ "rusqlite",
  "serde_json",
  "tempfile",
 ]

@@ -6,12 +6,12 @@ use std::collections::HashMap;
 use relief_model::EdgeKind;
 
 use crate::http::{self, Found, HttpCall, Route};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 type TsNode<'a> = tree_sitter::Node<'a>;
 
 /// A reference from a symbol of the file to a name, duplicates merged.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Ref {
     /// Enclosing symbol (`Class.method` for a method).
@@ -24,7 +24,7 @@ pub struct Ref {
 }
 
 /// A name bound by an import statement.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Binding {
     pub local: String,
@@ -34,7 +34,7 @@ pub struct Binding {
 }
 
 /// A top-level `const name = new Class()`.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Instance {
     pub name: String,
