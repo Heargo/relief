@@ -42,18 +42,20 @@ La carte est imbriquée : les systèmes (paquets, services, dépendances externe
 - Tant que le curseur est dans le champ, les touches tapées ne déclenchent aucun raccourci.
 - La recherche par route HTTP (`POST /checkout`) n'est pas encore disponible : cherchez le chemin du fichier.
 - **Fil d'Ariane** : en haut à gauche de la carte, le chemin du nœud sélectionné, par exemple `acme-shop › apps/api › auth/ › session.ts › SessionStore.refresh`. Un clic sur un ancêtre le sélectionne et le cadre. Sans sélection, le fil affiche le niveau courant.
+- **Précédent / suivant** : chaque sélection (nœud, arête, résultat de recherche, lien d'un panneau) est une étape d'un historique. Les deux flèches à gauche du fil d'Ariane, `Alt` + `←` / `→` ou les boutons latéraux de la souris reviennent à l'étape précédente ou suivante, sélection et cadrage compris. Déplacer ou zoomer à la main n'ajoute pas d'étape ; changer de plage vide l'historique.
 - **Échap**, hors du champ de recherche : désélectionne d'abord le nœud, puis remonte d'un niveau à chaque appui, jusqu'à tout voir.
 
 ## Raccourcis clavier
 
 La touche `?` (ou le bouton « ? » de la barre du haut) ouvre la liste des raccourcis ; Échap la ferme.
 
-| Touche    | Action                                                                   |
-| --------- | ------------------------------------------------------------------------ |
-| `0` à `3` | Niveau de zoom : système, modules, fichiers, symboles                    |
-| `/`       | Rechercher                                                               |
-| `?`       | Afficher l'aide des raccourcis                                           |
-| `Échap`   | Fermer l'aide, désélectionner, puis remonter d'un niveau, puis tout voir |
+| Touche            | Action                                                                   |
+| ----------------- | ------------------------------------------------------------------------ |
+| `0` à `3`         | Niveau de zoom : système, modules, fichiers, symboles                    |
+| `/`               | Rechercher                                                               |
+| `?`               | Afficher l'aide des raccourcis                                           |
+| `Alt` + `←` / `→` | Étape précédente / suivante de l'historique                              |
+| `Échap`           | Fermer l'aide, désélectionner, puis remonter d'un niveau, puis tout voir |
 
 ## Inspecter un nœud
 

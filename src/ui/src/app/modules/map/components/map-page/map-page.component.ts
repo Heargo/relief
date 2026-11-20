@@ -63,7 +63,14 @@ import { RepoBusiness } from '../../business/repo.business';
 import { SubgraphBusiness } from '../../business/subgraph.business';
 import { repoMetaLine } from '../../helpers/repo-meta.logic';
 import type { SearchResult } from '../../helpers/search.logic';
-import { actionForKey, isTypingTarget, keyLabel, SHORTCUTS } from '../../helpers/shortcuts.logic';
+import {
+  actionForKey,
+  historyMove,
+  isTypingTarget,
+  keyLabel,
+  mouseHistoryMove,
+  SHORTCUTS,
+} from '../../helpers/shortcuts.logic';
 import { EdgeHeadComponent } from '../edge-head/edge-head.component';
 import { InspectorHeaderComponent } from '../inspector-header/inspector-header.component';
 import { NodeEdgesComponent } from '../node-edges/node-edges.component';
@@ -417,6 +424,15 @@ export class MapPageComponent implements OnInit {
       this.settingsOpen.set(false);
       return;
     }
+    if (event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey) {
+      const target = event.target instanceof HTMLElement ? event.target : null;
+      const move = isTypingTarget(target) ? null : historyMove(event.key);
+      if (move) {
+        event.preventDefault();
+        this.moveInHistory(move);
+      }
+      return;
+    }
     if (event.ctrlKey || event.metaKey || event.altKey) return;
     const target = event.target instanceof HTMLElement ? event.target : null;
     if (isTypingTarget(target)) return;
@@ -557,6 +573,20 @@ export class MapPageComponent implements OnInit {
       (count) =>
         this.language.t(count === 1 ? 'map.edges.links_one' : 'map.edges.links', { count }),
     );
+  }
+
+  /** The back / forward buttons of a mouse (buttons 4 and 5). */
+  @HostListener('window:mouseup', ['$event'])
+  protected onMouseButton(event: MouseEvent): void {
+    const move = mouseHistoryMove(event.button);
+    if (!move) return;
+    event.preventDefault();
+    this.moveInHistory(move);
+  }
+
+  private moveInHistory(move: 'back' | 'forward'): void {
+    if (move === 'back') this.map.goBack();
+    else this.map.goForward();
   }
 
   @HostListener('window:focus')

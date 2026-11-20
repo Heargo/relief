@@ -14,6 +14,32 @@
     data-testid="breadcrumbs"
     [attr.aria-label]="'map.breadcrumbs' | translate"
   >
+    <button
+      type="button"
+      class="history"
+      data-testid="history-back"
+      [disabled]="!map.canGoBack()"
+      [attr.aria-label]="'map.history.back' | translate"
+      [title]="'map.history.back' | translate"
+      (click)="map.goBack()"
+    >
+      <svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true">
+        <path d="M10 3 5 8l5 5" fill="none" stroke="currentColor" stroke-width="2" />
+      </svg>
+    </button>
+    <button
+      type="button"
+      class="history"
+      data-testid="history-forward"
+      [disabled]="!map.canGoForward()"
+      [attr.aria-label]="'map.history.forward' | translate"
+      [title]="'map.history.forward' | translate"
+      (click)="map.goForward()"
+    >
+      <svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true">
+        <path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="2" />
+      </svg>
+    </button>
     @for (crumb of map.breadcrumbs(); track $index; let last = $last) {
       <button
         type="button"

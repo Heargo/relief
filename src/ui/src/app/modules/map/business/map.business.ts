@@ -61,6 +61,17 @@ import {
 import { buildSearchIndex, searchNodes, type SearchResult } from '../helpers/search.logic';
 import { edgesAround, nodeEdges } from '../helpers/node-edges.logic';
 import type { Selection } from '../helpers/emphasis.logic';
+import {
+  canGoBack,
+  canGoForward,
+  clearHistory,
+  currentStep,
+  emptyHistory,
+  goBack,
+  goForward,
+  type History,
+  pushStep,
+} from '../helpers/history.logic';
 import { escapeStep } from '../helpers/shortcuts.logic';
 import {
   computeModes,
@@ -68,6 +79,17 @@ import {
   levelOfKind,
   type NodeMode,
 } from '../helpers/visibility.logic';
+
+/** A step of the navigation: what is selected, and where the camera is. */
+interface NavStep {
+  nodeId: string | null;
+  edgeKey: string | null;
+  listedEdge: AggregatedEdge | null;
+  fine: ViolationEdge | null;
+  camera: Camera;
+  level: number | null;
+  cap: number | null;
+}
 
 export type MapStatus = 'loading' | 'error' | 'ready';
 
@@ -197,11 +219,17 @@ export class MapBusiness {
   /** What to do once the next graph is laid out (the content of a container just arrived). */
   private afterShow: (() => void)[] = [];
 
+  private readonly _history = signal<History<NavStep>>(emptyHistory());
+  /** Where the running camera flight ends; meaningful while `animation` is set. */
+  private flightTarget: Camera | null = null;
+
   private pristine = true;
   private beforeFrame: { camera: Camera; level: number | null } | null = null;
   private animation = 0;
   private pendingSettle: (() => void) | null = null;
 
+  readonly canGoBack = computed(() => canGoBack(this._history()));
+  readonly canGoForward = computed(() => canGoForward(this._history()));
   readonly status = this._status.asReadonly();
   readonly layoutMode = this._layoutMode.asReadonly();
   readonly hideExternal = this._hideExternal.asReadonly();
@@ -412,6 +440,11 @@ export class MapBusiness {
   readonly visibleCrossings = computed(() => crossingsOfEdges(this._targetLayout(), this.edges()));
 
   selectEdge(from: string, to: string): void {
+    this.applyEdge(from, to);
+    this.record();
+  }
+
+  private applyEdge(from: string, to: string): void {
     this._selectedNodeId.set(null);
     this._selectedFine.set(null);
     this._selectedEdgeKey.set(pairKey(from, to));
@@ -426,12 +459,14 @@ export class MapBusiness {
     this._selectedFine.set(edge);
     this._selectedNodeId.set(null);
     if (!this.selectedEdge()) this.focusNode(edge.from);
+    this.record();
   }
 
   /** Selects an edge listed by a node: the one the map draws, else the listed one itself. */
   selectListedEdge(edge: AggregatedEdge): void {
-    this.selectEdge(edge.from, edge.to);
+    this.applyEdge(edge.from, edge.to);
     if (!this.selectedEdge()) this._listedEdge.set(edge);
+    this.record();
   }
 
   clearEdgeSelection(): void {
@@ -449,6 +484,7 @@ export class MapBusiness {
   selectLink(edge: Edge): void {
     this.clearEdgeSelection();
     this._selectedNodeId.set(edge.from);
+    this.record();
   }
 
   setCoChangeEdges(edges: Edge[]): void {
@@ -499,6 +535,7 @@ export class MapBusiness {
   selectNode(id: string): void {
     this.clearEdgeSelection();
     this._selectedNodeId.set(id);
+    this.record();
   }
 
   /** Clears the node selection (a click on empty map). */
@@ -510,6 +547,49 @@ export class MapBusiness {
   selectResult(id: string): void {
     this.clearEdgeSelection();
     this.focusNode(id);
+    this.record();
+  }
+
+  /** Back to the previous step of the navigation: selection and camera. */
+  goBack(): void {
+    this.restore(goBack(this._history()));
+  }
+
+  /** Forward to the next step of the navigation. */
+  goForward(): void {
+    this.restore(goForward(this._history()));
+  }
+
+  private restore(history: History<NavStep>): void {
+    if (history === this._history()) return;
+    this._history.set(history);
+    const step = currentStep(history);
+    if (!step) return;
+    this.interrupt();
+    this._zoomPoint.set(null);
+    this._diveTarget.set(null);
+    this._selectedNodeId.set(step.nodeId);
+    this._selectedEdgeKey.set(step.edgeKey);
+    this._listedEdge.set(step.listedEdge);
+    this._selectedFine.set(step.fine);
+    this._forcedLevel.set(step.level);
+    this._cap.set(step.cap);
+    this.animateTo(step.camera);
+  }
+
+  /** Adds the current selection and camera (where a flight ends) as a step. */
+  private record(): void {
+    this._history.update((history) =>
+      pushStep(history, {
+        nodeId: this._selectedNodeId(),
+        edgeKey: this._selectedEdgeKey(),
+        listedEdge: this._listedEdge(),
+        fine: this._selectedFine(),
+        camera: this.animation && this.flightTarget ? this.flightTarget : this._camera(),
+        level: this._forcedLevel(),
+        cap: this._cap(),
+      }),
+    );
   }
 
   private focusNode(id: string): void {
@@ -607,7 +687,10 @@ export class MapBusiness {
     this._infos.set(buildNodeInfos(graph));
     this._edges.set(graph.edges);
     this._parents.set(new Map(graph.nodes.map((n) => [n.id, n.parent ?? null])));
-    if (!keepView) this.clearEdgeSelection();
+    if (!keepView) {
+      this.clearEdgeSelection();
+      this._history.update(clearHistory);
+    }
     const later = this.afterShow;
     this.afterShow = [];
     if (keepView) {
@@ -798,6 +881,7 @@ export class MapBusiness {
   private stopAnimation(): void {
     if (this.animation) cancelAnimationFrame(this.animation);
     this.animation = 0;
+    this.flightTarget = null;
   }
 
   private animateTo(target: Camera, onDone?: () => void): void {
@@ -806,6 +890,7 @@ export class MapBusiness {
     const viewport = this._viewport();
     const start = performance.now();
     this.pendingSettle = onDone ?? null;
+    this.flightTarget = target;
     const step = (now: number): void => {
       const u = Math.min(1, (now - start) / ANIMATION_MS);
       this._camera.set(

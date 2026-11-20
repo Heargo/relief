@@ -303,6 +303,15 @@
     &.last {
       font-weight: 500;
     }
+
+    &.history {
+      display: inline-flex;
+    }
+
+    &.history:disabled {
+      opacity: 0.35;
+      cursor: default;
+    }
   }
 
   i {

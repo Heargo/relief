@@ -88,3 +88,15 @@ export function isTypingTarget(
   if (!target) return false;
   return target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName);
 }
+
+/** `Alt` + arrow: the previous / next step of the navigation. */
+export function historyMove(key: string): 'back' | 'forward' | null {
+  if (key === 'ArrowLeft') return 'back';
+  return key === 'ArrowRight' ? 'forward' : null;
+}
+
+/** Buttons 4 and 5 of a mouse (`MouseEvent.button` 3 and 4). */
+export function mouseHistoryMove(button: number): 'back' | 'forward' | null {
+  if (button === 3) return 'back';
+  return button === 4 ? 'forward' : null;
+}

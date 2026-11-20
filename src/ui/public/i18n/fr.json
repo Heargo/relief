@@ -71,6 +71,10 @@
       "totals": "Croisements, tous niveaux"
     },
     "breadcrumbs": "Fil d'Ariane",
+    "history": {
+      "back": "Étape précédente de la navigation",
+      "forward": "Étape suivante de la navigation"
+    },
     "shortcutsList": {
       "rangeBase": "Choisir la base de la plage",
       "rangeHead": "Choisir le head de la plage",

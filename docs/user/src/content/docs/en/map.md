@@ -42,18 +42,20 @@ The map is nested: systems (packages, services, external dependencies when shown
 - While the cursor is in the field, typed keys trigger no shortcut.
 - Search by HTTP route (`POST /checkout`) is not available yet: search for the file's path instead.
 - **Breadcrumbs**: at the top left of the map, the path of the selected node, for example `acme-shop › apps/api › auth/ › session.ts › SessionStore.refresh`. Click an ancestor to select and frame it. With nothing selected, the breadcrumbs show the current level.
+- **Back / forward**: each selection (node, edge, search result, panel link) is a step of a history. The two arrows left of the breadcrumbs, `Alt` + `←` / `→` or the mouse side buttons go back or forward one step, selection and framing included. Panning or zooming by hand adds no step; changing the range clears the history.
 - **Escape**, outside the search field: first deselects the node, then goes up one level per press, until everything is shown.
 
 ## Keyboard shortcuts
 
 The `?` key (or the "?" button in the top bar) opens the shortcut list; Escape closes it.
 
-| Key        | Action                                                             |
-| ---------- | ------------------------------------------------------------------ |
-| `0` to `3` | Zoom level: system, modules, files, symbols                        |
-| `/`        | Search                                                             |
-| `?`        | Show the shortcut help                                             |
-| `Esc`      | Close the help, deselect, then go up a level, then show everything |
+| Key               | Action                                                             |
+| ----------------- | ------------------------------------------------------------------ |
+| `0` to `3`        | Zoom level: system, modules, files, symbols                        |
+| `/`               | Search                                                             |
+| `?`               | Show the shortcut help                                             |
+| `Alt` + `←` / `→` | Previous / next step of the history                                |
+| `Esc`             | Close the help, deselect, then go up a level, then show everything |
 
 ## Inspecting a node
 

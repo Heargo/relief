@@ -71,6 +71,10 @@
       "totals": "Crossings, all levels"
     },
     "breadcrumbs": "Breadcrumbs",
+    "history": {
+      "back": "Previous step of the navigation",
+      "forward": "Next step of the navigation"
+    },
     "shortcutsList": {
       "rangeBase": "Choose the base of the range",
       "rangeHead": "Choose the head of the range",

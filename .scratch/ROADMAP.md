@@ -181,7 +181,7 @@ Brainstorm du 2026-11-20 (`quicknotes.md`) : en relecture on se perd dans les d�
 | - | - | --- | --- | --- |
 | ☐ | 55 | **R09** Notes de relecture ancrées sur la carte | Garder ce qu'on pense en lisant ; note, question, à corriger. | R05 |
 | ☐ | 56 | **R11** Suivre les dépendances transitives sans se perdre | Où suis-je, revenir à l'entrée en cours, « vérifié » hors diff. | R05, R04 |
-| ☐ | 57 | **U25** Historique de navigation : précédent / suivant | Revenir au nœud d'avant après avoir suivi des arêtes. | U05 |
+| ✓ | 57 | **U25** Historique de navigation : précédent / suivant | Revenir au nœud d'avant après avoir suivi des arêtes. | U05 |
 | ☐ | 58 | **R12** Profondeur du rayon d'impact sur la carte | Un symbole très utilisé rend toute la carte orange. | R04 |
 | ☐ | 59 | **R15** Diff lisible : coloration et contexte | Le diff n'est pas coloré, son contexte est fixe. | R02 |
 | ☐ | 60 | **R14** Naviguer depuis le code | Un appel dans le diff n'est que du texte. | R02, U20 |
