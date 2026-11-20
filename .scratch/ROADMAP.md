@@ -146,7 +146,7 @@ Brainstorm du 2026-11-20 : la carte rame sur un gros écran et les budgets de S0
 | ✓ | # | Ticket | Pourquoi maintenant | Bloqué par |
 | - | - | --- | --- | --- |
 | ✓ | 50 | **S01** Sous-graphes au-delà de 2 000 nœuds | Les monorepos. | R01, I02, F06 |
-| ☐ | 50a | **S03** Relecture d'un gros dépôt : l'UI lit le sous-graphe de relecture | Suite de S01 : les changés visibles sans zoom, budget IPC aussi en relecture. | S01 |
+| ✓ | 50a | **S03** Relecture d'un gros dépôt : l'UI lit le sous-graphe de relecture | Suite de S01 : les changés visibles sans zoom, budget IPC aussi en relecture. | S01 |
 | ✓ | 51 | **S02** Benchmarks sur de vrais dépôts | Des budgets mesurés, pas supposés. | S01 |
 | ☐ | 51a | **S04** Garder l'index de fichier en cache | Suite de S02 : les budgets à chaud et de diff ne sont pas tenus faute de cet index en cache. | S02 |
 | ☐ | 51b | **S05** Mesurer le rendu de la carte | La carte rame sur un gros écran ; fixture `dense`, `just bench-ui` et budget de rendu. | S02 |

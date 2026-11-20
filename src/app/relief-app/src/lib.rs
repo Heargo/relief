@@ -323,42 +323,11 @@ impl Session {
         let source = GitSource::open(&self.path)?;
         let head = self.sides(&source, request.range.as_ref())?.new;
         let graph = self.indexed_snapshot(&source, &head)?.graph;
-        let query = request.query.trim().to_lowercase();
-        if query.is_empty() {
-            return Ok(SearchResponse { hits: Vec::new() });
-        }
-        let mut ranked: Vec<(u8, usize)> = Vec::new();
-        for (order, node) in graph.nodes().iter().enumerate() {
-            if matches!(node.kind, NodeKind::Repo | NodeKind::External) {
-                continue;
-            }
-            let id = node.id.to_string().to_lowercase();
-            let label = id.rsplit("::").next().unwrap_or(&id);
-            let label = label.split_once(':').map_or(label, |(_, rest)| rest);
-            let name = label.rsplit(['.', '/']).next().unwrap_or(label);
-            let rank = if name == query || label == query {
-                0
-            } else if name.starts_with(&query) || label.starts_with(&query) {
-                1
-            } else if label.contains(&query) {
-                2
-            } else if id.contains(&query) {
-                3
-            } else {
-                continue;
-            };
-            ranked.push((rank, order));
-        }
-        ranked.sort_unstable();
-        let hits = ranked
+        let hits = relief_diff::rank_search(&graph, &request.query, request.limit)
             .into_iter()
-            .take(request.limit)
-            .map(|(_, order)| {
-                let node = &graph.nodes()[order];
-                SearchHit {
-                    id: node.id.clone(),
-                    kind: node.kind,
-                }
+            .filter_map(|id| {
+                let kind = graph.nodes().iter().find(|n| n.id == id)?.kind;
+                Some(SearchHit { id, kind })
             })
             .collect();
         Ok(SearchResponse { hits })

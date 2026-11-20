@@ -96,7 +96,7 @@ Au-delà d'environ 2 000 nœuds, relief n'envoie pas tout le graphe à l'écran 
 - **Zoomer** dans un conteneur fermé charge son contenu : un indicateur s'affiche dans la boîte le temps du chargement.
 - **Rechercher** (`/`) interroge tout le dépôt, pas seulement ce qui est affiché : choisir un résultat charge les conteneurs qui le contiennent et cadre la carte dessus.
 
-En relecture, un nœud modifié qui se trouve dans un conteneur encore fermé n'apparaît qu'une fois ce conteneur ouvert.
+En relecture, relief n'envoie que ce qui sert à la relecture : les nœuds changés, leurs voisins directs et leurs ancêtres ; les autres conteneurs restent fermés. La carte démarre au niveau Fichiers, si bien que les fichiers changés sont visibles sans zoomer.
 
 ## Disposition
 

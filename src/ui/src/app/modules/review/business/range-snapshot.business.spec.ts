@@ -116,7 +116,7 @@ describe('the map snapshot follows the head of the range', () => {
     await diff.load(null);
     api.snapshot.mockClear();
     await TestBed.inject(ReloadBusiness).reload();
-    expect(api.snapshot).toHaveBeenCalledWith('WORKTREE');
+    expect(api.snapshot).toHaveBeenCalledWith('WORKTREE', 2000, []);
   });
 
   it('changing the range asks the snapshot of the new head and keeps the map view', async () => {
@@ -133,7 +133,7 @@ describe('the map snapshot follows the head of the range', () => {
 
     api.snapshot.mockClear();
     await diff.setRange('WORKTREE');
-    await vi.waitFor(() => expect(api.snapshot).toHaveBeenCalledWith('WORKTREE'));
+    await vi.waitFor(() => expect(api.snapshot).toHaveBeenCalledWith('WORKTREE', 2000, []));
     await vi.waitFor(() => expect(map.search('brand-new').map((r) => r.id)).toEqual([ADDED_FILE]));
     expect(map.level()).toBe(1);
   });

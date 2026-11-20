@@ -2,8 +2,10 @@
 
 use std::collections::{HashMap, HashSet};
 
+mod search;
 mod subgraph;
 
+pub use search::rank_search;
 pub use subgraph::{budgeted, review_subgraph};
 
 use relief_model::{

@@ -6,7 +6,7 @@ import { headRef } from '../helpers/repo.logic';
 import { ancestorIds, mergeExpanded } from '../helpers/subgraph.logic';
 
 /** Most nodes the map asks for: the core closes the containers below. */
-const DISPLAY_BUDGET = 2000;
+export const DISPLAY_BUDGET = 2000;
 
 export type RepoStatus = 'loading' | 'error' | 'ready';
 
@@ -55,20 +55,12 @@ export class RepoBusiness {
   }
 
   /**
-   * Reads the snapshot of `ref` again, keeping the status: the working tree changed under us. A
-   * graph that was whole and small is asked whole; else the budget and the opened containers are
-   * asked again.
+   * Reads the snapshot of `ref` again, keeping the status: the working tree changed under us. The
+   * budget and the opened containers are asked again.
    */
   async refreshSnapshot(ref: string): Promise<void> {
-    const graph = this._snapshot()?.graph;
     if (ref !== this._ref()) this.expanded = [];
-    const whole =
-      !!graph && graph.nodes.length < DISPLAY_BUDGET && !graph.nodes.some((n) => n.childCount);
-    this._snapshot.set(
-      whole
-        ? await this.api.snapshot(ref)
-        : await this.api.snapshot(ref, DISPLAY_BUDGET, this.expanded),
-    );
+    this._snapshot.set(await this.api.snapshot(ref, DISPLAY_BUDGET, this.expanded));
     this._ref.set(ref);
   }
 

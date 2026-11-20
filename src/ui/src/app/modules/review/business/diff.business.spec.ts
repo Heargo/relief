@@ -54,7 +54,7 @@ describe('DiffBusiness', () => {
     const business = TestBed.inject(DiffBusiness);
     await business.load('main...feat/promo-codes');
     expect(api.diff).toHaveBeenCalledTimes(1);
-    expect(api.diff).toHaveBeenCalledWith('main...feat/promo-codes');
+    expect(api.diff).toHaveBeenCalledWith('main...feat/promo-codes', 2000);
     expect(business.status()).toBe('ready');
     expect(business.range()).toBe('main...feat/promo-codes');
     expect(business.diff()).toEqual(THREE_DOTS);
@@ -65,7 +65,7 @@ describe('DiffBusiness', () => {
     const business = TestBed.inject(DiffBusiness);
     await business.load('main...feat/promo-codes');
     expect(api.diff).toHaveBeenCalledTimes(1);
-    expect(api.diff).toHaveBeenCalledWith('feat/promo-codes...main');
+    expect(api.diff).toHaveBeenCalledWith('feat/promo-codes...main', 2000);
     expect(business.range()).toBe('feat/promo-codes...main');
     expect(business.diff()).toEqual(REVERSED);
   });
@@ -76,7 +76,7 @@ describe('DiffBusiness', () => {
     await business.setRange('feat/promo-codes...main');
 
     expect(api.diff).toHaveBeenCalledTimes(2);
-    expect(api.diff).toHaveBeenLastCalledWith('feat/promo-codes...main');
+    expect(api.diff).toHaveBeenLastCalledWith('feat/promo-codes...main', 2000);
     expect(business.range()).toBe('feat/promo-codes...main');
     expect(business.diff()).toEqual(REVERSED);
     expect(rangeInUrl()).toBe('feat/promo-codes...main');

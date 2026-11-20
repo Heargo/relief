@@ -62,6 +62,7 @@ import { PanelsBusiness } from '../../business/panels.business';
 import { RepoBusiness } from '../../business/repo.business';
 import { SubgraphBusiness } from '../../business/subgraph.business';
 import { repoMetaLine } from '../../helpers/repo-meta.logic';
+import { isPartial } from '../../../review/helpers/review-graph.logic';
 import type { SearchResult } from '../../helpers/search.logic';
 import {
   actionForKey,
@@ -79,6 +80,9 @@ import { NodePanelComponent } from '../node-panel/node-panel.component';
 import { EdgeUsagesComponent } from '../edge-usages/edge-usages.component';
 import { EdgeUsagesBusiness } from '../../business/edge-usages.business';
 import { hasCodeUsages } from '../../helpers/edge-usages.logic';
+
+/** Level of the map at which the files are drawn: where a big review starts. */
+const CHANGED_FILES_LEVEL = 2;
 
 @Component({
   selector: 'app-map-page',
@@ -390,9 +394,16 @@ export class MapPageComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    void this.repo
-      .load()
-      .then(() => this.review.load(this.repo.range()).then(() => this.diffSettled.set(true)));
+    void this.repo.load().then(() =>
+      this.review.load(this.repo.range()).then(() => {
+        // A big repository: the review subgraph holds the changed files, shown without a zoom.
+        const diff = this.review.diff();
+        if (diff?.graph && diff.diff.nodes.length > 0 && isPartial(diff.graph)) {
+          this.map.whenShown(() => this.map.setLevel(CHANGED_FILES_LEVEL));
+        }
+        this.diffSettled.set(true);
+      }),
+    );
   }
 
   protected readonly settingsOpen = signal(false);

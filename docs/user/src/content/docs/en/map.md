@@ -96,7 +96,7 @@ Beyond about 2,000 nodes, relief does not send the whole graph to the screen at 
 - **Zooming** into a closed container loads its content: an indicator shows in the box while it loads.
 - **Searching** (`/`) queries the whole repository, not only what is displayed: picking a result loads the containers that hold it and frames the map on it.
 
-In review, a changed node that sits in a container still closed shows only once that container is open.
+In review, relief only sends what the review needs: the changed nodes, their direct neighbours and their ancestors; the other containers stay closed. The map starts at the Files level, so the changed files are visible without zooming.
 
 ## Layout
 
