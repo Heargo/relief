@@ -1,6 +1,7 @@
 import { $, $$, expect } from '@wdio/globals';
 import { openRelief } from '../helpers/open-relief';
-import { forceClick, press, tid } from '../helpers/ui';
+import { clickEdge, sceneEdge, waitForScene } from '../helpers/map-scene';
+import { press, tid } from '../helpers/ui';
 
 // Contract with the UI (data attributes, no i18n dependency):
 //  - the sticky header of the right panel is `data-testid="inspector-badge"` with
@@ -11,17 +12,18 @@ import { forceClick, press, tid } from '../helpers/ui';
 //    `node-edge-row` per edge (`data-from`, `data-to`).
 const WEB = 'pkg:@acme/web';
 const DB = 'pkg:@acme/db';
-const WEB_DB = `[data-testid="map-edge"][data-from="${WEB}"][data-to="${DB}"]`;
+const edgeLoaded = () =>
+  waitForScene((s) => s.edges.some((e) => e.from === WEB && e.to === DB && !e.merged));
 
 const kind = () => tid('inspector-badge');
 
 it('a node, then one of its edges, then Escape: Node, Edge, Overview', async () => {
   await openRelief();
-  await $(WEB_DB).waitForExist(); // the edge exists once the diff is loaded
+  await edgeLoaded(); // the edge exists once the diff is loaded
   await expect(kind()).toHaveAttribute('data-kind', 'none');
 
   // Reach the node `apps/web` through an edge, by its end button.
-  await forceClick(WEB_DB);
+  await clickEdge(WEB, DB);
   await expect(kind()).toHaveAttribute('data-kind', 'edge');
   await expect(tid('inspector-from')).toHaveAttribute('data-node-id', WEB);
   await expect(tid('inspector-to')).toHaveAttribute('data-node-id', DB);
@@ -39,7 +41,7 @@ it('a node, then one of its edges, then Escape: Node, Edge, Overview', async () 
   await expect(tid('inspector-from')).toHaveAttribute('data-node-id', WEB);
   await expect(tid('inspector-to')).toHaveAttribute('data-node-id', DB);
   await expect($$('[data-testid="edge-link"]')).toBeElementsArrayOfSize(
-    Number(await $(WEB_DB).getAttribute('data-count')),
+    (await sceneEdge(WEB, DB))!.count,
   );
 
   await press('Escape');
@@ -49,8 +51,8 @@ it('a node, then one of its edges, then Escape: Node, Edge, Overview', async () 
 
 it('the cross of the header clears the selection', async () => {
   await openRelief();
-  await $(WEB_DB).waitForExist(); // the edge exists once the diff is loaded
-  await forceClick(WEB_DB);
+  await edgeLoaded(); // the edge exists once the diff is loaded
+  await clickEdge(WEB, DB);
   await expect(kind()).toHaveAttribute('data-kind', 'edge');
   await tid('inspector-close').click();
   await expect(kind()).toHaveAttribute('data-kind', 'none');

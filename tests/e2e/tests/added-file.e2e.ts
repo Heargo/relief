@@ -1,8 +1,9 @@
 // @fixture tiny
 import { rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { $, browser, expect } from '@wdio/globals';
+import { browser, expect } from '@wdio/globals';
 import { openRelief } from '../helpers/open-relief';
+import { sceneNodesMatching, waitForNodeMatching } from '../helpers/map-scene';
 import { tid } from '../helpers/ui';
 
 // The app is opened without a range: the core compares HEAD with the working tree, so the map
@@ -19,7 +20,8 @@ function repoPath(file: string): string {
   return join(repo, file);
 }
 
-const fileNode = (file: string) => $(`[data-testid="map-node"][data-node-id$="::file:${file}"]`);
+const isFile = (file: string) => (id: string) => id.endsWith(`::file:${file}`);
+const statusOf = async (file: string) => (await sceneNodesMatching(isFile(file)))[0]?.status;
 
 describe('a file added in the working tree', () => {
   afterEach(() => {
@@ -34,12 +36,11 @@ describe('a file added in the working tree', () => {
     await tid('reload-button').click();
     await tid('level-2').click();
     await expect(tid('current-level')).toHaveAttribute('data-level', '2');
-    await browser.waitUntil(async () => fileNode(ROOT_FILE).isExisting(), {
+    await waitForNodeMatching(isFile(ROOT_FILE), 15000);
+    await browser.waitUntil(async () => (await statusOf(ROOT_FILE)) === 'added', {
       timeout: 15000,
-      interval: 1000,
-      timeoutMsg: `${ROOT_FILE} never appeared on the map`,
+      timeoutMsg: `${ROOT_FILE} never appeared on the map as added`,
     });
-    await expect(fileNode(ROOT_FILE)).toHaveAttribute('data-diff-status', 'added');
-    await expect(fileNode(SUB_FILE)).toHaveAttribute('data-diff-status', 'added');
+    expect(await statusOf(SUB_FILE)).toBe('added');
   });
 });

@@ -1,14 +1,15 @@
 import { $, browser } from '@wdio/globals';
 import { openRelief } from '../../../tests/e2e/helpers/open-relief';
 import { press, typeText } from '../../../tests/e2e/helpers/ui';
+import { waitForScene } from '../../../tests/e2e/helpers/map-scene';
 import { languages, shot } from './shots';
 
 // The map screen (top bar and three columns), once per documentation language.
 for (const lang of languages) {
   it(`map: screen (${lang})`, async () => {
     await openRelief({ lang, size: { width: 1280, height: 720 } });
-    await $('[data-testid="map-node"]').waitForDisplayed();
-    await $('[data-testid="map-edge"]').waitForExist();
+    await waitForScene((s) => s.nodes.length > 0);
+    await waitForScene((s) => s.edges.length > 0);
     await browser.saveScreenshot(shot(lang, 'map'));
   });
 }
@@ -17,7 +18,7 @@ for (const lang of languages) {
 for (const lang of languages) {
   it(`map: search and breadcrumbs (${lang})`, async () => {
     await openRelief({ lang, size: { width: 1280, height: 720 } });
-    await $('[data-testid="map-node"]').waitForDisplayed();
+    await waitForScene((s) => s.nodes.length > 0);
     await press('/');
     await typeText('refresh');
     await press('Enter');

@@ -160,6 +160,48 @@ describe('buildMapScene, nodes', () => {
     expect(node.labelShown).toBe(false);
   });
 
+  it('gives the height in pixels of the header of an open container, 0 for the others (S16)', () => {
+    const open = nodeOf({ nodes: [vnode('sys', { kind: 'service', mode: 'open' })] }, 'sys');
+    // A system header is 50 world units, capped at 38 px; at scale 1 that is 38.
+    expect(open.headerHeight).toBe(38);
+    const half = nodeOf(
+      { nodes: [vnode('sys', { kind: 'service', mode: 'open' })], modesScale: 0.5 },
+      'sys',
+    );
+    expect(half.headerHeight).toBe(25);
+    const closed = nodeOf({ nodes: [vnode('file', { mode: 'box' })] }, 'file');
+    expect(closed.headerHeight).toBe(0);
+  });
+
+  it('flags a shown label that is wider than its box (S16)', () => {
+    const fits = nodeOf({ nodes: [vnode('file', { w: 100, h: 40 })] }, 'file');
+    expect(fits.labelClipped).toBe(false);
+    const tight = nodeOf(
+      {
+        nodes: [vnode('file', { w: 30, h: 40 })],
+        info: () => ({ ...INFOS['file']!, label: 'a-very-long-file-name-that-cannot-fit.ts' }),
+      },
+      'file',
+    );
+    expect(tight.labelShown).toBe(true);
+    expect(tight.labelClipped).toBe(true);
+  });
+
+  it('places the title tab of an open container on its top border, none otherwise (S16)', () => {
+    const tabbed = nodeOf(
+      { nodes: [vnode('sys', { kind: 'service', mode: 'open' })], modesScale: 0.2 },
+      'sys',
+    );
+    const tab = tabbed.tabRect;
+    expect(tab).toBeTruthy();
+    expect(tab!.y).toBeLessThanOrEqual(tabbed.rect.y);
+    expect(tab!.y + tab!.h).toBeGreaterThanOrEqual(tabbed.rect.y);
+    expect(tab!.x).toBeGreaterThanOrEqual(tabbed.rect.x);
+    expect(tab!.x + tab!.w).toBeLessThanOrEqual(tabbed.rect.x + tabbed.rect.w);
+    const headed = nodeOf({ nodes: [vnode('sys', { kind: 'service', mode: 'open' })] }, 'sys');
+    expect(headed.tabRect).toBeNull();
+  });
+
   it('keeps a ghost without content', () => {
     const node = nodeOf({ nodes: [vnode('file', { mode: 'ghost' })] }, 'file');
     expect(node.mode).toBe('ghost');

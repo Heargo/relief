@@ -1,14 +1,15 @@
-import { $, browser, expect } from '@wdio/globals';
+import { expect } from '@wdio/globals';
 import { clearReviewState } from '../helpers/review-state';
 import { openRelief } from '../helpers/open-relief';
-import { count, tid } from '../helpers/ui';
+import { sceneNode, sceneNodesMatching, waitForScene } from '../helpers/map-scene';
+import { tid } from '../helpers/ui';
 
 // Contract with the UI, on main...feat/promo-codes:
 //  - the left panel has a `toggle-hide-external` button (`aria-checked`), on by default;
-//  - while it is on, no `map-node` has a `data-node-id` starting with `pkg:external`; switching
+//  - while it is on, no node of the map scene has an id starting with `pkg:external`; switching
 //    it off shows the node `pkg:external` (the external group).
 
-const EXTERNAL = '[data-testid="map-node"][data-node-id^="pkg:external"]';
+const isExternal = (id: string) => id.startsWith('pkg:external');
 
 describe('hide external dependencies', () => {
   beforeEach(async () => {
@@ -18,14 +19,11 @@ describe('hide external dependencies', () => {
 
   it('hides them at load, and shows the external group once switched off', async () => {
     await expect(tid('toggle-hide-external')).toHaveAttribute('aria-checked', 'true');
-    expect(await count(EXTERNAL)).toBe(0);
+    expect(await sceneNodesMatching(isExternal)).toEqual([]);
 
     await tid('toggle-hide-external').click();
     await expect(tid('toggle-hide-external')).toHaveAttribute('aria-checked', 'false');
-    await browser.waitUntil(async () => (await count(EXTERNAL)) > 0, {
-      timeout: 8000,
-      timeoutMsg: 'the external group never appeared',
-    });
-    await expect($('[data-testid="map-node"][data-node-id="pkg:external"]')).toBeExisting();
+    await waitForScene((s) => s.nodes.some((n) => isExternal(n.id)));
+    expect(await sceneNode('pkg:external')).toBeDefined();
   });
 });

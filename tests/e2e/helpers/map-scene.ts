@@ -18,6 +18,12 @@ export interface SceneNode extends ClientRect {
   label: string;
   labelShown: boolean;
   header: 'header' | 'tab' | 'none';
+  /** Height of the header band in pixels (0 without header). */
+  headerHeight: number;
+  /** Where the title tab sits when `header` is 'tab' (straddling the top border), else null. */
+  tabRect: ClientRect | null;
+  /** The shown label does not fit in its header or box. */
+  labelClipped: boolean;
   status: 'added' | 'removed' | 'modified' | 'moved' | 'unchanged' | null;
   intensity: number | null;
   oldLocation: boolean;
@@ -144,6 +150,11 @@ async function click({ x, y }: { x: number; y: number }): Promise<void> {
   await browser.action('pointer').move({ x, y }).down().up().perform();
 }
 
+/** A real pointer click at the middle of a scene edge (merged ones included). */
+export async function clickSceneEdge(edge: SceneEdge): Promise<void> {
+  await click({ x: Math.round(edge.mid.x), y: Math.round(edge.mid.y) });
+}
+
 /** A real pointer click at the node. */
 export async function clickNode(id: string): Promise<void> {
   await click(await nodePoint(id));
@@ -164,4 +175,54 @@ export async function clickEdge(from: string, to: string): Promise<void> {
 export async function hoverEdge(from: string, to: string): Promise<void> {
   const { x, y } = await edgePoint(from, to);
   await browser.action('pointer').move({ x, y }).perform();
+}
+
+/** Waits until a node is drawn and has stopped moving (the camera animation is over); returns it. */
+export async function settledNode(id: string, timeout = 8000): Promise<SceneNode> {
+  await waitForNode(id, timeout);
+  let previous = '';
+  let node: SceneNode | undefined;
+  await browser.waitUntil(
+    async () => {
+      node = await sceneNode(id);
+      const key = node
+        ? [node.left, node.top, node.width, node.height].map((v) => Math.round(v)).join(',')
+        : '';
+      const same = key !== '' && key === previous;
+      previous = key;
+      return same;
+    },
+    { timeout, interval: 300, timeoutMsg: `${id} never stopped moving` },
+  );
+  return node as SceneNode;
+}
+
+/** The nodes of the scene whose id satisfies `test`. */
+export async function sceneNodesMatching(test: (id: string) => boolean): Promise<SceneNode[]> {
+  return (await sceneNodes()).filter((n) => test(n.id));
+}
+
+/** Waits until the scene holds a node whose id satisfies `test`; returns it. */
+export async function waitForNodeMatching(
+  test: (id: string) => boolean,
+  timeout = 8000,
+): Promise<SceneNode> {
+  const found = await waitForScene((s) => s.nodes.some((n) => test(n.id)), timeout);
+  return found.nodes.find((n) => test(n.id)) as SceneNode;
+}
+
+/** Waits until the number of drawn nodes is the same on two reads, and non-zero. */
+export async function settledNodeCount(timeout = 8000): Promise<number> {
+  let previous = -1;
+  let now = 0;
+  await browser.waitUntil(
+    async () => {
+      now = (await sceneNodes()).length;
+      const same = now > 0 && now === previous;
+      previous = now;
+      return same;
+    },
+    { timeout, interval: 600, timeoutMsg: 'the map never settled' },
+  );
+  return now;
 }

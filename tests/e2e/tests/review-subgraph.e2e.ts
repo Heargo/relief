@@ -1,14 +1,15 @@
 // @fixture wide
 import { appendFileSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { $, browser, expect } from '@wdio/globals';
+import { expect } from '@wdio/globals';
 import { openRelief } from '../helpers/open-relief';
+import { sceneNodes, waitForNode } from '../helpers/map-scene';
 import { clearReviewState } from '../helpers/review-state';
 import { poll } from '../helpers/ui';
 
 // Contract with the UI, on `wide` (6 012 nodes, more than the 2 000 the map shows) with changes in
 // the working tree (`?range=WORKTREE`, "Relire la PR" on): the review shows the subgraph of the
-// diff, so the modified files are `map-node` boxes (`data-node-id` of the form
+// diff, so the modified files are nodes of the map scene (id of the form
 // `pkg:wide/packages/pkg-NN::file:packages/pkg-NN/file-NNN.ts`) without any zoom, in two different
 // packages, and the screen holds at most 2 000 nodes. `wide` is shared by the specs of the run:
 // the edited files are restored.
@@ -42,13 +43,10 @@ describe('review of a big repository', () => {
 
   it('shows the modified files without zooming, and at most 2 000 nodes', async () => {
     for (const file of EDITED) {
-      await $(`[data-testid="map-node"][data-node-id="${idOf(file)}"]`).waitForExist({
-        timeout: 90000,
-        timeoutMsg: `${file} is not on the map in review`,
-      });
+      await waitForNode(idOf(file), 90000);
     }
     const count = await poll(
-      () => browser.execute(() => document.querySelectorAll('[data-testid="map-node"]').length),
+      async () => (await sceneNodes()).length,
       (n) => n > 0,
       5000,
     );

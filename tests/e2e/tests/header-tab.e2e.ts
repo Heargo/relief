@@ -1,6 +1,7 @@
 // @fixture deep
 import { browser, expect } from '@wdio/globals';
 import { openRelief } from '../helpers/open-relief';
+import { sceneNodes, type SceneNode } from '../helpers/map-scene';
 import { tid } from '../helpers/ui';
 
 // U14: containers open on their width alone; when the reserved header is too small for a readable
@@ -18,65 +19,51 @@ interface Report {
 }
 
 async function inspect(): Promise<Report> {
-  return browser.execute(() => {
-    const TOL = 0.75;
-    const shownEl = (el: HTMLElement | null) => {
-      if (!el) return false;
-      const s = getComputedStyle(el);
-      return s.display !== 'none' && s.visibility !== 'hidden' && el.getClientRects().length > 0;
-    };
-    const nodes = Array.from(
-      document.querySelectorAll<HTMLElement>('[data-testid="map-node"]'),
-    ).map((el) => ({ el, id: el.dataset['nodeId'] ?? '', box: el.getBoundingClientRect() }));
-    const r: Report = {
-      open: 0,
-      overlaps: [],
-      missingTab: [],
-      badTab: [],
-      tabs: 0,
-      closedWide: [],
-      smallHeaderOpenModules: 0,
-    };
-    for (const node of nodes) {
-      const mode = node.el.dataset['mode'];
-      const kind = node.el.dataset['kind'];
-      if (mode === 'box' && kind === 'module' && node.box.width >= 300 + TOL) {
-        const hasKids = node.el.querySelector('[data-testid="map-node"]') !== null;
-        // a module made only of externals or without children has nothing to open
-        if (hasKids) r.closedWide.push(`${node.id} (${Math.round(node.box.width)} px)`);
+  const nodes = await sceneNodes();
+  const TOL = 0.75;
+  const r: Report = {
+    open: 0,
+    overlaps: [],
+    missingTab: [],
+    badTab: [],
+    tabs: 0,
+    closedWide: [],
+    smallHeaderOpenModules: 0,
+  };
+  const inside = (inner: SceneNode, outer: SceneNode) =>
+    inner.left >= outer.left - TOL &&
+    inner.left + inner.width <= outer.left + outer.width + TOL &&
+    inner.top >= outer.top - TOL &&
+    inner.top + inner.height <= outer.top + outer.height + TOL;
+  for (const node of nodes) {
+    if (node.mode === 'box' && node.kind === 'module' && node.width >= 300 + TOL) {
+      // a module made only of externals or without children has nothing to open
+      if (nodes.some((other) => other !== node && other.width > 0 && inside(other, node))) {
+        r.closedWide.push(`${node.id} (${Math.round(node.width)} px)`);
       }
-      if (mode !== 'open') continue;
-      const hd = node.el.querySelector<HTMLElement>(':scope > .hd');
-      if (!hd || !shownEl(hd)) continue;
-      r.open++;
-      const bottom = hd.getBoundingClientRect().bottom;
-      for (const other of nodes) {
-        if (other === node || other.box.width === 0) continue;
-        const inside =
-          other.box.left >= node.box.left - TOL &&
-          other.box.right <= node.box.right + TOL &&
-          other.box.top >= node.box.top - TOL &&
-          other.box.bottom <= node.box.bottom + TOL;
-        if (inside && other.box.top < bottom - TOL) r.overlaps.push(`${node.id} > ${other.id}`);
-      }
-      const label = hd.querySelector<HTMLElement>('.lb');
-      const hasLabel =
-        !!label && !!label.textContent?.trim() && getComputedStyle(label).display !== 'none';
-      const tab = node.el.querySelector<HTMLElement>(':scope > .tab');
-      if (kind === 'module' && !hasLabel) r.smallHeaderOpenModules++;
-      if (hasLabel) continue;
-      if (!tab || !shownEl(tab) || !tab.textContent?.trim()) {
-        r.missingTab.push(node.id);
-        continue;
-      }
-      r.tabs++;
-      const t = tab.getBoundingClientRect();
-      const straddles = t.top < node.box.top + TOL && t.bottom > node.box.top - TOL;
-      const inside = t.left >= node.box.left - TOL && t.right <= node.box.right + TOL;
-      if (!straddles || !inside || !tab.title) r.badTab.push(node.id);
     }
-    return r;
-  });
+    if (node.mode !== 'open' || node.headerHeight <= 0) continue;
+    r.open++;
+    const bottom = node.top + node.headerHeight;
+    for (const other of nodes) {
+      if (other === node || other.width === 0) continue;
+      if (inside(other, node) && other.top < bottom - TOL)
+        r.overlaps.push(`${node.id} > ${other.id}`);
+    }
+    const hasLabel = node.header === 'header' && node.labelShown && node.label.trim() !== '';
+    if (node.kind === 'module' && !hasLabel) r.smallHeaderOpenModules++;
+    if (hasLabel) continue;
+    if (node.header !== 'tab' || node.label.trim() === '' || !node.tabRect) {
+      r.missingTab.push(node.id);
+      continue;
+    }
+    r.tabs++;
+    const t = node.tabRect;
+    const straddles = t.top < node.top + TOL && t.top + t.height > node.top - TOL;
+    const within = t.left >= node.left - TOL && t.left + t.width <= node.left + node.width + TOL;
+    if (!straddles || !within) r.badTab.push(node.id);
+  }
+  return r;
 }
 
 it('containers open on width alone and a tab names each one without a header label, at three zooms', async () => {

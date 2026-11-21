@@ -1,6 +1,7 @@
 import { $, browser, expect } from '@wdio/globals';
 import { clearReviewState } from '../helpers/review-state';
 import { openRelief } from '../helpers/open-relief';
+import { sceneNode, sceneNodes } from '../helpers/map-scene';
 import { poll, press, tid, tids } from '../helpers/ui';
 
 // Contract with the UI (data attributes, no i18n dependency), on main...feat/promo-codes:
@@ -9,7 +10,7 @@ import { poll, press, tid, tids } from '../helpers/ui';
 //    `data-seen-count` and `data-total-count` (the "x/y seen"), whose text holds the short sha and
 //    the message; the files of a commit are `reading-row` elements inside it;
 //  - clicking a `commit-row` filters the map: only the nodes touched by that commit keep a
-//    `data-diff-status` other than `unchanged` (absent counts as unchanged); the row gets
+//    scene `status` other than `unchanged` (null counts as unchanged); the row gets
 //    `data-selected="true"`;
 //  - `commit-show-all` ("see all the commits") removes the filter; clicking the selected row again
 //    does too; `n` / `p` move the selection from commit to commit while in commit mode.
@@ -18,16 +19,11 @@ const PAYMENT = 'pkg:@acme/api/billing::file:apps/api/billing/payment.ts';
 const AUTH_MESSAGE = 'refactor(auth): refresh() renvoie null';
 
 async function coloured(): Promise<string[]> {
-  return browser.execute(() =>
-    Array.from(document.querySelectorAll('[data-testid="map-node"]'))
-      .filter((el) => {
-        const status = el.getAttribute('data-diff-status');
-        return status !== null && status !== 'unchanged';
-      })
-      .map((el) => el.getAttribute('data-node-id') as string)
-      .filter((id) => id.includes('::file:') && !id.includes('::sym:'))
-      .sort(),
-  );
+  return (await sceneNodes())
+    .filter((n) => n.status !== null && n.status !== 'unchanged')
+    .map((n) => n.id)
+    .filter((id) => id.includes('::file:') && !id.includes('::sym:'))
+    .sort();
 }
 
 /** Waits until the coloured files stop changing (the camera animation settles), then returns them. */
@@ -46,15 +42,8 @@ async function settled(): Promise<string[]> {
 }
 
 async function nodeBox(id: string): Promise<string> {
-  return browser.execute(
-    (nodeId: string) =>
-      JSON.stringify(
-        document
-          .querySelector(`[data-testid="map-node"][data-node-id="${nodeId}"]`)
-          ?.getBoundingClientRect(),
-      ),
-    id,
-  );
+  const { left, top, width, height } = (await sceneNode(id))!;
+  return JSON.stringify({ left, top, width, height });
 }
 
 async function authRow() {

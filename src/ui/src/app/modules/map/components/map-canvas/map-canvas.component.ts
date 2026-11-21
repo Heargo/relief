@@ -283,6 +283,7 @@ export class MapCanvasComponent {
         archi: this.archi(),
         risk: this.risk(),
         loading: this.loading(),
+        measureLabel,
       });
       const rect = root.getBoundingClientRect();
       const { scale, tx, ty } = this.map.camera();
@@ -296,7 +297,11 @@ export class MapCanvasComponent {
       });
       return {
         renderer: PROTO_RENDERER,
-        nodes: scene.nodes.map(({ rect: r, ...node }) => ({ ...node, ...client(r) })),
+        nodes: scene.nodes.map(({ rect: r, tabRect, ...node }) => ({
+          ...node,
+          ...client(r),
+          tabRect: tabRect ? client(tabRect) : null,
+        })),
         edges: scene.edges.map(({ mid, labelRect, ...edge }) => ({
           ...edge,
           mid: { x: px(mid.x), y: py(mid.y) },
@@ -767,6 +772,16 @@ export class MapCanvasComponent {
     }
     el.appendChild(head);
   }
+}
+
+let measureCtx: CanvasRenderingContext2D | null = null;
+
+/** Width in pixels of a text in a CSS font, by Canvas 2D. */
+function measureLabel(text: string, font: string): number {
+  measureCtx ??= document.createElement('canvas').getContext('2d');
+  if (!measureCtx) return text.length * 7;
+  measureCtx.font = font;
+  return measureCtx.measureText(text).width;
 }
 
 const EMPHASIS_CLASSES = ['out', 'in', 'picked', 'dim', 'hidden'];

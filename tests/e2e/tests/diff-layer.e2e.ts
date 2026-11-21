@@ -11,12 +11,10 @@ import {
 import { tid } from '../helpers/ui';
 
 // Contract with the UI (data attributes, no i18n dependency), on main...feat/promo-codes:
-//  - while the diff layer is on, each `data-testid="map-node"` carries `data-diff-status`
-//    (added | removed | modified | moved | unchanged) and `data-diff-badges`, a space-separated
-//    list of breaking-api | api | internal-signature | format-only; without a diff neither
-//    attribute is present;
-//  - the former place of a moved node is `data-testid="old-location"` with the old `data-node-id`;
-//  - each `data-testid="map-edge"` carries `data-status` (added | removed | moved | unchanged);
+//  - while the diff layer is on, each node of the map scene carries `status`
+//    (added | removed | modified | moved | unchanged) and `badges`, a list of breaking-api | api | internal-signature | format-only; without a diff the status is null;
+//  - the former place of a moved node is a scene node with `oldLocation` and the old id;
+//  - each scene edge carries `status` (added | removed | moved | unchanged);
 //  - `data-testid="diff-legend"` is the legend;
 //  - `data-testid="pr-stats"` (top of the left panel) carries `data-files`, `data-lines-added`
 //    (not asserted here), `data-symbols-added|removed|modified|moved` and `data-signatures`;

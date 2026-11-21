@@ -39,6 +39,12 @@ export interface SceneNode {
   faded: boolean;
   emphasis: NodeEmphasis | null;
   rect: SceneRect;
+  /** Height in pixels of the header of an open container, 0 for the others. */
+  headerHeight: number;
+  /** The shown label is wider than the room its header or box leaves it. */
+  labelClipped: boolean;
+  /** The title tab straddling the top border (world units), only when `header` is 'tab'. */
+  tabRect: SceneRect | null;
 }
 
 export interface SceneEdge {
@@ -82,7 +88,26 @@ export interface MapSceneInput {
   archi: ReadonlySet<string> | null;
   risk: ReadonlyMap<string, number> | null;
   loading: ReadonlySet<string>;
+  /** Width in pixels of a text in a CSS font; the component measures with a canvas. */
+  measureLabel?: (text: string, font: string) => number;
 }
+
+/** Without a measurer: about 0.6 em per character. */
+const estimateLabel = (text: string, font: string): number => {
+  const size = Number.parseFloat(/(\d+(?:\.\d+)?)px/.exec(font)?.[1] ?? '12');
+  return text.length * size * 0.6;
+};
+
+const MONO = "ui-monospace, 'JetBrains Mono', Menlo, monospace";
+/** Tab of a title on the top border: font, padding and offsets, in pixels. */
+const TAB_FONT_CSS = '11px sans-serif';
+const TAB_PAD = 14;
+const TAB_H = 18;
+const TAB_TOP = 9;
+const TAB_LEFT = 8;
+const TAB_MARGIN = 30;
+/** Horizontal room a label loses to the padding of its header, in pixels (none in a closed box). */
+const LABEL_PAD = 16;
 
 /** Room of an edge label on screen, in pixels. */
 const LABEL_W = 28;
@@ -109,6 +134,21 @@ function sceneNode(node: VisibleNode, input: MapSceneInput, selecting: boolean):
   const info = input.info(node.id);
   const content = info ? nodeContent(info, node.mode, sizeClass(width)) : null;
   const open = node.mode === 'open' ? headerLayout(node.kind, scale) : null;
+  const measure = input.measureLabel ?? estimateLabel;
+  const label = info?.label ?? '';
+  const labelShown =
+    node.mode === 'ghost'
+      ? false
+      : open
+        ? open.label === 'header'
+        : closedLabelVisible(width, height);
+  const fontPx = open ? open.fontSize : 12;
+  const family = node.kind === 'file' || node.kind === 'symbol' ? MONO : 'sans-serif';
+  const font = `${node.kind === 'service' ? 600 : 500} ${fontPx}px ${family}`;
+  const tabWidth =
+    open?.label === 'tab'
+      ? Math.max(0, Math.min(measure(label, TAB_FONT_CSS) + TAB_PAD, width - TAB_MARGIN))
+      : 0;
   const state = impactState(impact, node.id);
   const kept = !!impact && (impact.reached.has(node.id) || impact.scope.has(node.id));
   const emphasis = selecting ? (input.emphasis.nodes.get(node.id) ?? null) : null;
@@ -117,13 +157,8 @@ function sceneNode(node: VisibleNode, input: MapSceneInput, selecting: boolean):
     id: node.id,
     kind: node.kind,
     mode: node.mode,
-    label: info?.label ?? '',
-    labelShown:
-      node.mode === 'ghost'
-        ? false
-        : open
-          ? open.label === 'header'
-          : closedLabelVisible(width, height),
+    label,
+    labelShown,
     header: open ? open.label : 'none',
     status: mark?.status ?? null,
     intensity: mark?.intensity ?? null,
@@ -140,6 +175,18 @@ function sceneNode(node: VisibleNode, input: MapSceneInput, selecting: boolean):
     faded: !!input.focus && !input.focus.has(node.id),
     emphasis: emphasis === 'dim' && kept ? null : emphasis,
     rect: { x: node.x, y: node.y, w: node.w, h: node.h },
+    headerHeight: open ? open.height : 0,
+    labelClipped:
+      labelShown && label !== '' && measure(label, font) > width - (open ? LABEL_PAD : 0),
+    tabRect:
+      open?.label === 'tab'
+        ? {
+            x: node.x + TAB_LEFT / scale,
+            y: node.y - TAB_TOP / scale,
+            w: tabWidth / scale,
+            h: TAB_H / scale,
+          }
+        : null,
   };
 }
 

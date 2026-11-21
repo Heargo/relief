@@ -1,5 +1,6 @@
 import { $, $$, expect } from '@wdio/globals';
 import { openRelief } from '../helpers/open-relief';
+import { waitForNode, waitForNodeMatching } from '../helpers/map-scene';
 import { press, tid, tids, typeText } from '../helpers/ui';
 
 // Contract with the UI (data attributes, no i18n dependency):
@@ -8,13 +9,12 @@ import { press, tid, tids, typeText } from '../helpers/ui';
 //  - the breadcrumbs are `data-testid="breadcrumbs"`, one `breadcrumb` per crumb;
 //  - the help window is `data-testid="shortcuts-help"`; the Shortcuts row of the settings menu is `help-button`;
 //  - the selected node shows in `selected-node` with `data-node-id`.
-const REFRESH = '[data-testid="map-node"][data-node-id$="sym:SessionStore.refresh"]';
 const CRUMBS = 'acme-shop › apps/api › auth/ › session.ts › SessionStore.refresh';
 const REFRESH_ID = expect.stringMatching(/sym:SessionStore\.refresh$/);
 
 async function openMap() {
   await openRelief();
-  await expect($('[data-node-id="pkg:@acme/api"]')).toBeDisplayed();
+  await waitForNode('pkg:@acme/api');
 }
 
 async function searchRefresh() {
@@ -39,7 +39,7 @@ it('/, refresh, Enter selects SessionStore.refresh and shows it in the breadcrum
   await press('Enter');
 
   await expect(tid('selected-node')).toHaveAttribute('data-node-id', REFRESH_ID);
-  await expect($(REFRESH)).toBeDisplayed();
+  await waitForNodeMatching((id) => id.endsWith('sym:SessionStore.refresh'));
   await expect(tid('breadcrumbs')).toHaveText(CRUMBS);
   await expect(tid('search-results')).not.toBeDisplayed();
 });

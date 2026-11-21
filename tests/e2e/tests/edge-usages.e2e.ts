@@ -1,6 +1,7 @@
 import { $, $$, browser, expect } from '@wdio/globals';
 import { openRelief } from '../helpers/open-relief';
-import { forceClick, tid, tids } from '../helpers/ui';
+import { clickEdge } from '../helpers/map-scene';
+import { tid, tids } from '../helpers/ui';
 
 // Contract with the UI (ticket U20), on acme-shop (main...feat/promo-codes): the panel of an edge
 // has a section `edge-usages` with, per source file, `usage-file`, per imported symbol
@@ -9,14 +10,11 @@ import { forceClick, tid, tids } from '../helpers/ui';
 // `code-line[data-line]` marked `data-focused="true"`.
 const API = 'pkg:@acme/api';
 const DB = 'pkg:@acme/db';
-const API_DB = `[data-testid="map-edge"][data-from="${API}"][data-to="${DB}"]`;
 
 describe('the usages of an edge', () => {
   it('clicking an edge lists the usages, and clicking one opens the code at its line', async () => {
     await openRelief({ size: { width: 3200, height: 2000 } });
-    await $(API_DB).waitForExist();
-
-    await forceClick(API_DB);
+    await clickEdge(API, DB);
     await expect(tid('edge-panel')).toBeDisplayed();
     await browser.waitUntil(async () => (await tids('usage-row').length) > 0, {
       timeout: 15000,

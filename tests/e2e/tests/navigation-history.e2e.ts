@@ -1,6 +1,7 @@
 import { $, browser, expect } from '@wdio/globals';
 import { openRelief } from '../helpers/open-relief';
-import { forceClick, tid } from '../helpers/ui';
+import { clickEdge, waitForNode, waitForScene } from '../helpers/map-scene';
+import { tid } from '../helpers/ui';
 
 // Contract with the UI (ticket U25), on acme-shop (main...feat/promo-codes): `Alt+ArrowLeft` /
 // `Alt+ArrowRight` and the buttons `history-back` / `history-forward` of the breadcrumbs go to the
@@ -8,8 +9,10 @@ import { forceClick, tid } from '../helpers/ui';
 // there is no such step.
 const WEB = 'pkg:@acme/web';
 const DB = 'pkg:@acme/db';
-const WEB_DB = `[data-testid="map-edge"][data-from="${WEB}"][data-to="${DB}"]`;
 const WEB_DB_ROW = `[data-testid="node-edges-depends-on"] [data-testid="node-edge-row"][data-from="${WEB}"][data-to="${DB}"]`;
+
+const waitForEdge = () =>
+  waitForScene((s) => s.edges.some((e) => e.from === WEB && e.to === DB && !e.merged));
 
 const back = () => browser.keys(['Alt', 'ArrowLeft']);
 const forward = () => browser.keys(['Alt', 'ArrowRight']);
@@ -17,8 +20,8 @@ const forward = () => browser.keys(['Alt', 'ArrowRight']);
 // Steps: the edge web -> db, the node web, the same edge again (from the node), the node db.
 async function walk() {
   await openRelief();
-  await $(WEB_DB).waitForExist();
-  await forceClick(WEB_DB);
+  await waitForEdge();
+  await clickEdge(WEB, DB);
   await tid('inspector-from').click();
   await expect(tid('selected-node')).toHaveAttribute('data-node-id', WEB);
   await $(WEB_DB_ROW).click();
@@ -34,7 +37,7 @@ it('Alt+Left selects the previous node again and frames it, Alt+Right comes back
   await expect(tid('inspector-badge')).toHaveAttribute('data-kind', 'edge');
   await back();
   await expect(tid('selected-node')).toHaveAttribute('data-node-id', WEB);
-  await expect($(`[data-testid="map-node"][data-node-id="${WEB}"]`)).toBeDisplayed();
+  await waitForNode(WEB);
 
   await forward();
   await expect(tid('inspector-badge')).toHaveAttribute('data-kind', 'edge');
@@ -44,7 +47,7 @@ it('Alt+Left selects the previous node again and frames it, Alt+Right comes back
 
 it('the buttons of the breadcrumbs go back and forward', async () => {
   await openRelief();
-  await $(WEB_DB).waitForExist();
+  await waitForEdge();
   await expect(tid('history-back')).toBeDisabled();
   await expect(tid('history-forward')).toBeDisabled();
 
