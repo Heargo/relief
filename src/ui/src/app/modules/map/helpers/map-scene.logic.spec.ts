@@ -447,6 +447,41 @@ describe('buildMapScene, edges', () => {
   });
 });
 
+describe('buildMapScene, edge shapes (what the Canvas painter draws)', () => {
+  it('carries the curve, the arrow and the covered flag of a full edge', () => {
+    const edge = edgeOf(
+      {
+        edgeLines: [
+          line('a', 'b', {
+            shape: { ...SHAPE, d: 'M1 2 L3 4', arrow: 'M5 6 L7 8', covered: true },
+          }),
+        ],
+      },
+      'a',
+      'b',
+    );
+    expect(edge.shape).toEqual({ d: 'M1 2 L3 4', arrow: 'M5 6 L7 8', covered: true });
+  });
+
+  it('carries the curve of a merged edge', () => {
+    const edge = edgeOf(
+      { mergedEdgeLines: [line('c', 'd', { shape: { ...SHAPE, d: 'M9 9 L8 8' } })] },
+      'c',
+      'd',
+    );
+    expect(edge.shape.d).toBe('M9 9 L8 8');
+  });
+
+  it('carries the curve of a co-change edge', () => {
+    const coChange: CoChangeLine = {
+      edge: { from: 'x', to: 'y', count: 5, kinds: [], links: [], changed: false },
+      shape: { ...SHAPE, d: 'M0 1 L2 3' },
+    };
+    const edge = edgeOf({ coChangeLines: [coChange] }, 'x', 'y');
+    expect(edge.shape.d).toBe('M0 1 L2 3');
+  });
+});
+
 describe('buildMapScene on acme-shop', () => {
   beforeEach(() => {
     localStorage.clear();

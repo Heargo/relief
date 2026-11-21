@@ -63,6 +63,8 @@ export interface SceneEdge {
   tooltip: string;
   labelRect: SceneRect | null;
   mid: { x: number; y: number };
+  /** The curve and arrow head (SVG path data, world units), and whether the label is covered. */
+  shape: { d: string; arrow: string; covered: boolean };
 }
 
 export interface MapScene {
@@ -239,6 +241,7 @@ function sceneEdge(line: EdgeLine, merged: boolean, input: MapSceneInput): Scene
     tooltip: line.tooltip,
     labelRect: labelRect(line.label, shape.mx, shape.my, input.modesScale),
     mid: { x: shape.mx, y: shape.my },
+    shape: { d: shape.d, arrow: shape.arrow, covered: shape.covered },
   };
 }
 
@@ -259,5 +262,6 @@ function sceneCoChange({ edge, shape }: CoChangeLine, input: MapSceneInput): Sce
     tooltip: '',
     labelRect: null,
     mid: { x: shape.mx, y: shape.my },
+    shape: { d: shape.d, arrow: shape.arrow, covered: shape.covered },
   };
 }

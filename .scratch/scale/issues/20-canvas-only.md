@@ -15,6 +15,7 @@ Spec: ADR `docs/adr/0009-carte-en-canvas-2d.md`
 - `docs/dev/rules.md` : la carte est un canvas (ADR 0009), e2e par l'API de scène.
 - Coins arrondis des boîtes (6 px) et de l'onglet (4 px) dans le peintre, comme le DOM (S17 les a laissés carrés) ; tests du peintre adaptés.
 - Identifier la spec e2e instable vue en S16 et S17 (une spec sur 47 échoue parfois dans `just e2e-summary`, jamais en relance).
+- Reprises de S18 : halo des étiquettes d'arête (`--relief-map`), survol en accent ; élagage des arêtes hors écran dans le peintre si le banc le demande ; tableaux de tirets réutilisés.
 - `docs/bench.md` : section « After S20 » avec `just bench-ui` sur `dense` et excalidraw.
 
 ## Critères d'acceptation

@@ -48,7 +48,6 @@ import { buildMapScene, type SceneRect } from '../../helpers/map-scene.logic';
 import { symbolIcon } from '../../helpers/node-content.logic';
 import { chooseRenderer } from '../../helpers/renderer.logic';
 import { createMapPainter, readPalette, type Palette } from './map-painter';
-import { TempEdgePainter } from './map-edges-temp';
 
 /** Distance, in screen pixels, within which a click picks a merged edge. */
 const MERGED_PICK_PX = 6;
@@ -267,14 +266,13 @@ export class MapCanvasComponent {
     const el = this.surface()?.nativeElement;
     const ctx = el?.getContext('2d');
     if (!el || !ctx) return;
-    const edges = new TempEdgePainter();
     let palette = readPalette(getComputedStyle(document.documentElement));
     let stale = false;
     const riskColors = () => {
       const css = getComputedStyle(document.documentElement);
       return [0, 1, 2, 3, 4].map((i) => css.getPropertyValue(`--relief-risk-${i}`).trim());
     };
-    let painter = this.makePainter(ctx, palette, riskColors(), edges, () => palette);
+    let painter = this.makePainter(ctx, palette, riskColors());
     const draw = () => {
       const dpr = window.devicePixelRatio || 1;
       const { width, height } = this.map.viewport();
@@ -287,7 +285,7 @@ export class MapCanvasComponent {
       if (stale) {
         stale = false;
         palette = readPalette(getComputedStyle(document.documentElement));
-        painter = this.makePainter(ctx, palette, riskColors(), edges, () => palette);
+        painter = this.makePainter(ctx, palette, riskColors());
       }
       painter.paint(this.scene(), this.map.camera(), { width, height }, dpr);
     };
@@ -311,13 +309,7 @@ export class MapCanvasComponent {
     this.destroyRef.onDestroy(() => cancelAnimationFrame(this.frame));
   }
 
-  private makePainter(
-    ctx: CanvasRenderingContext2D,
-    palette: Palette,
-    risk: string[],
-    edges: TempEdgePainter,
-    current: () => Palette,
-  ) {
+  private makePainter(ctx: CanvasRenderingContext2D, palette: Palette, risk: string[]) {
     return createMapPainter(ctx, palette, {
       t: (key, params) => this.language.t(key, params),
       icon: (id) => {
@@ -325,16 +317,6 @@ export class MapCanvasComponent {
         return info?.kind === 'symbol' ? (ICON_GLYPHS[symbolIcon(info.subkind)] ?? null) : null;
       },
       risk,
-      edges: (c, camera) => {
-        const { nodes, edges: states } = this.map.emphasis();
-        edges.draw(c, camera, current(), {
-          lines: this.map.edgeLines(),
-          merged: this.map.mergedEdgeLines(),
-          nodeEmphasis: nodes,
-          edgeEmphasis: states,
-          edgeKey: (l) => edgeKey(l.edge.from, l.edge.to),
-        });
-      },
     });
   }
 

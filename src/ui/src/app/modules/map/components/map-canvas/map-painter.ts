@@ -2,6 +2,7 @@
 // shapes in world units under the camera, text in screen pixels. The visual reference is
 // `map-canvas.component.scss`.
 import type { Camera } from '../../helpers/camera.logic';
+import { createEdgePainter } from './edge-painter';
 import { headerFontSize } from '../../helpers/header.logic';
 import {
   closedFontPx,
@@ -28,6 +29,8 @@ export interface Palette {
   mov: string;
   rule: string;
   impact: string;
+  cochange: string;
+  ruleOld: string;
 }
 
 const VARIABLES: Record<keyof Palette, string> = {
@@ -46,6 +49,8 @@ const VARIABLES: Record<keyof Palette, string> = {
   mov: '--relief-mov',
   rule: '--relief-rule',
   impact: '--relief-impact',
+  cochange: '--relief-cochange',
+  ruleOld: '--relief-rule-old',
 };
 
 /** The colors of the theme, read from the `--relief-*` variables. */
@@ -64,8 +69,6 @@ export interface PainterOptions {
   icon?: (id: string) => string | null;
   /** Colors of the risk steps, indexed by step (0 is unused). */
   risk?: readonly string[];
-  /** Temporary (until the edge painter): draws the edges once the boxes are, in world units. */
-  edges?: (ctx: CanvasRenderingContext2D, camera: Camera) => void;
 }
 
 export interface Viewport {
@@ -361,6 +364,7 @@ export function createMapPainter(
     ctx.globalAlpha = 1;
   }
 
+  const edgePainter = createEdgePainter(ctx, palette);
   const shown: SceneNode[] = [];
 
   return {
@@ -397,9 +401,13 @@ export function createMapPainter(
         boxes(n, px);
         tabBox(n, px);
       }
-      options.edges?.(ctx, camera);
+      const selecting =
+        scene.nodes.some((n) => n.emphasis !== null) ||
+        scene.edges.some((e) => e.emphasis !== 'normal');
+      edgePainter.lines(scene.edges, camera, selecting);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.textBaseline = 'middle';
+      edgePainter.labels(scene.edges, camera);
       for (const n of shown) texts(n, camera);
     },
   };

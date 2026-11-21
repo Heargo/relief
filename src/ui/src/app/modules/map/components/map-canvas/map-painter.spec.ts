@@ -1,9 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 
-import type { SceneNode } from '../../helpers/map-scene.logic';
+import type { SceneEdge, SceneNode } from '../../helpers/map-scene.logic';
 import { createMapPainter, readPalette, type Palette } from './map-painter';
 
-const PALETTE: Palette = {
+const PALETTE = {
   fg: '#f1',
   muted: '#f2',
   faint: '#f3',
@@ -19,7 +19,9 @@ const PALETTE: Palette = {
   mov: '#a4',
   rule: '#a5',
   impact: '#a6',
-};
+  cochange: '#a7',
+  ruleOld: '#a8',
+} as Palette;
 
 interface Call {
   op: string;
@@ -27,6 +29,9 @@ interface Call {
   fillStyle: unknown;
   strokeStyle: unknown;
   globalAlpha: number;
+  lineWidth: number;
+  dash: number[];
+  font: unknown;
   /** The last `setTransform` before the call. */
   matrix: number[];
 }
@@ -40,6 +45,7 @@ function fakeContext() {
     globalAlpha: 1,
     lineWidth: 1,
     font: '',
+    dash: [],
   };
   let matrix = [1, 0, 0, 1, 0, 0];
   const stack: { s: Record<string, unknown>; m: number[] }[] = [];
@@ -50,6 +56,9 @@ function fakeContext() {
       fillStyle: state['fillStyle'],
       strokeStyle: state['strokeStyle'],
       globalAlpha: state['globalAlpha'] as number,
+      lineWidth: state['lineWidth'] as number,
+      dash: state['dash'] as number[],
+      font: state['font'],
       matrix,
     });
   const ctx = new Proxy({} as Record<string, unknown>, {
@@ -59,6 +68,11 @@ function fakeContext() {
         return (...m: number[]) => {
           matrix = m;
           record('setTransform', m);
+        };
+      if (prop === 'setLineDash')
+        return (dash: number[]) => {
+          state['dash'] = dash;
+          record('setLineDash', [dash]);
         };
       if (prop === 'save') return () => stack.push({ s: { ...state }, m: matrix });
       if (prop === 'restore')
@@ -112,9 +126,9 @@ const node = (over: Partial<SceneNode> = {}): SceneNode => ({
 const VIEWPORT = { width: 800, height: 600 };
 const CAMERA = { scale: 1, tx: 0, ty: 0 };
 
-function paint(nodes: SceneNode[], camera = CAMERA, dpr = 1) {
+function paint(nodes: SceneNode[], camera = CAMERA, dpr = 1, edges: SceneEdge[] = []) {
   const rec = fakeContext();
-  createMapPainter(rec.ctx, PALETTE).paint({ nodes, edges: [] }, camera, VIEWPORT, dpr);
+  createMapPainter(rec.ctx, PALETTE).paint({ nodes, edges }, camera, VIEWPORT, dpr);
   return rec;
 }
 
@@ -136,6 +150,8 @@ describe('readPalette', () => {
       '--relief-mov': '#ddd',
       '--relief-rule': '#eee',
       '--relief-impact': '#fff',
+      '--relief-cochange': '#c0c',
+      '--relief-rule-old': '#d0d',
     };
     expect(readPalette({ getPropertyValue: (name: string) => vars[name] ?? '' })).toEqual({
       fg: '#111',
@@ -153,6 +169,8 @@ describe('readPalette', () => {
       mov: '#ddd',
       rule: '#eee',
       impact: '#fff',
+      cochange: '#c0c',
+      ruleOld: '#d0d',
     });
   });
 });
@@ -290,5 +308,258 @@ describe('createMapPainter', () => {
     expect(fill?.matrix).toEqual([4, 0, 0, 4, 20, 40]);
     const text = of('fillText').find((c) => c.args[0] === 'cart.ts');
     expect(text?.matrix).toEqual([2, 0, 0, 2, 0, 0]);
+  });
+});
+
+// ---- Edges (S18) ----------------------------------------------------------------------------
+
+/** A Path2D that remembers what it was made of. */
+class FakePath2D {
+  readonly parts: string[] = [];
+  constructor(d?: string | FakePath2D) {
+    if (typeof d === 'string') this.parts.push(d);
+  }
+  addPath(other: FakePath2D): void {
+    this.parts.push(...other.parts);
+  }
+  get d(): string {
+    return this.parts.join(' ');
+  }
+}
+
+beforeAll(() => {
+  vi.stubGlobal('Path2D', FakePath2D);
+});
+
+const CURVE = 'M0 0 L100 100';
+const ARROW = 'M100 100 L90 95 L95 90 Z';
+
+const edge = (over: Partial<SceneEdge> = {}): SceneEdge => ({
+  from: 'a',
+  to: 'b',
+  status: 'unchanged',
+  count: 1,
+  changed: false,
+  selected: false,
+  merged: false,
+  coChange: false,
+  impactPath: false,
+  violation: null,
+  emphasis: 'normal',
+  label: { text: '', cls: 'base', visible: false },
+  tooltip: '',
+  labelRect: null,
+  mid: { x: 100, y: 50 },
+  shape: { d: CURVE, arrow: ARROW, covered: false },
+  ...over,
+});
+
+const pathOf = (c: Call) => (c.args[0] as FakePath2D).d;
+/** The stroke calls of a path (not of a rectangle). */
+const strokes = (r: ReturnType<typeof paint>, d: string) =>
+  r.of('stroke').filter((c) => c.args[0] instanceof FakePath2D && pathOf(c).includes(d));
+const arrows = (r: ReturnType<typeof paint>) =>
+  r.of('fill').filter((c) => c.args[0] instanceof FakePath2D && pathOf(c) === ARROW);
+const paintEdges = (edges: SceneEdge[], camera = CAMERA, nodes: SceneNode[] = []) =>
+  paint(nodes, camera, 1, edges);
+
+describe('createMapPainter, full edges', () => {
+  it('strokes the curve in world units and fills the arrow head', () => {
+    const r = paintEdges([edge()], { scale: 2, tx: 10, ty: 20 });
+    const line = strokes(r, CURVE);
+    expect(line).toHaveLength(1);
+    expect(line[0].matrix).toEqual([2, 0, 0, 2, 10, 20]);
+    const arrow = arrows(r);
+    expect(arrow).toHaveLength(1);
+    expect(arrow[0].matrix).toEqual([2, 0, 0, 2, 10, 20]);
+    expect(arrow[0].fillStyle).toBe(line[0].strokeStyle);
+  });
+
+  it('keeps the thickness of edgeThickness(count) in screen pixels', () => {
+    // count 1: 1.3 px; count 4: 1.3 + 0.9 * 2 = 3.1 px; the line width is in world units.
+    expect(strokes(paintEdges([edge({ count: 1 })]), CURVE)[0].lineWidth).toBeCloseTo(1.3, 5);
+    expect(strokes(paintEdges([edge({ count: 4 })]), CURVE)[0].lineWidth).toBeCloseTo(3.1, 5);
+    const zoomed = paintEdges([edge({ count: 4 })], { scale: 2, tx: 0, ty: 0 });
+    expect(strokes(zoomed, CURVE)[0].lineWidth).toBeCloseTo(1.55, 5);
+  });
+
+  it('colors an unchanged edge faint, at 0.75 alpha, and its arrow at 0.85', () => {
+    const r = paintEdges([edge()]);
+    expect(strokes(r, CURVE)[0].strokeStyle).toBe('#f3');
+    expect(strokes(r, CURVE)[0].globalAlpha).toBe(0.75);
+    expect(arrows(r)[0].fillStyle).toBe('#f3');
+    expect(arrows(r)[0].globalAlpha).toBe(0.85);
+  });
+
+  it('colors the edges by diff status', () => {
+    const color = (status: SceneEdge['status']) =>
+      strokes(paintEdges([edge({ status })]), CURVE)[0].strokeStyle;
+    expect(color('added')).toBe('#a1');
+    expect(color('modified')).toBe('#a2');
+    expect(color('removed')).toBe('#a3');
+    expect(color('moved')).toBe('#a4');
+  });
+
+  it('dashes an added edge 7 4, a removed one 3 4 and a moved one 2 5 (screen pixels)', () => {
+    const dash = (status: SceneEdge['status']) =>
+      strokes(paintEdges([edge({ status })]), CURVE)[0].dash;
+    expect(dash('added')).toEqual([7, 4]);
+    expect(dash('removed')).toEqual([3, 4]);
+    expect(dash('moved')).toEqual([2, 5]);
+    expect(dash('unchanged')).toEqual([]);
+    const zoomed = paintEdges([edge({ status: 'added' })], { scale: 2, tx: 0, ty: 0 });
+    expect(strokes(zoomed, CURVE)[0].dash).toEqual([3.5, 2]);
+  });
+
+  it('colors a new violation with the rule color (dashed) and an old one with the old rule color', () => {
+    const fresh = strokes(paintEdges([edge({ violation: 'new' })]), CURVE)[0];
+    expect(fresh.strokeStyle).toBe('#a5');
+    expect(fresh.dash).toEqual([7, 4]);
+    const old = strokes(paintEdges([edge({ violation: 'old' })]), CURVE)[0];
+    expect(old.strokeStyle).toBe('#a8');
+    expect(old.dash).toEqual([]);
+  });
+
+  it('colors a selected edge with the accent, fully opaque', () => {
+    const line = strokes(paintEdges([edge({ selected: true, status: 'added' })]), CURVE)[0];
+    expect(line.strokeStyle).toBe('#f9');
+    expect(line.globalAlpha).toBe(1);
+  });
+
+  it('colors an edge of the impact path with the impact color', () => {
+    const r = paintEdges([edge({ impactPath: true })]);
+    expect(strokes(r, CURVE)[0].strokeStyle).toBe('#a6');
+    expect(arrows(r)[0].fillStyle).toBe('#a6');
+  });
+
+  it('draws the emphasized edges: picked and out in the accent, in in the impact color', () => {
+    const draw = (emphasis: SceneEdge['emphasis']) =>
+      strokes(paintEdges([edge({ emphasis, count: 1 })]), CURVE)[0];
+    expect(draw('out')).toMatchObject({ strokeStyle: '#f9', globalAlpha: 1 });
+    expect(draw('out').lineWidth).toBeCloseTo(2.4, 5);
+    expect(draw('in')).toMatchObject({ strokeStyle: '#a6', globalAlpha: 1 });
+    expect(draw('in').lineWidth).toBeCloseTo(2.4, 5);
+    expect(draw('picked')).toMatchObject({ strokeStyle: '#f9', globalAlpha: 1 });
+    expect(draw('picked').lineWidth).toBeCloseTo(3, 5);
+  });
+
+  it('draws a dimmed edge, its arrow and its label at 0.12 alpha', () => {
+    const r = paintEdges([
+      edge({ emphasis: 'dim', label: { text: '3 +1', cls: 'base', visible: true } }),
+    ]);
+    expect(strokes(r, CURVE)[0].globalAlpha).toBeCloseTo(0.12, 5);
+    expect(arrows(r)[0].globalAlpha).toBeCloseTo(0.12, 5);
+    expect(r.of('fillText').find((c) => c.args[0] === '3 +1')?.globalAlpha).toBeCloseTo(0.12, 5);
+  });
+
+  it('does not draw a hidden edge, nor its arrow, nor its label', () => {
+    const r = paintEdges([
+      edge({ emphasis: 'hidden', label: { text: '3 +1', cls: 'base', visible: true } }),
+    ]);
+    expect(strokes(r, CURVE)).toHaveLength(0);
+    expect(arrows(r)).toHaveLength(0);
+    expect(r.of('fillText').some((c) => c.args[0] === '3 +1')).toBe(false);
+  });
+});
+
+describe('createMapPainter, edge labels', () => {
+  const labelled = (cls: string, over: Partial<SceneEdge> = {}) =>
+    edge({ label: { text: '3 +1', cls, visible: true }, ...over });
+  const text = (r: ReturnType<typeof paint>) => r.of('fillText').find((c) => c.args[0] === '3 +1');
+
+  it('writes a visible label at the middle of the edge, in screen pixels', () => {
+    const r = paintEdges([labelled('base')], { scale: 2, tx: 10, ty: 20 });
+    const t = text(r)!;
+    expect(t.args[1]).toBe(210);
+    expect(t.args[2]).toBe(120);
+    expect(t.matrix).toEqual([1, 0, 0, 1, 0, 0]);
+  });
+
+  it('does not write a label the scene says is not visible', () => {
+    const r = paintEdges([edge({ label: { text: '3 +1', cls: 'base', visible: false } })]);
+    expect(text(r)).toBeUndefined();
+    expect(strokes(r, CURVE)).toHaveLength(1);
+  });
+
+  it('colors the label by class: base muted, add, del, viol, violOld, mov', () => {
+    const color = (cls: string) => text(paintEdges([labelled(cls)]))!.fillStyle;
+    expect(color('base')).toBe('#f2');
+    expect(color('add')).toBe('#a1');
+    expect(color('del')).toBe('#a3');
+    expect(color('viol')).toBe('#a5');
+    expect(color('violOld')).toBe('#a8');
+    expect(color('mov')).toBe('#a4');
+  });
+
+  it('colors the label of an impact path edge with the impact color', () => {
+    expect(text(paintEdges([labelled('base', { impactPath: true })]))!.fillStyle).toBe('#a6');
+  });
+
+  it('writes the label after the edges, and the edges after the boxes', () => {
+    const r = paintEdges([labelled('base')], CAMERA, [node()]);
+    const box = r.calls.findIndex((c) => c.op === 'strokeRect');
+    const line = r.calls.findIndex((c) => c.op === 'stroke' && c.args[0] instanceof FakePath2D);
+    const label = r.calls.findIndex((c) => c.op === 'fillText' && c.args[0] === '3 +1');
+    expect(box).toBeGreaterThanOrEqual(0);
+    expect(line).toBeGreaterThan(box);
+    expect(label).toBeGreaterThan(line);
+  });
+});
+
+describe('createMapPainter, merged edges', () => {
+  const merged = (d: string) => edge({ merged: true, shape: { d, arrow: ARROW, covered: false } });
+
+  it('strokes all the merged edges in one thin path, with no arrow and no label', () => {
+    const r = paintEdges([
+      merged('M0 0 L1 1'),
+      edge({ ...merged('M2 2 L3 3'), label: { text: 'x2', cls: 'base', visible: true } }),
+    ]);
+    const all = r.of('stroke').filter((c) => c.args[0] instanceof FakePath2D);
+    expect(all).toHaveLength(1);
+    expect(pathOf(all[0])).toContain('M0 0 L1 1');
+    expect(pathOf(all[0])).toContain('M2 2 L3 3');
+    expect(all[0].strokeStyle).toBe('#f3');
+    expect(all[0].lineWidth).toBe(1);
+    expect(all[0].globalAlpha).toBe(0.6);
+    expect(arrows(r)).toHaveLength(0);
+    expect(r.of('fillText').some((c) => c.args[0] === 'x2')).toBe(false);
+  });
+
+  it('keeps the merged path one screen pixel thick at any zoom', () => {
+    const r = paintEdges([merged('M0 0 L1 1')], { scale: 4, tx: 0, ty: 0 });
+    expect(strokes(r, 'M0 0 L1 1')[0].lineWidth).toBeCloseTo(0.25, 5);
+  });
+
+  it('fades the merged path when something is selected', () => {
+    const selected = paint([node({ emphasis: 'sharp' })], CAMERA, 1, [merged('M0 0 L1 1')]);
+    expect(strokes(selected, 'M0 0 L1 1')[0].globalAlpha).toBeCloseTo(0.12, 5);
+    const dimmedEdge = paintEdges([merged('M0 0 L1 1'), edge({ emphasis: 'out' })]);
+    expect(strokes(dimmedEdge, 'M0 0 L1 1')[0].globalAlpha).toBeCloseTo(0.12, 5);
+  });
+});
+
+describe('createMapPainter, co-change edges', () => {
+  const cochange = (over: Partial<SceneEdge> = {}) =>
+    edge({
+      coChange: true,
+      count: 4,
+      shape: { d: 'M5 5 L6 6', arrow: ARROW, covered: false },
+      ...over,
+    });
+
+  it('strokes a co-change edge dashed 6 4 in the co-change color, with no arrow', () => {
+    const r = paintEdges([cochange()]);
+    const line = strokes(r, 'M5 5 L6 6');
+    expect(line).toHaveLength(1);
+    expect(line[0].strokeStyle).toBe('#a7');
+    expect(line[0].dash).toEqual([6, 4]);
+    expect(line[0].globalAlpha).toBe(0.85);
+    expect(line[0].lineWidth).toBeCloseTo(3.1, 5);
+    expect(arrows(r)).toHaveLength(0);
+  });
+
+  it('does not write a label on a co-change edge', () => {
+    const r = paintEdges([cochange({ label: { text: 'cc', cls: 'base', visible: true } })]);
+    expect(r.of('fillText').some((c) => c.args[0] === 'cc')).toBe(false);
   });
 });

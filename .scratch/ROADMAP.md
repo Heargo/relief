@@ -162,7 +162,7 @@ Brainstorm du 2026-11-20 : la carte rame sur un gros écran et les budgets de S0
 | ✓ | 51l | **S15** API de scène de la carte, indépendante du moteur | Les e2e lisent le DOM de la carte, que le Canvas n'aura plus (ADR 0009). | S14 |
 | ✓ | 51m | **S16** Migrer les e2e et les captures sur l'API de scène | ~29 specs et 2 captures lisent encore `map-node` / `map-edge`. | S15 |
 | ✓ | 51n | **S17** Peintre Canvas : caméra, boîtes et texte | Premier morceau du moteur Canvas, à côté du DOM. | S15 |
-| ☐ | 51o | **S18** Peintre Canvas : arêtes, étiquettes et co-changements | Parité des arêtes avec le SVG. | S17 |
+| ✓ | 51o | **S18** Peintre Canvas : arêtes, étiquettes et co-changements | Parité des arêtes avec le SVG. | S17 |
 | ☐ | 51p | **S19** Interactions sur le canvas : clic, survol, infobulles, clavier | Hit-testing par géométrie ; toute la suite e2e en Canvas. | S18, S16 |
 | ☐ | 51q | **S20** Canvas seul rendu de la carte | Retrait du DOM de la carte ; budgets mesurés. | S19 |
 | ☐ | 51r | **S21** Arêtes au franchissement de seuil sous une frame | 25 à 35 ms de calcul d'arêtes au seuil : 60 fps au zoom. | S20 |
