@@ -5,8 +5,16 @@
   (pointerdown)="startPan($event)"
   (dblclick)="onDoubleClick($event)"
 >
-  <div #layer class="map-layer"></div>
-  <svg class="map-edges" data-testid="map-edges" (click)="onEdgesClick($event)">
+  @if (renderer === 'canvas') {
+    <canvas #surface class="map-surface" data-testid="map-surface"></canvas>
+  }
+  <div #layer class="map-layer" [style.display]="renderer === 'canvas' ? 'none' : null"></div>
+  <svg
+    class="map-edges"
+    data-testid="map-edges"
+    [style.display]="renderer === 'canvas' ? 'none' : null"
+    (click)="onEdgesClick($event)"
+  >
     <defs></defs>
     <g #edgesLayer class="map-world"></g>
   </svg>

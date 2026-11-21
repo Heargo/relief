@@ -40,6 +40,11 @@ export function openHeader(kind: NodeKind | string, scale: number): OpenHeader {
   return { height, fontSize, labelVisible: fontSize >= MIN_FONT };
 }
 
+/** Font size of the title of an open container whose header is `height` px high. */
+export function headerFontSize(kind: NodeKind | string, height: number): number {
+  return Math.min(specOf(kind).maxFont, height * FONT_RATIO);
+}
+
 /** Under this font size (px) the title leaves the header for a tab on the border. */
 export const TAB_FONT = 11;
 

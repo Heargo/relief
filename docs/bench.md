@@ -202,7 +202,7 @@ The state and the shape of an edge are made on demand, for the edges that meet t
 | Wheel zoom | 3/44, 3/202     | 4/18, 3/196  | 3/108, 8/104    | 2/92, 3/82        |
 | Selection  | 97/156, 104/134 | 30/35, 25/51 | 111/155, 87/143 | 18/51, 18/41      |
 
-- Drawing a Canvas frame (`syncProto`) costs 2 to 7 ms p95 in every case.
+- Drawing a Canvas frame (`syncCanvas`) costs 2 to 7 ms p95 in every case.
 - Selection: the renderer was the cost (style recalculation of ~1,300 elements on each emphasis change). Canvas holds the 100 ms budget everywhere.
 - Wheel zoom: the heavy frames were computation, the same with both renderers. The on-screen crossings counter (`visibleCrossings`, O(n²) over the aggregated edges) cost 160 to 194 ms on `dense` and ~62 ms on excalidraw at each threshold crossing; the "After S08" reading (browser style and layout) was wrong. A subgraph loaded during the zoom adds one frame of ~1.3 s (`buildLayouts` ~710 ms, `layoutCrossings` ~350 ms for the two layout totals).
 

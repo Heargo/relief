@@ -99,8 +99,29 @@ const estimateLabel = (text: string, font: string): number => {
 };
 
 const MONO = "ui-monospace, 'JetBrains Mono', Menlo, monospace";
+
+/** Font of the title of a node, shared by the measure here and by the painters. */
+const fonts = new Map<string, string>();
+export function labelFont(kind: string, fontPx: number): string {
+  const key = `${kind}|${fontPx}`;
+  let font = fonts.get(key);
+  if (!font) {
+    const family = kind === 'file' || kind === 'symbol' ? MONO : 'sans-serif';
+    font = `${kind === 'service' ? 600 : 500} ${fontPx}px ${family}`;
+    fonts.set(key, font);
+  }
+  return font;
+}
+
+/** Font size in pixels of the title of a closed box, by kind (`map-canvas.component.scss`). */
+export function closedFontPx(kind: string): number {
+  if (kind === 'service' || kind === 'package' || kind === 'workspace') return 15;
+  if (kind === 'module') return 13;
+  return kind === 'symbol' ? 11.5 : 12;
+}
+
 /** Tab of a title on the top border: font, padding and offsets, in pixels. */
-const TAB_FONT_CSS = '11px sans-serif';
+export const TAB_FONT_CSS = '11px sans-serif';
 const TAB_PAD = 14;
 const TAB_H = 18;
 const TAB_TOP = 9;
@@ -142,9 +163,8 @@ function sceneNode(node: VisibleNode, input: MapSceneInput, selecting: boolean):
       : open
         ? open.label === 'header'
         : closedLabelVisible(width, height);
-  const fontPx = open ? open.fontSize : 12;
-  const family = node.kind === 'file' || node.kind === 'symbol' ? MONO : 'sans-serif';
-  const font = `${node.kind === 'service' ? 600 : 500} ${fontPx}px ${family}`;
+  const fontPx = open ? open.fontSize : closedFontPx(node.kind);
+  const font = labelFont(node.kind, fontPx);
   const tabWidth =
     open?.label === 'tab'
       ? Math.max(0, Math.min(measure(label, TAB_FONT_CSS) + TAB_PAD, width - TAB_MARGIN))

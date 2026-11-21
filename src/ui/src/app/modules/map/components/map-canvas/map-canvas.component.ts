@@ -15,6 +15,7 @@ import {
 import { measured } from '../../../../core/helpers/perf';
 import { TranslatePipe } from '@ngx-translate/core';
 
+import { ThemeBusiness } from '../../../../core/business/theme.business';
 import { LanguageBusiness } from '../../../../core/business/language.business';
 import type { DiffResponse, GraphSnapshot, Violation } from '../../../../core/models/contract';
 import {
@@ -44,7 +45,10 @@ import type { ReadingNodeState } from '../../../review/business/reading-order.bu
 import { isClick } from '../../helpers/pointer.logic';
 import { mergedEdgesPath, nearestEdge } from '../../helpers/edge-culling.logic';
 import { buildMapScene, type SceneRect } from '../../helpers/map-scene.logic';
-import { Canvas2dPainter, hitNode, PROTO_RENDERER, type ProtoPainter } from './proto-renderer';
+import { symbolIcon } from '../../helpers/node-content.logic';
+import { chooseRenderer } from '../../helpers/renderer.logic';
+import { createMapPainter, readPalette, type Palette } from './map-painter';
+import { TempEdgePainter } from './map-edges-temp';
 
 /** Distance, in screen pixels, within which a click picks a merged edge. */
 const MERGED_PICK_PX = 6;
@@ -88,6 +92,7 @@ export class MapCanvasComponent {
 
   protected readonly map = inject(MapBusiness);
   private readonly language = inject(LanguageBusiness);
+  private readonly theme = inject(ThemeBusiness);
   private readonly destroyRef = inject(DestroyRef);
   private readonly canvas = viewChild.required<ElementRef<HTMLElement>>('canvas');
   private readonly layer = viewChild.required<ElementRef<HTMLElement>>('layer');
@@ -105,9 +110,14 @@ export class MapCanvasComponent {
   private readonly edgeElements = new Map<string, SVGGElement>();
   private readonly coChangeElements = new Map<string, SVGGElement>();
   private mergedElement: SVGPathElement | null = null;
-  // PROTOTYPE (S14): a painter other than the DOM, picked by `?renderer=`.
-  private readonly proto = PROTO_RENDERER !== 'dom';
-  private readonly painter = signal<ProtoPainter | null>(null);
+  /** The engine that draws the map, read once: `?renderer=` or the `relief.renderer` preference. */
+  protected readonly renderer = chooseRenderer(location.search, {
+    getItem: (key) => localStorage.getItem(key),
+  });
+  private readonly proto = this.renderer === 'canvas';
+  private readonly surface = viewChild<ElementRef<HTMLCanvasElement>>('surface');
+  private readonly painter = signal<(() => void) | null>(null);
+  private frame = 0;
 
   constructor() {
     effect(() => {
@@ -193,48 +203,40 @@ export class MapCanvasComponent {
       untracked(() => measured('syncCoChange', () => this.syncCoChange(lines)));
     });
     effect(() => {
-      const painter = this.painter();
-      if (!painter) return;
-      const nodes = this.map.visibleNodes();
-      const lines = this.map.edgeLines();
-      const merged = this.map.mergedEdgeLines();
-      const emphasis = this.map.emphasis();
-      const camera = this.map.camera();
-      const { width, height } = this.map.viewport();
+      const draw = this.painter();
+      if (!draw) return;
+      // What a frame depends on: any change schedules one redraw, at most once per frame.
+      this.map.visibleNodes();
+      this.map.edgeLines();
+      this.map.mergedEdgeLines();
+      this.map.emphasis();
+      this.map.camera();
+      this.map.viewport();
+      this.map.modesScale();
       this.language.current();
-      untracked(() =>
-        measured('syncProto', () =>
-          painter.draw({
-            nodes,
-            lines,
-            merged,
-            nodeEmphasis: emphasis.nodes,
-            edgeEmphasis: emphasis.edges,
-            edgeKey: (l) => edgeKey(l.edge.from, l.edge.to),
-            camera,
-            width,
-            height,
-            label: (n) => {
-              const info = this.map.info(n.id);
-              return (info && nodeContent(info, n.mode, 'medium')?.label) || '';
-            },
-          }),
-        ),
-      );
+      // The palette is read again when the theme changes.
+      this.theme.dark();
+      this.impact();
+      this.reading();
+      this.focus();
+      this.archi();
+      this.risk();
+      this.loading();
+      untracked(() => this.schedule(draw));
     });
     afterNextRender(() => this.listen());
   }
 
-  /** PROTOTYPE (S14): the node under a client point, by geometry instead of the DOM. */
+  /** The node under a client point, by geometry instead of the DOM. */
   private protoHit(clientX: number, clientY: number): string | null {
     const rect = this.canvas().nativeElement.getBoundingClientRect();
     const { scale, tx, ty } = this.map.camera();
     const x = (clientX - rect.left - tx) / scale;
     const y = (clientY - rect.top - ty) / scale;
-    return hitNode(this.map.visibleNodes(), x, y)?.id ?? null;
+    return hitNode(this.map.visibleNodes(), x, y) ?? null;
   }
 
-  /** PROTOTYPE (S14): selects the full edge nearest to a client point. */
+  /** Selects the full edge nearest to a client point. */
   private protoPickEdge(clientX: number, clientY: number): boolean {
     const lines = this.map.edgeLines();
     if (lines.length === 0) return false;
@@ -251,16 +253,109 @@ export class MapCanvasComponent {
     return true;
   }
 
-  /** PROTOTYPE (S14): mounts the painter and the scene API the bench reads. */
-  private mountProto(root: HTMLElement): void {
-    const el = document.createElement('canvas');
-    el.className = 'map-proto';
-    el.setAttribute('data-testid', 'map-proto');
-    el.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;';
-    root.insertBefore(el, root.firstChild?.nextSibling ?? null);
-    this.painter.set(new Canvas2dPainter(el));
+  /** Redraws on the next animation frame, once however many changes came before it. */
+  private schedule(draw: () => void): void {
+    if (this.frame) return;
+    this.frame = requestAnimationFrame(() => {
+      this.frame = 0;
+      measured('syncCanvas', draw);
+    });
+  }
+
+  /** The painter of the `<canvas>` of the template, with the palette of the current theme. */
+  private mountCanvas(): void {
+    const el = this.surface()?.nativeElement;
+    const ctx = el?.getContext('2d');
+    if (!el || !ctx) return;
+    const edges = new TempEdgePainter();
+    let palette = readPalette(getComputedStyle(document.documentElement));
+    let stale = false;
+    const riskColors = () => {
+      const css = getComputedStyle(document.documentElement);
+      return [0, 1, 2, 3, 4].map((i) => css.getPropertyValue(`--relief-risk-${i}`).trim());
+    };
+    let painter = this.makePainter(ctx, palette, riskColors(), edges, () => palette);
+    const draw = () => {
+      const dpr = window.devicePixelRatio || 1;
+      const { width, height } = this.map.viewport();
+      const w = Math.round(width * dpr);
+      const h = Math.round(height * dpr);
+      if (el.width !== w || el.height !== h) {
+        el.width = w;
+        el.height = h;
+      }
+      if (stale) {
+        stale = false;
+        palette = readPalette(getComputedStyle(document.documentElement));
+        painter = this.makePainter(ctx, palette, riskColors(), edges, () => palette);
+      }
+      painter.paint(this.scene(), this.map.camera(), { width, height }, dpr);
+    };
+    this.painter.set(draw);
+    // Whatever changes the theme (the app, a script, the system): read the palette again.
+    const restyle = () => {
+      stale = true;
+      this.schedule(draw);
+    };
+    const observer = new MutationObserver(restyle);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    const dark =
+      typeof matchMedia === 'function' ? matchMedia('(prefers-color-scheme: dark)') : null;
+    dark?.addEventListener('change', restyle);
     this.destroyRef.onDestroy(() => {
-      this.painter()?.destroy();
+      observer.disconnect();
+      dark?.removeEventListener('change', restyle);
+    });
+    // The icon font may load after the first frame: draw again once it is there.
+    void document.fonts?.ready.then(() => this.schedule(draw));
+    this.destroyRef.onDestroy(() => cancelAnimationFrame(this.frame));
+  }
+
+  private makePainter(
+    ctx: CanvasRenderingContext2D,
+    palette: Palette,
+    risk: string[],
+    edges: TempEdgePainter,
+    current: () => Palette,
+  ) {
+    return createMapPainter(ctx, palette, {
+      t: (key, params) => this.language.t(key, params),
+      icon: (id) => {
+        const info = this.map.info(id);
+        return info?.kind === 'symbol' ? (ICON_GLYPHS[symbolIcon(info.subkind)] ?? null) : null;
+      },
+      risk,
+      edges: (c, camera) => {
+        const { nodes, edges: states } = this.map.emphasis();
+        edges.draw(c, camera, current(), {
+          lines: this.map.edgeLines(),
+          merged: this.map.mergedEdgeLines(),
+          nodeEmphasis: nodes,
+          edgeEmphasis: states,
+          edgeKey: (l) => edgeKey(l.edge.from, l.edge.to),
+        });
+      },
+    });
+  }
+
+  /** What is drawn, in world units, whatever draws it. */
+  private scene() {
+    return buildMapScene({
+      nodes: this.map.visibleNodes(),
+      edgeLines: this.map.edgeLines(),
+      mergedEdgeLines: this.map.mergedEdgeLines(),
+      coChangeLines: this.map.coChangeLines(),
+      emphasis: this.map.emphasis(),
+      modesScale: this.map.modesScale(),
+      info: (id) => this.map.info(id),
+      t: (key, params) => this.language.t(key, params),
+      impact: this.impact(),
+      reading: this.reading(),
+      focus: this.focus(),
+      archi: this.archi(),
+      risk: this.risk(),
+      loading: this.loading(),
+      measureLabel,
     });
   }
 
@@ -268,23 +363,7 @@ export class MapCanvasComponent {
   private exposeScene(root: HTMLElement): void {
     const w = window as unknown as { __reliefScene?: () => unknown };
     w.__reliefScene = () => {
-      const scene = buildMapScene({
-        nodes: this.map.visibleNodes(),
-        edgeLines: this.map.edgeLines(),
-        mergedEdgeLines: this.map.mergedEdgeLines(),
-        coChangeLines: this.map.coChangeLines(),
-        emphasis: this.map.emphasis(),
-        modesScale: this.map.modesScale(),
-        info: (id) => this.map.info(id),
-        t: (key, params) => this.language.t(key, params),
-        impact: this.impact(),
-        reading: this.reading(),
-        focus: this.focus(),
-        archi: this.archi(),
-        risk: this.risk(),
-        loading: this.loading(),
-        measureLabel,
-      });
+      const scene = this.scene();
       const rect = root.getBoundingClientRect();
       const { scale, tx, ty } = this.map.camera();
       const px = (x: number) => rect.left + x * scale + tx;
@@ -296,7 +375,6 @@ export class MapCanvasComponent {
         height: r.h * scale,
       });
       return {
-        renderer: PROTO_RENDERER,
         nodes: scene.nodes.map(({ rect: r, tabRect, ...node }) => ({
           ...node,
           ...client(r),
@@ -403,7 +481,7 @@ export class MapCanvasComponent {
 
   private listen(): void {
     const root = this.canvas().nativeElement;
-    if (this.proto) this.mountProto(root);
+    if (this.proto) this.mountCanvas();
     this.exposeScene(root);
     const measure = () => this.map.setViewport(root.clientWidth, root.clientHeight);
     measure();
@@ -772,6 +850,31 @@ export class MapCanvasComponent {
     }
     el.appendChild(head);
   }
+}
+
+/** Glyphs of the icon font for the icon classes of the symbols (`openng-icons.css`). */
+const ICON_GLYPHS: Record<string, string> = {
+  'pi-objects-column': '\uea12',
+  'pi-code': '\ue9e7',
+  'pi-link': '\ue9c1',
+  'pi-box': '\ue9d9',
+  'pi-wrench': '\ue9ff',
+  'pi-tag': '\ue95e',
+  'pi-lock': '\ue95f',
+  'pi-directions': '\ue9a6',
+  'pi-table': '\ue969',
+  'pi-clock': '\ue940',
+  'pi-circle-fill': '\ue9dd',
+};
+
+/** Id of the topmost (smallest) node under a world point. */
+function hitNode(nodes: readonly VisibleNode[], x: number, y: number): string | null {
+  let best: VisibleNode | null = null;
+  for (const n of nodes) {
+    if (x < n.x || y < n.y || x > n.x + n.w || y > n.y + n.h) continue;
+    if (!best || n.w * n.h < best.w * best.h) best = n;
+  }
+  return best?.id ?? null;
 }
 
 let measureCtx: CanvasRenderingContext2D | null = null;
