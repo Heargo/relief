@@ -5,6 +5,7 @@ export const DEFAULT_SIZE = { width: 1280, height: 720 };
 /**
  * Starts from a clean webview, like a fresh browser context: the `localStorage` of the app survives
  * between sessions, so it is emptied (and the language pinned) before the page is loaded again.
+ * With `RELIEF_E2E_RENDERER=canvas` (or `dom`), `renderer=<engine>` is added to the query.
  * Waits until the top bar shows the repository name. `query` is appended to `/` (e.g. `?range=…`).
  */
 export async function openRelief(
@@ -16,10 +17,22 @@ export async function openRelief(
     localStorage.clear();
     localStorage.setItem('lang', language);
   }, lang);
-  await browser.execute((target: string) => {
-    window.location.assign(target);
-  }, `/${query}`);
+  await browser.execute(
+    (target: string) => {
+      window.location.assign(target);
+    },
+    `/${withRenderer(query)}`,
+  );
   await $('[data-testid="repo-name"]').waitForDisplayed();
+}
+
+/** `query` with `renderer=` from `RELIEF_E2E_RENDERER` merged in, whatever `query` already holds. */
+export function withRenderer(query: string, renderer = process.env.RELIEF_E2E_RENDERER): string {
+  if (!renderer) return query;
+  const params = new URLSearchParams(query.replace(/^\?/, ''));
+  if (!params.has('renderer')) params.set('renderer', renderer);
+  const text = params.toString();
+  return text ? `?${text}` : '';
 }
 
 /** Sizes the page area (the viewport), not the window, to `width` x `height` CSS pixels. */

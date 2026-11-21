@@ -66,6 +66,11 @@
       "fewerCrossings": "Moins de croisements",
       "rawGrid": "Grille brute"
     },
+    "canvasLabel": "Carte du dépôt",
+    "announce": {
+      "node": "{{name}} sélectionné",
+      "edge": "Lien de {{from}} vers {{to}} sélectionné"
+    },
     "breadcrumbs": "Fil d'Ariane",
     "history": {
       "back": "Étape précédente de la navigation",

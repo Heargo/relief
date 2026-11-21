@@ -2,6 +2,7 @@ import {
   afterNextRender,
   ChangeDetectionStrategy,
   Component,
+  computed,
   DestroyRef,
   effect,
   ElementRef,
@@ -46,11 +47,14 @@ import { isClick } from '../../helpers/pointer.logic';
 import { mergedEdgesPath, nearestEdge } from '../../helpers/edge-culling.logic';
 import { buildMapScene, type SceneRect } from '../../helpers/map-scene.logic';
 import { symbolIcon } from '../../helpers/node-content.logic';
+import { hitTest, type MapHit } from '../../helpers/map-hit.logic';
 import { chooseRenderer } from '../../helpers/renderer.logic';
 import { createMapPainter, readPalette, type Palette } from './map-painter';
 
 /** Distance, in screen pixels, within which a click picks a merged edge. */
 const MERGED_PICK_PX = 6;
+/** Distance, in screen pixels, a pointer must move within one frame to be tested again. */
+const HOVER_STEP_PX = 3;
 const MERGED_TESTID = 'map-edges-merged';
 
 /**
@@ -226,30 +230,94 @@ export class MapCanvasComponent {
     afterNextRender(() => this.listen());
   }
 
-  /** The node under a client point, by geometry instead of the DOM. */
-  private protoHit(clientX: number, clientY: number): string | null {
-    const rect = this.canvas().nativeElement.getBoundingClientRect();
-    const { scale, tx, ty } = this.map.camera();
-    const x = (clientX - rect.left - tx) / scale;
-    const y = (clientY - rect.top - ty) / scale;
-    return hitNode(this.map.visibleNodes(), x, y) ?? null;
-  }
+  /** The scene, rebuilt only when what it reads changes. */
+  private readonly sceneMemo = computed(() => this.scene());
 
-  /** Selects the full edge nearest to a client point. */
-  private protoPickEdge(clientX: number, clientY: number): boolean {
-    const lines = this.map.edgeLines();
-    if (lines.length === 0) return false;
+  /** What is under a client point, by geometry instead of the DOM. */
+  private protoHit(clientX: number, clientY: number): MapHit | null {
     const rect = this.canvas().nativeElement.getBoundingClientRect();
     const { scale, tx, ty } = this.map.camera();
     const point = { x: (clientX - rect.left - tx) / scale, y: (clientY - rect.top - ty) / scale };
-    const found = nearestEdge(
-      lines.map((l) => ({ d: l.shape.d, edge: l.edge })),
-      point,
-      MERGED_PICK_PX / Math.abs(scale),
-    );
-    if (!found) return false;
-    this.map.selectEdge(found.edge.from, found.edge.to);
-    return true;
+    return hitTest(this.sceneMemo(), point, scale);
+  }
+
+  /** Tooltip shown near the pointer, in the coordinates of the map; null when there is none. */
+  protected readonly tip = signal<{ text: string; x: number; y: number } | null>(null);
+  private hoverEvent: PointerEvent | null = null;
+  private hoverFrame = 0;
+
+  private hoverAt = { x: 0, y: 0 };
+
+  /**
+   * The hit-test of the hover: within a frame, a move of less than `HOVER_STEP_PX` waits for the
+   * end of the frame (the browser already delivers one move per frame, so this only caps jitter).
+   */
+  protected onHover(event: PointerEvent): void {
+    const far =
+      Math.hypot(event.clientX - this.hoverAt.x, event.clientY - this.hoverAt.y) >= HOVER_STEP_PX;
+    if (this.hoverFrame && !far) {
+      this.hoverEvent = event;
+      return;
+    }
+    this.hoverAt = { x: event.clientX, y: event.clientY };
+    this.hoverEvent = null;
+    this.hover(event);
+    if (this.hoverFrame) return;
+    this.hoverFrame = requestAnimationFrame(() => {
+      this.hoverFrame = 0;
+      const last = this.hoverEvent;
+      this.hoverEvent = null;
+      if (last) this.hover(last);
+    });
+  }
+
+  protected onHoverLeave(): void {
+    this.hoverEvent = null;
+    this.tip.set(null);
+    const el = this.surface()?.nativeElement;
+    if (el) el.style.cursor = '';
+  }
+
+  private hover(event: PointerEvent): void {
+    const el = this.surface()?.nativeElement;
+    const hit = this.protoHit(event.clientX, event.clientY);
+    if (el) el.style.cursor = hit ? 'pointer' : '';
+    let text = '';
+    if (hit?.kind === 'node') {
+      const node = this.sceneMemo().nodes.find((n) => n.id === hit.id);
+      if (node?.labelClipped) text = node.label;
+    } else if (hit) {
+      text =
+        this.sceneMemo().edges.find((e) => e.from === hit.from && e.to === hit.to)?.tooltip ?? '';
+    }
+    if (!text) {
+      this.tip.set(null);
+      return;
+    }
+    const rect = this.canvas().nativeElement.getBoundingClientRect();
+    this.tip.set({ text, x: event.clientX - rect.left + 12, y: event.clientY - rect.top + 16 });
+  }
+
+  /** What the live region says about the selection. */
+  protected readonly announcement = computed(() => {
+    this.language.current();
+    const selection = this.map.selection();
+    if (!selection) return '';
+    const label = (id: string) => this.sceneMemo().nodes.find((n) => n.id === id)?.label ?? id;
+    if (selection.kind === 'node')
+      return this.language.t('map.announce.node', { name: label(selection.id) });
+    return this.language.t('map.announce.edge', {
+      from: label(selection.from),
+      to: label(selection.to),
+    });
+  });
+
+  protected onSurfaceKey(event: KeyboardEvent): void {
+    if (event.key !== 'Enter') return;
+    const id = this.map.selectedNodeId();
+    if (!id) return;
+    event.preventDefault();
+    this.map.dive(id);
   }
 
   /** Redraws on the next animation frame, once however many changes came before it. */
@@ -306,7 +374,10 @@ export class MapCanvasComponent {
     });
     // The icon font may load after the first frame: draw again once it is there.
     void document.fonts?.ready.then(() => this.schedule(draw));
-    this.destroyRef.onDestroy(() => cancelAnimationFrame(this.frame));
+    this.destroyRef.onDestroy(() => {
+      cancelAnimationFrame(this.frame);
+      cancelAnimationFrame(this.hoverFrame);
+    });
   }
 
   private makePainter(ctx: CanvasRenderingContext2D, palette: Palette, risk: string[]) {
@@ -384,9 +455,12 @@ export class MapCanvasComponent {
   protected onDoubleClick(event: MouseEvent): void {
     const target = event.target instanceof Element ? event.target : null;
     if (target?.closest('.map-levels, .map-crumbs, .map-legend')) return;
-    const id = this.proto
-      ? this.protoHit(event.clientX, event.clientY)
-      : target?.closest<HTMLElement>('[data-node-id]')?.dataset['nodeId'];
+    if (this.proto) {
+      const hit = this.protoHit(event.clientX, event.clientY);
+      if (hit?.kind === 'node') this.map.dive(hit.id);
+      return;
+    }
+    const id = target?.closest<HTMLElement>('[data-node-id]')?.dataset['nodeId'];
     if (id) this.map.dive(id);
   }
 
@@ -400,11 +474,15 @@ export class MapCanvasComponent {
     )
       return;
     // The strokes of the common path are thin, and nodes may lie under them: pick by proximity.
+    if (this.proto) {
+      const hit = this.protoHit(at.x, at.y);
+      if (hit?.kind === 'node') this.map.selectNode(hit.id);
+      else if (hit) this.map.selectEdge(hit.from, hit.to);
+      else this.map.deselectNode();
+      return;
+    }
     if (this.pickMerged(at.x, at.y)) return;
-    if (this.proto && this.protoPickEdge(at.x, at.y)) return;
-    const id = this.proto
-      ? this.protoHit(at.x, at.y)
-      : target.closest<HTMLElement>('[data-node-id]')?.dataset['nodeId'];
+    const id = target.closest<HTMLElement>('[data-node-id]')?.dataset['nodeId'];
     if (id) this.map.selectNode(id);
     else this.map.deselectNode();
   }

@@ -16,6 +16,7 @@ Spec: ADR `docs/adr/0009-carte-en-canvas-2d.md`
 - Coins arrondis des boîtes (6 px) et de l'onglet (4 px) dans le peintre, comme le DOM (S17 les a laissés carrés) ; tests du peintre adaptés.
 - Identifier la spec e2e instable vue en S16 et S17 (une spec sur 47 échoue parfois dans `just e2e-summary`, jamais en relance).
 - Reprises de S18 : halo des étiquettes d'arête (`--relief-map`), survol en accent ; élagage des arêtes hors écran dans le peintre si le banc le demande ; tableaux de tirets réutilisés.
+- Reprises de S19 : supprimer `hitNode` (mort) ; annuler le `requestAnimationFrame` du survol à la sortie du pointeur et effacer l'infobulle pendant un pan ou un zoom ; une `Map` par id dans la scène mémoïsée ; grille de S07 pour le hit-test du survol si le banc le demande ; identifier le test Vitest instable (un échec sur un passage de `just test-summary` en S19).
 - `docs/bench.md` : section « After S20 » avec `just bench-ui` sur `dense` et excalidraw.
 
 ## Critères d'acceptation

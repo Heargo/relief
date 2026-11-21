@@ -35,30 +35,34 @@ it('exposes the nodes drawn at level 0, with their label and a client rectangle'
   expect(api!.height).toBeGreaterThan(30);
 });
 
-it('the scene rectangles cover the DOM boxes of the nodes', async () => {
-  await openRelief();
-  await waitForNode(WEB);
-  const compared = await browser.execute(() => {
-    const read = (window as unknown as { __reliefScene: () => { nodes: any[] } }).__reliefScene;
-    return read().nodes.map((n) => {
-      const el = document.querySelector(`[data-node-id="${n.id}"]`);
-      const r = el?.getBoundingClientRect();
-      return {
-        id: n.id,
-        scene: { left: n.left, top: n.top, width: n.width, height: n.height },
-        dom: r ? { left: r.left, top: r.top, width: r.width, height: r.height } : null,
-      };
+// Compares the scene with the DOM rendering: meaningless once the map is a canvas.
+(process.env['RELIEF_E2E_RENDERER'] === 'canvas' ? it.skip : it)(
+  'the scene rectangles cover the DOM boxes of the nodes',
+  async () => {
+    await openRelief();
+    await waitForNode(WEB);
+    const compared = await browser.execute(() => {
+      const read = (window as unknown as { __reliefScene: () => { nodes: any[] } }).__reliefScene;
+      return read().nodes.map((n) => {
+        const el = document.querySelector(`[data-node-id="${n.id}"]`);
+        const r = el?.getBoundingClientRect();
+        return {
+          id: n.id,
+          scene: { left: n.left, top: n.top, width: n.width, height: n.height },
+          dom: r ? { left: r.left, top: r.top, width: r.width, height: r.height } : null,
+        };
+      });
     });
-  });
-  expect(compared.length).toBeGreaterThan(0);
-  for (const { id, scene: s, dom } of compared) {
-    expect(dom).not.toBeNull();
-    expect(s.left).toBeCloseTo(dom!.left, 0);
-    expect(s.top).toBeCloseTo(dom!.top, 0);
-    expect(s.width).toBeCloseTo(dom!.width, 0);
-    expect(s.height).toBeCloseTo(dom!.height, 0);
-  }
-});
+    expect(compared.length).toBeGreaterThan(0);
+    for (const { id, scene: s, dom } of compared) {
+      expect(dom).not.toBeNull();
+      expect(s.left).toBeCloseTo(dom!.left, 0);
+      expect(s.top).toBeCloseTo(dom!.top, 0);
+      expect(s.width).toBeCloseTo(dom!.width, 0);
+      expect(s.height).toBeCloseTo(dom!.height, 0);
+    }
+  },
+);
 
 it('the middle of an edge is a client point inside the map', async () => {
   await openRelief();

@@ -66,6 +66,11 @@
       "fewerCrossings": "Fewer crossings",
       "rawGrid": "Raw grid"
     },
+    "canvasLabel": "Map of the repository",
+    "announce": {
+      "node": "{{name}} selected",
+      "edge": "Link from {{from}} to {{to}} selected"
+    },
     "breadcrumbs": "Breadcrumbs",
     "history": {
       "back": "Previous step of the navigation",
