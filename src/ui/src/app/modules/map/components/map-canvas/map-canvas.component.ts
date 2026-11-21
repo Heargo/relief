@@ -43,6 +43,7 @@ import {
 import type { ReadingNodeState } from '../../../review/business/reading-order.business';
 import { isClick } from '../../helpers/pointer.logic';
 import { mergedEdgesPath, nearestEdge } from '../../helpers/edge-culling.logic';
+import { buildMapScene, type SceneRect } from '../../helpers/map-scene.logic';
 import { Canvas2dPainter, hitNode, PROTO_RENDERER, type ProtoPainter } from './proto-renderer';
 
 /** Distance, in screen pixels, within which a click picks a merged edge. */
@@ -258,26 +259,52 @@ export class MapCanvasComponent {
     el.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;';
     root.insertBefore(el, root.firstChild?.nextSibling ?? null);
     this.painter.set(new Canvas2dPainter(el));
+    this.destroyRef.onDestroy(() => {
+      this.painter()?.destroy();
+    });
+  }
+
+  /** `window.__reliefScene()`: what is drawn, with client rectangles; computed on call only. */
+  private exposeScene(root: HTMLElement): void {
     const w = window as unknown as { __reliefScene?: () => unknown };
     w.__reliefScene = () => {
+      const scene = buildMapScene({
+        nodes: this.map.visibleNodes(),
+        edgeLines: this.map.edgeLines(),
+        mergedEdgeLines: this.map.mergedEdgeLines(),
+        coChangeLines: this.map.coChangeLines(),
+        emphasis: this.map.emphasis(),
+        modesScale: this.map.modesScale(),
+        info: (id) => this.map.info(id),
+        t: (key, params) => this.language.t(key, params),
+        impact: this.impact(),
+        reading: this.reading(),
+        focus: this.focus(),
+        archi: this.archi(),
+        risk: this.risk(),
+        loading: this.loading(),
+      });
       const rect = root.getBoundingClientRect();
       const { scale, tx, ty } = this.map.camera();
+      const px = (x: number) => rect.left + x * scale + tx;
+      const py = (y: number) => rect.top + y * scale + ty;
+      const client = (r: SceneRect) => ({
+        left: px(r.x),
+        top: py(r.y),
+        width: r.w * scale,
+        height: r.h * scale,
+      });
       return {
         renderer: PROTO_RENDERER,
-        edges: this.map.edgeLines().length + this.map.mergedEdgeLines().length,
-        nodes: this.map.visibleNodes().map((n) => ({
-          id: n.id,
-          left: rect.left + n.x * scale + tx,
-          top: rect.top + n.y * scale + ty,
-          width: n.w * scale,
-          height: n.h * scale,
+        nodes: scene.nodes.map(({ rect: r, ...node }) => ({ ...node, ...client(r) })),
+        edges: scene.edges.map(({ mid, labelRect, ...edge }) => ({
+          ...edge,
+          mid: { x: px(mid.x), y: py(mid.y) },
+          labelRect: labelRect ? client(labelRect) : null,
         })),
       };
     };
-    this.destroyRef.onDestroy(() => {
-      this.painter()?.destroy();
-      delete w.__reliefScene;
-    });
+    this.destroyRef.onDestroy(() => delete w.__reliefScene);
   }
 
   protected crumbText(crumb: Crumb): string {
@@ -372,6 +399,7 @@ export class MapCanvasComponent {
   private listen(): void {
     const root = this.canvas().nativeElement;
     if (this.proto) this.mountProto(root);
+    this.exposeScene(root);
     const measure = () => this.map.setViewport(root.clientWidth, root.clientHeight);
     measure();
     if (typeof ResizeObserver !== 'undefined') {

@@ -241,9 +241,9 @@ async function scenario(name: string, steps: number): Promise<PhaseResult> {
 const counts = () =>
   browser.execute(() => {
     const scene = (
-      window as unknown as { __reliefScene?: () => { nodes: unknown[]; edges: number } }
+      window as unknown as { __reliefScene?: () => { nodes: unknown[]; edges: unknown[] } }
     ).__reliefScene?.();
-    if (scene) return { nodes: scene.nodes.length, edges: scene.edges };
+    if (scene) return { nodes: scene.nodes.length, edges: scene.edges.length };
     return {
       nodes: document.querySelectorAll('[data-testid="map-node"]').length,
       edges: document.querySelectorAll('[data-testid="map-edge"]').length,

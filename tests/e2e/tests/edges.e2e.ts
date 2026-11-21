@@ -1,10 +1,11 @@
 import { $, $$, expect } from '@wdio/globals';
 import { openRelief } from '../helpers/open-relief';
-import { forceClick, tid } from '../helpers/ui';
+import { clickEdge, sceneEdges, waitForScene } from '../helpers/map-scene';
+import { tid } from '../helpers/ui';
 
-// Contract with the UI (data attributes, no i18n dependency):
-//  - each aggregated edge is `data-testid="map-edge"` with `data-from`, `data-to` (node ids) and
-//    `data-count` (number of fine links), and is clickable;
+// Contract with the UI: the edges are read through `window.__reliefScene()` (helpers/map-scene.ts):
+// each aggregated edge has `from`, `to` (node ids) and `count` (number of fine links), and a click
+// at its middle selects it;
 //  - the right panel of a selected edge is `data-testid="edge-panel"`; each fine link in it is
 //    `data-testid="edge-link"` (text: "<from symbol> → <to symbol>");
 //  - the selected symbol is `data-testid="selected-node"` with `data-node-id`.
@@ -15,11 +16,12 @@ it('at the system level, apps/web -> packages/db lists validateCodeLocally -> fi
   await openRelief();
   await expect(tid('current-level')).toHaveAttribute('data-level', '0');
 
-  const edgeSelector = `[data-testid="map-edge"][data-from="${WEB}"][data-to="${DB}"]`;
-  await expect($$(edgeSelector)).toBeElementsArrayOfSize(1);
-  expect(Number(await $(edgeSelector).getAttribute('data-count'))).toBeGreaterThanOrEqual(1);
+  await waitForScene((sc) => sc.edges.some((e) => e.from === WEB && e.to === DB));
+  const edges = (await sceneEdges()).filter((e) => e.from === WEB && e.to === DB);
+  expect(edges).toHaveLength(1);
+  expect(edges[0].count).toBeGreaterThanOrEqual(1);
 
-  await forceClick(edgeSelector);
+  await clickEdge(WEB, DB);
   await expect(tid('edge-panel')).toBeDisplayed();
   const linkSelector =
     '//*[@data-testid="edge-panel"]//*[@data-testid="edge-link"][contains(., "validateCodeLocally")][contains(., "findDiscountByCode")]';
