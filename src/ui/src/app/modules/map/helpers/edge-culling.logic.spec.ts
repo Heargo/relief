@@ -4,7 +4,6 @@ import {
   EDGE_MERGE_THRESHOLD,
   edgeBounds,
   edgeInView,
-  mergedEdgesPath,
   nearestEdge,
   partitionEdges,
   type EdgeDetail,
@@ -111,16 +110,6 @@ describe('partitionEdges', () => {
     const { full, merged } = partitionEdges(many(4), 3);
     expect(full).toHaveLength(0);
     expect(merged).toHaveLength(4);
-  });
-});
-
-describe('mergedEdgesPath', () => {
-  it('chains the curves into one path data', () => {
-    expect(mergedEdgesPath(['M0,0Q5,5 10,10', 'M1,1Q2,2 3,3'])).toBe('M0,0Q5,5 10,10M1,1Q2,2 3,3');
-  });
-
-  it('is empty without an edge', () => {
-    expect(mergedEdgesPath([])).toBe('');
   });
 });
 

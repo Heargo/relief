@@ -5,36 +5,24 @@
   (pointerdown)="startPan($event)"
   (dblclick)="onDoubleClick($event)"
 >
-  @if (renderer === 'canvas') {
-    <canvas
-      #surface
-      class="map-surface"
-      data-testid="map-surface"
-      tabindex="0"
-      [attr.aria-label]="'map.canvasLabel' | translate"
-      (pointermove)="onHover($event)"
-      (pointerleave)="onHoverLeave()"
-      (keydown)="onSurfaceKey($event)"
-    ></canvas>
-    <div class="map-announce" data-testid="map-announce" aria-live="polite">
-      {{ announcement() }}
+  <canvas
+    #surface
+    class="map-surface"
+    data-testid="map-surface"
+    tabindex="0"
+    [attr.aria-label]="'map.canvasLabel' | translate"
+    (pointermove)="onHover($event)"
+    (pointerleave)="onHoverLeave()"
+    (keydown)="onSurfaceKey($event)"
+  ></canvas>
+  <div class="map-announce" data-testid="map-announce" aria-live="polite">
+    {{ announcement() }}
+  </div>
+  @if (tip(); as t) {
+    <div class="map-tooltip" data-testid="map-tooltip" [style.left.px]="t.x" [style.top.px]="t.y">
+      {{ t.text }}
     </div>
-    @if (tip(); as t) {
-      <div class="map-tooltip" data-testid="map-tooltip" [style.left.px]="t.x" [style.top.px]="t.y">
-        {{ t.text }}
-      </div>
-    }
   }
-  <div #layer class="map-layer" [style.display]="renderer === 'canvas' ? 'none' : null"></div>
-  <svg
-    class="map-edges"
-    data-testid="map-edges"
-    [style.display]="renderer === 'canvas' ? 'none' : null"
-    (click)="onEdgesClick($event)"
-  >
-    <defs></defs>
-    <g #edgesLayer class="map-world"></g>
-  </svg>
   <nav
     class="map-crumbs"
     data-testid="breadcrumbs"

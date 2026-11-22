@@ -34,8 +34,6 @@ export interface BenchResult {
 }
 
 const SIZE = { width: 1600, height: 900 };
-// PROTOTYPE (S14): the painter under test (`dom`, `canvas`, `webgl`), passed as `?renderer=`.
-const RENDERER = process.env['RELIEF_RENDERER'] ?? 'dom';
 
 /** Runs in the page. `scenario`: pan | zoom | select. Returns the raw per-step samples. */
 function runScenario(scenario: string, steps: number, done: (r: unknown) => void): void {
@@ -73,25 +71,19 @@ function runScenario(scenario: string, steps: number, done: (r: unknown) => void
         };
       }
     ).__reliefScene?.();
-    const rects = scene
-      ? scene.nodes.map((n) => ({
-          r: {
-            left: n.left,
-            top: n.top,
-            right: n.left + n.width,
-            bottom: n.top + n.height,
-            x: n.left,
-            y: n.top,
-            width: n.width,
-            height: n.height,
-          },
-          el: canvas as Element,
-        }))
-      : Array.from(document.querySelectorAll<HTMLElement>('.map-node')).map((el) => ({
-          r: el.getBoundingClientRect(),
-          el: el as Element,
-        }));
-    // Smallest boxes first in the DOM order is not guaranteed: keep the order, filter by size.
+    const rects = (scene?.nodes ?? []).map((n) => ({
+      r: {
+        left: n.left,
+        top: n.top,
+        right: n.left + n.width,
+        bottom: n.top + n.height,
+        x: n.left,
+        y: n.top,
+        width: n.width,
+        height: n.height,
+      },
+      el: canvas as Element,
+    }));
     const nodes = rects.filter(({ r }) => {
       return (
         r.width > 24 &&
@@ -243,14 +235,10 @@ const counts = () =>
     const scene = (
       window as unknown as { __reliefScene?: () => { nodes: unknown[]; edges: unknown[] } }
     ).__reliefScene?.();
-    if (scene) return { nodes: scene.nodes.length, edges: scene.edges.length };
-    return {
-      nodes: document.querySelectorAll('[data-testid="map-node"]').length,
-      edges: document.querySelectorAll('[data-testid="map-edge"]').length,
-    };
+    return { nodes: scene?.nodes.length ?? 0, edges: scene?.edges.length ?? 0 };
   });
 
-/** Wheel zoom on the centre until `wanted` nodes are in the DOM (or 60 steps). */
+/** Wheel zoom on the centre until `wanted` nodes are in the scene (or 60 steps). */
 async function zoomToFiles(wanted: number): Promise<void> {
   for (let n = 0; n < 60; n++) {
     const { nodes } = await counts();
@@ -275,12 +263,11 @@ async function zoomToFiles(wanted: number): Promise<void> {
 
 export function benchRepository(name: string): void {
   it(`measures the map render on ${name}`, async () => {
-    await openRelief({ size: SIZE, query: RENDERER === 'dom' ? '' : `?renderer=${RENDERER}` });
+    await openRelief({ size: SIZE });
     await browser.waitUntil(async () => (await counts()).nodes > 0, { timeout: 120_000 });
     await browser.pause(2000);
-    const result: BenchResult & { renderer: string } = {
+    const result: BenchResult = {
       repo: name,
-      renderer: RENDERER,
       size: SIZE,
       states: {},
     };
@@ -306,7 +293,7 @@ export function benchRepository(name: string): void {
     }
     const dir = join(root, 'target/bench-ui');
     mkdirSync(dir, { recursive: true });
-    writeFileSync(join(dir, `${name}-${RENDERER}.json`), JSON.stringify(result, null, 2));
-    console.log(`bench-ui ${name} ${RENDERER}: ${JSON.stringify(result)}`);
+    writeFileSync(join(dir, `${name}.json`), JSON.stringify(result, null, 2));
+    console.log(`bench-ui ${name}: ${JSON.stringify(result)}`);
   });
 }

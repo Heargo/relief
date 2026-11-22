@@ -11,7 +11,6 @@ import {
   edgeLabelClass,
   type EdgeLabelClass,
   type EdgeLabelWords,
-  type EdgeShape,
   edgeTooltip,
 } from './edges.logic';
 
@@ -67,34 +66,4 @@ export function edgeState(edge: AggregatedEdge, context: EdgeStateContext): Edge
     label: edgeLabel({ count: edge.count, ...counts, cls, review }, words),
     tooltip: edgeTooltip(edge, context.label, context.unit),
   };
-}
-
-/** Changes when what is written in the DOM for an edge changes (not when only the camera moves). */
-export function edgeSyncKey(
-  shape: EdgeShape,
-  state: EdgeState,
-  selected: boolean,
-  scale: number,
-): string {
-  const { violations: v } = state;
-  return [
-    shape.d,
-    shape.arrow,
-    shape.mx,
-    shape.my,
-    shape.covered,
-    shape.length > 60,
-    state.status,
-    v.introduced,
-    v.existing,
-    state.added,
-    state.removed,
-    state.moved,
-    state.review,
-    state.cls,
-    state.label,
-    state.tooltip,
-    selected,
-    scale,
-  ].join('|');
 }

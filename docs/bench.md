@@ -194,7 +194,7 @@ The state and the shape of an edge are made on demand, for the edges that meet t
 
 ### S14 spike (renderer: DOM + SVG against Canvas 2D)
 
-`just bench-ui` takes `RELIEF_RENDERER=dom|canvas` (prototype painter behind `?renderer=canvas`) and writes `target/bench-ui/<repo>-<renderer>.json`, with the three worst steps of each scenario and their marks (`worst`). Same harness otherwise, Xvfb. `work` p50 / p95 in ms, fit / zoomed:
+During the spike, `just bench-ui` took `RELIEF_RENDERER=dom|canvas` (prototype painter behind `?renderer=canvas`; both removed in S20) and wrote `target/bench-ui/<repo>-<renderer>.json`, with the three worst steps of each scenario and their marks (`worst`). Same harness otherwise, Xvfb. `work` p50 / p95 in ms, fit / zoomed:
 
 | Scenario   | dense DOM       | dense Canvas | excalidraw DOM  | excalidraw Canvas |
 | ---------- | --------------- | ------------ | --------------- | ----------------- |
@@ -216,6 +216,19 @@ After removing the crossings counter and the layout totals (Canvas, fit / zoomed
 
 - Selection < 100 ms and zoom < 33 ms p95 on both. Not yet 60 fps at zoom: a threshold frame still spends 25 to 35 ms on `allEdges`, `edgeStates` and `edgeLines`; a subgraph loaded during the zoom keeps one frame of ~760 ms (`buildLayouts`, S09).
 - Decision: the map moves to Canvas 2D (ADR 0009).
+
+### After S20 (Canvas 2D is the only renderer)
+
+The DOM + SVG rendering of the map is gone (ADR 0009): the sections above that measure it are history. `just bench-ui` reads the scene (`window.__reliefScene()`) and writes `target/bench-ui/<repo>.json`; the draw of a frame is `relief:syncCanvas`. `work` p50 / p95 in ms, fit / zoomed, Xvfb:
+
+| Scenario   | dense        | excalidraw   | Budget (p95) |
+| ---------- | ------------ | ------------ | ------------ |
+| Pan        | 3/4, 2/2     | 1/2, 1/2     | 16           |
+| Wheel zoom | 2/32, 1/29   | 2/26, 3/25   | 33           |
+| Selection  | 28/32, 19/34 | 16/50, 17/35 | 100          |
+
+- All three budgets are held on both repositories, fit and zoomed. A Canvas frame costs 1 to 10 ms p95 (`syncCanvas`).
+- Wheel zoom: the threshold frames are edge computation (`allEdges`, `edgeStates`, `edgeLines`: 25 to 35 ms in the worst frames), not drawing; 60 fps at zoom is S21. On `dense`, a subgraph loaded during the zoom still makes one frame of ~730 ms (`buildLayouts` ~675 ms): S09.
 
 ## Shallow clones
 

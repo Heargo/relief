@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { Edge, GraphDiff, Violation } from '../../../core/models/contract';
 import { type AggregatedEdge, edgeShape } from './edges.logic';
-import { edgeState, edgeSyncKey } from './edge-state.logic';
+import { edgeState } from './edge-state.logic';
 
 const A = 'pkg:a';
 const B = 'pkg:b';
@@ -93,31 +93,5 @@ describe('edgeState', () => {
     const edge = aggregated([link(1), link(2)]);
     const input = { ...context, diff: undefined, violations: [] };
     expect(edgeState(edge, input)).toEqual(edgeState(edge, input));
-  });
-});
-
-describe('edgeSyncKey', () => {
-  const a = { x: 0, y: 0, w: 100, h: 60 };
-  const b = { x: 500, y: 0, w: 100, h: 60 };
-  const state = edgeState(aggregated([link(1)]), { ...context, diff: undefined, violations: [] });
-
-  it('is equal for the same shape, state and selection', () => {
-    expect(edgeSyncKey(edgeShape(a, b, [], 1), state, false, 1)).toBe(
-      edgeSyncKey(edgeShape(a, b, [], 1), state, false, 1),
-    );
-  });
-
-  it('changes with the shape', () => {
-    const moved = { ...b, y: 40 };
-    expect(edgeSyncKey(edgeShape(a, moved, [], 1), state, false, 1)).not.toBe(
-      edgeSyncKey(edgeShape(a, b, [], 1), state, false, 1),
-    );
-  });
-
-  it('changes with the selection and with the state', () => {
-    const shape = edgeShape(a, b, [], 1);
-    const base = edgeSyncKey(shape, state, false, 1);
-    expect(edgeSyncKey(shape, state, true, 1)).not.toBe(base);
-    expect(edgeSyncKey(shape, { ...state, label: 'x' }, false, 1)).not.toBe(base);
   });
 });

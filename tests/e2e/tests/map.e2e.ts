@@ -74,8 +74,9 @@ it('the level buttons change the level too', async () => {
 it('double-clicking apps/api frames that system', async () => {
   await openRelief();
   const api = 'pkg:@acme/api';
-  const canvas = await rectOf('map-canvas');
+  // `openRelief` only waits for the top bar: the map exists once a node is drawn.
   const before = await waitForNode(api);
+  const canvas = await rectOf('map-canvas');
 
   await doubleClickNode(api);
 

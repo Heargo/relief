@@ -21,6 +21,7 @@ const PALETTE = {
   impact: '#a6',
   cochange: '#a7',
   ruleOld: '#a8',
+  map: '#fa',
 } as Palette;
 
 interface Call {
@@ -132,6 +133,21 @@ function paint(nodes: SceneNode[], camera = CAMERA, dpr = 1, edges: SceneEdge[] 
   return rec;
 }
 
+/**
+ * The rounded rectangle of a box: its `roundRect` call (same rectangle `x,y,w,h`), and the first
+ * `fill` / `stroke` that follow it, which carry the colors and alphas of the box.
+ */
+function box(r: ReturnType<typeof fakeContext>, rect: string) {
+  const at = r.calls.findIndex((c) => c.op === 'roundRect' && c.args.slice(0, 4).join() === rect);
+  if (at < 0) return undefined;
+  const after = r.calls.slice(at + 1);
+  return {
+    radius: r.calls[at].args[4],
+    fill: after.find((c) => c.op === 'fill'),
+    stroke: after.find((c) => c.op === 'stroke'),
+  };
+}
+
 describe('readPalette', () => {
   it('reads the --relief-* variables, trimmed', () => {
     const vars: Record<string, string> = {
@@ -152,6 +168,7 @@ describe('readPalette', () => {
       '--relief-impact': '#fff',
       '--relief-cochange': '#c0c',
       '--relief-rule-old': '#d0d',
+      '--relief-map': '#0a0',
     };
     expect(readPalette({ getPropertyValue: (name: string) => vars[name] ?? '' })).toEqual({
       fg: '#111',
@@ -171,17 +188,23 @@ describe('readPalette', () => {
       impact: '#fff',
       cochange: '#c0c',
       ruleOld: '#d0d',
+      map: '#0a0',
     });
   });
 });
 
 describe('createMapPainter', () => {
   it('draws a closed box in world units with the node color and a line-2 border', () => {
-    const { of } = paint([node()]);
-    const fill = of('fillRect').find((c) => c.args.join() === '10,20,100,50');
-    expect(fill?.fillStyle).toBe('#f6');
-    const stroke = of('strokeRect').find((c) => c.args.join() === '10,20,100,50');
-    expect(stroke?.strokeStyle).toBe('#f5');
+    const b = box(paint([node()]), '10,20,100,50');
+    expect(b?.fill?.fillStyle).toBe('#f6');
+    expect(b?.stroke?.strokeStyle).toBe('#f5');
+  });
+
+  it('rounds the corners of a box with a 6 px radius, not square ones', () => {
+    const r = paint([node()]);
+    expect(box(r, '10,20,100,50')?.radius).toBe(6);
+    expect(r.of('fillRect').some((c) => c.args.join() === '10,20,100,50')).toBe(false);
+    expect(r.of('strokeRect').some((c) => c.args.join() === '10,20,100,50')).toBe(false);
   });
 
   it('draws the label of a closed box in the foreground color', () => {
@@ -196,7 +219,7 @@ describe('createMapPainter', () => {
   });
 
   it('draws an open container with the open color, and its title in the header', () => {
-    const { of } = paint([
+    const rec = paint([
       node({
         kind: 'module',
         mode: 'open',
@@ -206,8 +229,8 @@ describe('createMapPainter', () => {
         rect: { x: 0, y: 0, w: 300, h: 200 },
       }),
     ]);
-    const fill = of('fillRect').find((c) => c.args.join() === '0,0,300,200');
-    expect(fill?.fillStyle).toBe('#f7');
+    const of = rec.of;
+    expect(box(rec, '0,0,300,200')?.fill?.fillStyle).toBe('#f7');
     const text = of('fillText').find((c) => c.args[0] === 'billing');
     expect(text).toBeDefined();
     // The title sits inside the header (30 px high), at the screen position of the container.
@@ -215,7 +238,7 @@ describe('createMapPainter', () => {
   });
 
   it('draws the title of a tab in its own rectangle on the panel color', () => {
-    const { of } = paint([
+    const rec = paint([
       node({
         kind: 'module',
         mode: 'open',
@@ -226,10 +249,11 @@ describe('createMapPainter', () => {
         tabRect: { x: 8, y: -9, w: 60, h: 18 },
       }),
     ]);
-    const tab = of('fillRect').find((c) => c.args.join() === '8,-9,60,18');
-    expect(tab?.fillStyle).toBe('#f8');
-    expect(of('strokeRect').find((c) => c.args.join() === '8,-9,60,18')?.strokeStyle).toBe('#f5');
-    expect(of('fillText').find((c) => c.args[0] === 'billing')).toBeDefined();
+    const tab = box(rec, '8,-9,60,18');
+    expect(tab?.fill?.fillStyle).toBe('#f8');
+    expect(tab?.stroke?.strokeStyle).toBe('#f5');
+    expect(tab?.radius).toBe(4);
+    expect(rec.of('fillText').find((c) => c.args[0] === 'billing')).toBeDefined();
   });
 
   it('ends a clipped label with an ellipsis and keeps a whole one as is', () => {
@@ -250,18 +274,14 @@ describe('createMapPainter', () => {
 
   it('borders an added node with the add color and a modified one with the mod color', () => {
     const added = paint([node({ status: 'added', intensity: 1 })]);
-    expect(added.of('strokeRect').find((c) => c.args.join() === '10,20,100,50')?.strokeStyle).toBe(
-      '#a1',
-    );
+    expect(box(added, '10,20,100,50')?.stroke?.strokeStyle).toBe('#a1');
     const modified = paint([node({ status: 'modified', intensity: 1 })]);
-    expect(
-      modified.of('strokeRect').find((c) => c.args.join() === '10,20,100,50')?.strokeStyle,
-    ).toBe('#a2');
+    expect(box(modified, '10,20,100,50')?.stroke?.strokeStyle).toBe('#a2');
   });
 
   it('borders an impact hit with the impact color', () => {
     const { of } = paint([node({ impact: 'hit' })]);
-    expect(of('strokeRect').some((c) => c.strokeStyle === '#a6')).toBe(true);
+    expect(of('stroke').some((c) => c.strokeStyle === '#a6')).toBe(true);
   });
 
   it('draws the count of an impact box in the impact color', () => {
@@ -272,18 +292,15 @@ describe('createMapPainter', () => {
 
   it('draws an impact dim node at 0.3 alpha and a faded node at 0.2', () => {
     const dim = paint([node({ impact: 'dim' })]);
-    expect(dim.of('fillRect').find((c) => c.args.join() === '10,20,100,50')?.globalAlpha).toBe(0.3);
+    expect(box(dim, '10,20,100,50')?.fill?.globalAlpha).toBe(0.3);
     const faded = paint([node({ faded: true })]);
-    expect(faded.of('fillRect').find((c) => c.args.join() === '10,20,100,50')?.globalAlpha).toBe(
-      0.2,
-    );
+    expect(box(faded, '10,20,100,50')?.fill?.globalAlpha).toBe(0.2);
   });
 
   it('draws a node dimmed by the selection fainter than a sharp one', () => {
     const dim = paint([node({ emphasis: 'dim' })]);
     const sharp = paint([node({ emphasis: 'sharp' })]);
-    const rectAlpha = (r: ReturnType<typeof paint>) =>
-      r.of('fillRect').find((c) => c.args.join() === '10,20,100,50')!.globalAlpha;
+    const rectAlpha = (r: ReturnType<typeof paint>) => box(r, '10,20,100,50')!.fill!.globalAlpha;
     expect(rectAlpha(sharp)).toBe(1);
     expect(rectAlpha(dim)).toBeLessThan(1);
     // Its text is dimmed as well.
@@ -295,15 +312,15 @@ describe('createMapPainter', () => {
       node({ id: 'in' }),
       node({ id: 'out', label: 'far.ts', rect: { x: 5000, y: 20, w: 100, h: 50 } }),
     ]);
-    expect(of('fillRect').some((c) => c.args[0] === 5000)).toBe(false);
-    expect(of('strokeRect').some((c) => c.args[0] === 5000)).toBe(false);
+    expect(of('roundRect').some((c) => c.args[0] === 5000)).toBe(false);
     expect(of('fillText').some((c) => c.args[0] === 'far.ts')).toBe(false);
-    expect(of('fillRect').some((c) => c.args[0] === 10)).toBe(true);
+    expect(of('roundRect').some((c) => c.args[0] === 10)).toBe(true);
   });
 
   it('draws shapes under the camera and text in screen pixels', () => {
-    const { of } = paint([node()], { scale: 2, tx: 10, ty: 20 }, 2);
-    const fill = of('fillRect').find((c) => c.args.join() === '10,20,100,50');
+    const rec = paint([node()], { scale: 2, tx: 10, ty: 20 }, 2);
+    const of = rec.of;
+    const fill = box(rec, '10,20,100,50')?.fill;
     // world -> screen: scale 2, translation (10, 20), then the device pixel ratio 2.
     expect(fill?.matrix).toEqual([4, 0, 0, 4, 20, 40]);
     const text = of('fillText').find((c) => c.args[0] === 'cart.ts');
@@ -491,17 +508,28 @@ describe('createMapPainter, edge labels', () => {
     expect(color('mov')).toBe('#a4');
   });
 
+  it('draws a halo in the map color under the text of the label, at the same place', () => {
+    const r = paintEdges([labelled('base')], { scale: 2, tx: 10, ty: 20 });
+    const halo = r.calls.findIndex((c) => c.op === 'strokeText' && c.args[0] === '3 +1');
+    const fill = r.calls.findIndex((c) => c.op === 'fillText' && c.args[0] === '3 +1');
+    expect(halo).toBeGreaterThanOrEqual(0);
+    expect(fill).toBeGreaterThan(halo);
+    expect(r.calls[halo].strokeStyle).toBe('#fa');
+    expect(r.calls[halo].lineWidth).toBeGreaterThan(0);
+    expect(r.calls[halo].args.slice(1)).toEqual(r.calls[fill].args.slice(1));
+  });
+
   it('colors the label of an impact path edge with the impact color', () => {
     expect(text(paintEdges([labelled('base', { impactPath: true })]))!.fillStyle).toBe('#a6');
   });
 
   it('writes the label after the edges, and the edges after the boxes', () => {
     const r = paintEdges([labelled('base')], CAMERA, [node()]);
-    const box = r.calls.findIndex((c) => c.op === 'strokeRect');
+    const boxAt = r.calls.findIndex((c) => c.op === 'roundRect');
     const line = r.calls.findIndex((c) => c.op === 'stroke' && c.args[0] instanceof FakePath2D);
     const label = r.calls.findIndex((c) => c.op === 'fillText' && c.args[0] === '3 +1');
-    expect(box).toBeGreaterThanOrEqual(0);
-    expect(line).toBeGreaterThan(box);
+    expect(boxAt).toBeGreaterThanOrEqual(0);
+    expect(line).toBeGreaterThan(boxAt);
     expect(label).toBeGreaterThan(line);
   });
 });

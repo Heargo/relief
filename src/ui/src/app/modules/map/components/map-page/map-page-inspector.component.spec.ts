@@ -10,6 +10,8 @@ import type {
 } from '../../../../core/models/contract';
 import { ReliefApiService } from '../../../../core/services/relief-api.service';
 import { TEST_PROVIDERS } from '../../../../../testing/test-providers';
+import { settleScene } from '../../../../../testing/settle-scene';
+import { MapBusiness } from '../../business/map.business';
 import { MapPageComponent } from './map-page.component';
 
 const META: MetaResponse = {
@@ -121,7 +123,13 @@ async function render(snapshot: SnapshotResponse, lang: 'en' | 'fr' = 'en') {
   });
   await TestBed.inject(TranslateService).use(lang).toPromise();
   const fixture = TestBed.createComponent(MapPageComponent);
+  const map = fixture.debugElement.injector.get(MapBusiness);
+  map.setViewport(1000, 600);
   await fixture.whenStable();
+  // jsdom has no layout: the component measured 0 x 0 once rendered.
+  map.setViewport(1000, 600);
+  await fixture.whenStable();
+  await settleScene(fixture);
   return { fixture, el: fixture.nativeElement as HTMLElement };
 }
 
@@ -136,10 +144,34 @@ const chips = (el: HTMLElement) =>
     qa(el, 'inspector-chip').map((c) => [c.dataset['chip'], c.textContent?.trim() ?? '']),
   );
 
+/** A click on an edge, at its client coordinates in the scene: press on the map, release anywhere. */
+type SceneEdges = { edges: { from: string; to: string; mid: { x: number; y: number } }[] };
+const sceneMid = (from: string, to: string) =>
+  (window as unknown as { __reliefScene: () => SceneEdges })
+    .__reliefScene()
+    .edges.find((e) => e.from === from && e.to === to)?.mid;
+const nextFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+/** The edge's middle once the camera has stopped moving (a fit flight may still be running). */
+async function settledMid(fixture: Fixture, from: string, to: string) {
+  let mid = sceneMid(from, to);
+  for (let i = 0; i < 120; i++) {
+    await nextFrame();
+    await fixture.whenStable();
+    const next = sceneMid(from, to);
+    if (mid && next && next.x === mid.x && next.y === mid.y) return next;
+    mid = next;
+  }
+  throw new Error(`edge ${from} -> ${to} never settled in the scene`);
+}
+
 async function clickEdge(fixture: Fixture, el: HTMLElement, from: string, to: string) {
-  el.querySelector(`[data-testid="map-edge"][data-from="${from}"][data-to="${to}"]`)?.dispatchEvent(
-    new MouseEvent('click', { bubbles: true }),
+  const mid = await settledMid(fixture, from, to);
+  const init = { bubbles: true, clientX: mid.x, clientY: mid.y, button: 0 };
+  el.querySelector('[data-testid="map-canvas"]')!.dispatchEvent(
+    new MouseEvent('pointerdown', init),
   );
+  window.dispatchEvent(new MouseEvent('pointerup', init));
   await fixture.whenStable();
 }
 
@@ -150,6 +182,8 @@ async function pickRoute(fixture: Fixture, el: HTMLElement) {
     `[data-testid="entry-point-row"][data-node-id="${ROUTE}"]`,
   )?.click();
   await fixture.whenStable();
+  // Picking a route flies the camera to it: let the flight land before the next click.
+  await settleScene(fixture);
 }
 
 beforeEach(() => {

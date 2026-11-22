@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { MetaResponse, SnapshotResponse } from '../../../../core/models/contract';
 import { ReliefApiService } from '../../../../core/services/relief-api.service';
 import { TEST_PROVIDERS } from '../../../../../testing/test-providers';
+import { settleScene } from '../../../../../testing/settle-scene';
 import { MapBusiness } from '../../business/map.business';
 import { MapPageComponent } from './map-page.component';
 
@@ -88,43 +89,49 @@ describe('MapCanvasComponent, many edges on screen', () => {
     const map = fixture.debugElement.injector.get(MapBusiness);
     map.setViewport(1000, 600);
     await fixture.whenStable();
+    // jsdom has no layout: the component measured 0 x 0 once rendered.
+    map.setViewport(1000, 600);
+    await fixture.whenStable();
+    await settleScene(fixture);
     const root = fixture.nativeElement as HTMLElement;
     return { fixture, map, root };
   }
 
-  const merged = (root: HTMLElement) =>
-    root.querySelectorAll<SVGPathElement>('[data-testid="map-edges-merged"]');
+  interface SceneEdge {
+    from: string;
+    to: string;
+    merged: boolean;
+    selected: boolean;
+    mid: { x: number; y: number };
+  }
+  const edges = () =>
+    (window as unknown as { __reliefScene: () => { edges: SceneEdge[] } }).__reliefScene().edges;
 
-  it('draws the unchanged edges in one path, with no arrow, label or hit zone', async () => {
+  it('draws the unchanged edges as merged ones, with no element per edge', async () => {
     const { root } = await render();
-    expect(merged(root)).toHaveLength(1);
-    expect((merged(root)[0].getAttribute('d') ?? '').match(/M/g)).toHaveLength(552);
-    expect(root.querySelectorAll('g.edge')).toHaveLength(0);
-    expect(root.querySelectorAll('[data-testid="map-edge"]')).toHaveLength(0);
+    expect(edges().filter((e) => e.merged)).toHaveLength(552);
+    expect(edges().filter((e) => !e.merged)).toHaveLength(0);
+    expect(root.querySelectorAll('[data-testid="map-edges-merged"]')).toHaveLength(0);
+    expect(root.querySelectorAll('g.edge, [data-testid="map-edge"]')).toHaveLength(0);
     expect(root.querySelectorAll('path.arrow, path.hit')).toHaveLength(0);
   });
 
-  it('selects the edge under a click on the common path, and draws it in full', async () => {
+  it('selects the edge under a click on a merged one, and draws it in full', async () => {
     const { fixture, map, root } = await render();
-    const target = map.mergedEdgeLines()[3];
-    // Middle of the quadratic curve `M x0,y0 Q cx,cy x1,y1`, in world units.
-    const [x0, y0, cx, cy, x1, y1] = (target.shape.d.match(/-?\d+(\.\d+)?/g) ?? []).map(Number);
-    const { scale, tx, ty } = map.camera();
-    const world = { x: (x0 + 2 * cx + x1) / 4, y: (y0 + 2 * cy + y1) / 4 };
-    merged(root)[0].dispatchEvent(
-      new MouseEvent('click', {
-        bubbles: true,
-        clientX: world.x * scale + tx,
-        clientY: world.y * scale + ty,
-      }),
-    );
+    const { mid } = edges().filter((e) => e.merged)[3];
+    const init = { bubbles: true, clientX: mid.x, clientY: mid.y, button: 0 };
+    root
+      .querySelector('[data-testid="map-canvas"]')!
+      .dispatchEvent(new MouseEvent('pointerdown', init));
+    window.dispatchEvent(new MouseEvent('pointerup', init));
     await fixture.whenStable();
-    expect(map.selectedEdge()).toMatchObject({ from: target.edge.from, to: target.edge.to });
-    expect(
-      root.querySelectorAll(
-        `[data-testid="map-edge"][data-from="${target.edge.from}"][data-to="${target.edge.to}"]`,
-      ),
-    ).toHaveLength(1);
-    expect((merged(root)[0].getAttribute('d') ?? '').match(/M/g)).toHaveLength(551);
+
+    const picked = map.selectedEdge();
+    expect(picked).not.toBeNull();
+    // The picked edge leaves the merged set: one full edge, 551 merged ones.
+    const full = edges().filter((e) => !e.merged);
+    expect(full.map((e) => [e.from, e.to])).toEqual([[picked!.from, picked!.to]]);
+    expect(full[0].selected).toBe(true);
+    expect(edges().filter((e) => e.merged)).toHaveLength(551);
   });
 });

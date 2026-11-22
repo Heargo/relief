@@ -1,10 +1,11 @@
 import { TestBed } from '@angular/core/testing';
 import { TranslateService } from '@ngx-translate/core';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { MetaResponse, SnapshotResponse } from '../../../../core/models/contract';
 import { ReliefApiService } from '../../../../core/services/relief-api.service';
 import { TEST_PROVIDERS } from '../../../../../testing/test-providers';
+import { settleScene } from '../../../../../testing/settle-scene';
 import { MapBusiness } from '../../business/map.business';
 import { MapPageComponent } from '../map-page/map-page.component';
 
@@ -72,10 +73,9 @@ interface SceneEdge {
 }
 type Scene = { nodes: SceneNode[]; edges: SceneEdge[] };
 
-describe('MapCanvasComponent in canvas mode, interactions', () => {
+describe('MapCanvasComponent, interactions on the canvas', () => {
   beforeEach(() => {
     localStorage.clear();
-    history.replaceState(null, '', '/?renderer=canvas');
     api.meta.mockReset().mockResolvedValue(META);
     api.snapshot.mockReset().mockResolvedValue(SNAPSHOT);
     for (const name of [
@@ -92,7 +92,6 @@ describe('MapCanvasComponent in canvas mode, interactions', () => {
     api.setReviewState.mockReset().mockResolvedValue(undefined);
     api.openDocs.mockReset().mockResolvedValue(undefined);
   });
-  afterEach(() => history.replaceState(null, '', '/'));
 
   async function render() {
     TestBed.configureTestingModule({
@@ -107,6 +106,7 @@ describe('MapCanvasComponent in canvas mode, interactions', () => {
     // jsdom has no layout: the component measured 0 x 0 once rendered.
     map.setViewport(1000, 600);
     await fixture.whenStable();
+    await settleScene(fixture);
     const root = fixture.nativeElement as HTMLElement;
     const scene = () => (window as unknown as { __reliefScene: () => Scene }).__reliefScene();
     const surface = root.querySelector<HTMLCanvasElement>('[data-testid="map-surface"]')!;

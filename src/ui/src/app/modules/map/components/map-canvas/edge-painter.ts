@@ -1,5 +1,4 @@
-// Canvas 2D painter of the map edges (ADR 0009), to parity with the SVG of `map-canvas.component`
-// and its styles. No Angular: it draws the edges of a `MapScene`, shapes in world units under the
+// Canvas 2D painter of the map edges (ADR 0009). No Angular: it draws the edges of a `MapScene`, shapes in world units under the
 // camera (lines and dashes keep their screen thickness), labels in screen pixels.
 import type { Camera } from '../../helpers/camera.logic';
 import { edgeThickness } from '../../helpers/edges.logic';
@@ -15,7 +14,20 @@ const COCHANGE_ALPHA = 0.85;
 const OUT_WIDTH = 2.4;
 const PICKED_WIDTH = 3;
 const LABEL_FONT = '600 10.5px ui-sans-serif, system-ui';
-const NO_DASH: number[] = [];
+const HALO_WIDTH = 4;
+
+export const NO_DASH: number[] = [];
+const dashes = new Map<string, number[]>();
+/** A dash pattern, one array per pattern (the camera scale changes rarely). */
+export function dashed(on: number, off: number): number[] {
+  const key = `${on}|${off}`;
+  let d = dashes.get(key);
+  if (!d) {
+    if (dashes.size > 50) dashes.clear();
+    dashes.set(key, (d = [on, off]));
+  }
+  return d;
+}
 
 export function createEdgePainter(ctx: CanvasRenderingContext2D, palette: Palette) {
   const paths = new Map<string, Path2D>();
@@ -63,9 +75,9 @@ export function createEdgePainter(ctx: CanvasRenderingContext2D, palette: Palett
   };
 
   const dashOf = (e: SceneEdge, px: number): number[] => {
-    if (e.violation === 'new' || e.status === 'added') return [7 * px, 4 * px];
-    if (e.status === 'removed') return [3 * px, 4 * px];
-    if (e.status === 'moved') return [2 * px, 5 * px];
+    if (e.violation === 'new' || e.status === 'added') return dashed(7 * px, 4 * px);
+    if (e.status === 'removed') return dashed(3 * px, 4 * px);
+    if (e.status === 'moved') return dashed(2 * px, 5 * px);
     return NO_DASH;
   };
 
@@ -104,7 +116,7 @@ export function createEdgePainter(ctx: CanvasRenderingContext2D, palette: Palett
           ctx.globalAlpha = COCHANGE_ALPHA;
           ctx.strokeStyle = palette.cochange;
           ctx.lineWidth = edgeThickness(e.count) * px;
-          ctx.setLineDash([6 * px, 4 * px]);
+          ctx.setLineDash(dashed(6 * px, 4 * px));
           ctx.stroke(path(e.shape.d));
           continue;
         }
@@ -145,12 +157,21 @@ export function createEdgePainter(ctx: CanvasRenderingContext2D, palette: Palett
           set = true;
           ctx.font = LABEL_FONT;
           ctx.textAlign = 'center';
+          ctx.lineWidth = HALO_WIDTH;
+          ctx.lineJoin = 'round';
         }
         ctx.globalAlpha = e.emphasis === 'dim' ? DIM_ALPHA : e.label.cls === 'violOld' ? 0.8 : 1;
+        const lx = e.mid.x * s + tx;
+        const ly = e.mid.y * s + ty;
+        ctx.strokeStyle = palette.map;
+        ctx.strokeText(e.label.text, lx, ly);
         ctx.fillStyle = labelColor(e);
-        ctx.fillText(e.label.text, e.mid.x * s + tx, e.mid.y * s + ty);
+        ctx.fillText(e.label.text, lx, ly);
       }
-      if (set) ctx.textAlign = 'start';
+      if (set) {
+        ctx.textAlign = 'start';
+        ctx.lineJoin = 'miter';
+      }
       ctx.globalAlpha = 1;
     },
   };

@@ -1,8 +1,7 @@
 // Canvas 2D painter of the map nodes (ADR 0009). No Angular: it draws a `MapScene` on a context,
-// shapes in world units under the camera, text in screen pixels. The visual reference is
-// `map-canvas.component.scss`.
+// shapes in world units under the camera, text in screen pixels.
 import type { Camera } from '../../helpers/camera.logic';
-import { createEdgePainter } from './edge-painter';
+import { createEdgePainter, dashed, NO_DASH } from './edge-painter';
 import { headerFontSize } from '../../helpers/header.logic';
 import {
   closedFontPx,
@@ -31,6 +30,8 @@ export interface Palette {
   impact: string;
   cochange: string;
   ruleOld: string;
+  /** The color of the map background, the halo of the edge labels. */
+  map: string;
 }
 
 const VARIABLES: Record<keyof Palette, string> = {
@@ -51,6 +52,7 @@ const VARIABLES: Record<keyof Palette, string> = {
   impact: '--relief-impact',
   cochange: '--relief-cochange',
   ruleOld: '--relief-rule-old',
+  map: '--relief-map',
 };
 
 /** The colors of the theme, read from the `--relief-*` variables. */
@@ -93,6 +95,8 @@ const EMPHASIS_DIM = 0.35;
 const SEEN = 0.45;
 const OLD_LOCATION = 0.75;
 const RISK_TINT = 0.32;
+const BOX_RADIUS = 6;
+const TAB_RADIUS = 4;
 /** Height of the content row of a closed box, by kind (symbols use the whole box). */
 const CLOSED_ROW: Record<string, number> = { service: 38, package: 38, workspace: 38, module: 30 };
 
@@ -174,49 +178,55 @@ export function createMapPainter(
     const marked = !n.oldLocation && n.status !== null && n.status !== 'unchanged' && color;
     const tint = marked ? (INTENSITY[n.intensity ?? 0] ?? 0) : 0;
     const base = alphaOf(n);
+    const radius = BOX_RADIUS * px;
     ctx.globalAlpha = base;
+    round(x, y, w, h, radius);
     if (ghost) {
       ctx.fillStyle = marked ? color : palette.faint;
       ctx.globalAlpha = base * (marked ? Math.min(1, tint + 0.25) : 0.16);
-      ctx.fillRect(x, y, w, h);
+      ctx.fill();
       ctx.globalAlpha = 1;
       return;
     }
     if (!n.oldLocation) {
       ctx.fillStyle = open && n.kind !== 'file' ? palette.nodeOpen : palette.node;
-      ctx.fillRect(x, y, w, h);
+      ctx.fill();
     }
     if (marked) {
       ctx.fillStyle = color;
       ctx.globalAlpha = base * (open ? (n.kind === 'file' ? 0.05 : 0) : tint);
-      if (ctx.globalAlpha > 0) ctx.fillRect(x, y, w, h);
+      if (ctx.globalAlpha > 0) ctx.fill();
       ctx.globalAlpha = base;
+      // The accent bar follows the rounded corners.
+      ctx.save();
+      ctx.clip();
       if (open) ctx.fillRect(x, y, w, 3 * px);
       else ctx.fillRect(x, y, 3 * px, h);
+      ctx.restore();
     }
     const risk = n.risk ? options.risk?.[n.risk] : undefined;
     if (risk) {
       ctx.fillStyle = risk;
       ctx.globalAlpha = base * RISK_TINT;
-      ctx.fillRect(x, y, w, h);
+      ctx.fill();
       ctx.globalAlpha = base;
     }
     ctx.strokeStyle = risk ?? palette.line2;
     ctx.lineWidth = px;
-    ctx.setLineDash([]);
+    ctx.setLineDash(NO_DASH);
     if (n.oldLocation) {
       ctx.strokeStyle = palette.mov;
-      ctx.setLineDash([4 * px, 3 * px]);
+      ctx.setLineDash(dashed(4 * px, 3 * px));
     } else if (n.impact === 'hit') {
       ctx.strokeStyle = palette.impact;
       ctx.lineWidth = 2 * px;
-      ctx.setLineDash([4 * px, 3 * px]);
+      ctx.setLineDash(dashed(4 * px, 3 * px));
     } else if (marked) {
       ctx.strokeStyle = color;
-      if (n.status === 'removed') ctx.setLineDash([4 * px, 3 * px]);
+      if (n.status === 'removed') ctx.setLineDash(dashed(4 * px, 3 * px));
     }
-    ctx.strokeRect(x, y, w, h);
-    ctx.setLineDash([]);
+    ctx.stroke();
+    ctx.setLineDash(NO_DASH);
     ctx.globalAlpha = 1;
   }
 
@@ -356,11 +366,12 @@ export function createMapPainter(
     const tab: SceneRect | null = n.tabRect;
     if (n.header !== 'tab' || !tab) return;
     ctx.globalAlpha = alphaOf(n);
+    round(tab.x, tab.y, tab.w, tab.h, TAB_RADIUS * px);
     ctx.fillStyle = palette.panel;
-    ctx.fillRect(tab.x, tab.y, tab.w, tab.h);
+    ctx.fill();
     ctx.strokeStyle = palette.line2;
     ctx.lineWidth = px;
-    ctx.strokeRect(tab.x, tab.y, tab.w, tab.h);
+    ctx.stroke();
     ctx.globalAlpha = 1;
   }
 

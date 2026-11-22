@@ -121,17 +121,6 @@ body.resizing {
   user-select: none;
 }
 
-/* The risk map layer tints the map nodes by step (0 is left as is). */
-@for $level from 1 through 4 {
-  .map-node[data-risk-level='#{$level}'] {
-    background-image: linear-gradient(
-      color-mix(in srgb, var(--relief-risk-#{$level}) 32%, transparent),
-      color-mix(in srgb, var(--relief-risk-#{$level}) 32%, transparent)
-    );
-    border-color: var(--relief-risk-#{$level});
-  }
-}
-
 /* Left panel, like the mockup: sections, segmented controls, switches, stats, progress bar. */
 .sec {
   padding: 14px 16px;
@@ -320,45 +309,6 @@ body.resizing {
   white-space: nowrap;
 }
 
-// Edge label of the map (mockup `.el`): a text with a halo of the map colour, by status.
-.edge .tag text.el {
-  font:
-    600 10.5px ui-sans-serif,
-    system-ui;
-  paint-order: stroke;
-  stroke: var(--relief-map);
-  stroke-width: 4px;
-  stroke-linejoin: round;
-  text-anchor: middle;
-  dominant-baseline: central;
-  fill: var(--relief-muted);
-
-  &.add {
-    fill: var(--relief-add);
-  }
-
-  &.del {
-    fill: var(--relief-del);
-  }
-
-  &.viol {
-    fill: var(--relief-rule);
-  }
-
-  &.violOld {
-    fill: var(--relief-rule-old);
-    opacity: 0.8;
-  }
-
-  &.mov {
-    fill: var(--relief-mov);
-  }
-
-  &.hl {
-    fill: var(--relief-impact);
-  }
-}
-
 /* Settings menu of the top bar. */
 .settings {
   position: relative;
@@ -423,57 +373,5 @@ body.resizing {
   .sub {
     color: var(--relief-muted);
     font-weight: 400;
-  }
-}
-
-// Selection emphasis: the edges of the selected node (out: accent, in: impact colour) stand out,
-// the rest fades. Not `data-faded`, which belongs to the focus layer.
-.map-canvas .map-edges .edge {
-  transition: opacity 0.15s;
-
-  &.out {
-    --edge-color: var(--relief-accent);
-  }
-
-  &.in {
-    --edge-color: var(--relief-impact);
-  }
-
-  &.picked {
-    --edge-color: var(--relief-accent);
-  }
-
-  &.out .line,
-  &.in .line {
-    stroke-width: 2.4;
-    opacity: 1;
-  }
-
-  &.picked .line {
-    stroke-width: 3;
-    opacity: 1;
-  }
-
-  &.dim {
-    opacity: 0.12;
-  }
-
-  &.hidden {
-    display: none;
-  }
-}
-
-.map-canvas .map-node {
-  transition: opacity 0.15s;
-
-  &[data-emph='dim'] {
-    opacity: 0.35;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .map-canvas .map-edges .edge,
-  .map-canvas .map-node {
-    transition: none;
   }
 }

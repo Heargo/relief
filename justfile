@@ -99,7 +99,7 @@ e2e-summary: build
     failed=$(count failing)
     skipped=$(( $(count skipped) + $(count pending) ))
     echo "e2e: ${passed:-0} passed, ${skipped:-0} skipped, ${failed:-0} failed"
-    [ "$code" -eq 0 ] && [ "${failed:-0}" -eq 0 ] && [ "${passed:-0}" -gt 0 ] || { echo "$out" | tail -40; exit 1; }
+    [ "$code" -eq 0 ] && [ "${failed:-0}" -eq 0 ] && [ "${passed:-0}" -gt 0 ] || { grep -E "✖|FAILED|Error:" <<<"$out" | grep -v WARN | head -20; echo "$out" | tail -40; exit 1; }
 
 lint:
     cargo fmt --check

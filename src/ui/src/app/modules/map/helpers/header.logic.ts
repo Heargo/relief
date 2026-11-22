@@ -65,27 +65,3 @@ export function headerLayout(kind: NodeKind | string, scale: number): HeaderLayo
 export function closedLabelVisible(width: number, height: number): boolean {
   return width >= MIN_CLOSED_WIDTH && height >= MIN_CLOSED_HEIGHT;
 }
-
-/** Border width of a box: the header starts on it so that it ends where the layout says. */
-const BORDER = 1;
-const SUB_FONT = 11;
-
-export interface HeaderStyle {
-  height: string;
-  fontSize: string;
-  lineHeight: string;
-  marginTop: string;
-  /** Font of the sub-elements (sub text, chips, badges, icon). */
-  subFontSize: string;
-}
-
-/** The inline style of an open header. */
-export function headerStyle(open: Pick<OpenHeader, 'height' | 'fontSize'>): HeaderStyle {
-  return {
-    height: `${open.height}px`,
-    fontSize: `${open.fontSize}px`,
-    lineHeight: '1',
-    marginTop: `-${BORDER}px`,
-    subFontSize: `${Math.min(SUB_FONT, open.fontSize)}px`,
-  };
-}

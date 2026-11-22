@@ -10,6 +10,7 @@ import type {
 } from '../../../../core/models/contract';
 import { ReliefApiService } from '../../../../core/services/relief-api.service';
 import { TEST_PROVIDERS } from '../../../../../testing/test-providers';
+import { settleScene } from '../../../../../testing/settle-scene';
 import { MapPageComponent } from './map-page.component';
 
 const META: MetaResponse = {
@@ -97,12 +98,22 @@ async function render(lang: 'en' | 'fr' = 'en') {
   await TestBed.inject(TranslateService).use(lang).toPromise();
   const fixture = TestBed.createComponent(MapPageComponent);
   await fixture.whenStable();
+  await settleScene(fixture);
   return fixture.nativeElement as HTMLElement;
 }
 
-function edge(el: HTMLElement, from: string, to: string): Element | null {
-  return el.querySelector(`[data-testid="map-edge"][data-from="${from}"][data-to="${to}"]`);
+interface SceneEdge {
+  from: string;
+  to: string;
+  status: string;
+  count: number;
+  label: { text: string; cls: string; visible: boolean };
 }
+
+/** The edges the map draws, read from the scene the canvas exposes. */
+const sceneEdges = () =>
+  (window as unknown as { __reliefScene: () => { edges: SceneEdge[] } }).__reliefScene().edges;
+const edge = (from: string, to: string) => sceneEdges().find((e) => e.from === from && e.to === to);
 
 describe('MapPageComponent, edge labels like the mockup', () => {
   beforeEach(() => {
@@ -120,54 +131,39 @@ describe('MapPageComponent, edge labels like the mockup', () => {
     api.openDocs.mockReset().mockResolvedValue(undefined);
   });
 
-  it('draws no circle on the edges, labels are SVG texts', async () => {
+  it('draws the edges on the canvas: no SVG edge, no circle', async () => {
     const el = await render();
-    const edges = el.querySelector('[data-testid="map-edges"]')!;
-    expect(edges.querySelectorAll('[data-testid="map-edge"]').length).toBeGreaterThan(0);
-    expect(edges.querySelectorAll('circle')).toHaveLength(0);
-    expect(edges.querySelectorAll('rect')).toHaveLength(0);
+    expect(el.querySelector('[data-testid="map-edges"]')).toBeNull();
+    expect(el.querySelectorAll('[data-testid="map-edge"]')).toHaveLength(0);
+    expect(sceneEdges().length).toBeGreaterThan(0);
   });
 
-  it('writes the number of links in a text of the status class on a multi-link edge', async () => {
-    const el = await render();
-    const text = edge(el, WEB, DB)?.querySelector('text.el');
-    expect(text?.textContent?.trim()).toBe('5');
-    expect(text?.classList.contains('base')).toBe(true);
+  it('writes the number of links in a label of the base class on a multi-link edge', async () => {
+    await render();
+    expect(edge(WEB, DB)?.label.text).toBe('5');
+    expect(edge(WEB, DB)?.label.cls).toBe('base');
   });
 
   it('writes no label on an edge of a single link without diff', async () => {
-    const el = await render();
-    expect(edge(el, WEB, API)).not.toBeNull();
-    expect(edge(el, WEB, API)?.querySelector('text')?.textContent ?? '').toBe('');
+    await render();
+    expect(edge(WEB, API)).toBeDefined();
+    expect(edge(WEB, API)?.label.text).toBe('');
   });
 
   it('calls an added edge of one link new, in the language of the app', async () => {
-    const el = await render('en');
-    const text = edge(el, API, DB)?.querySelector('text.el');
-    expect(text?.textContent?.trim()).toBe('new');
-    expect(text?.classList.contains('add')).toBe(true);
+    await render('en');
+    expect(edge(API, DB)?.label.text).toBe('new');
+    expect(edge(API, DB)?.label.cls).toBe('add');
   });
 
   it('calls it nouveau in French', async () => {
-    const el = await render('fr');
-    expect(edge(el, API, DB)?.querySelector('text.el')?.textContent?.trim()).toBe('nouveau');
+    await render('fr');
+    expect(edge(API, DB)?.label.text).toBe('nouveau');
   });
 
-  it('keeps the data attributes of the edges', async () => {
-    const el = await render();
-    const e = edge(el, WEB, DB);
-    expect(e?.getAttribute('data-count')).toBe('5');
-    expect(e?.getAttribute('data-status')).toBe('unchanged');
-    expect(edge(el, API, DB)?.getAttribute('data-status')).toBe('added');
-  });
-
-  it('draws the stroke of the 5-link edge thicker than the single-link one', async () => {
-    const el = await render();
-    const width = (from: string, to: string) =>
-      Number(
-        edge(el, from, to)?.parentElement?.querySelector('path.line')?.getAttribute('stroke-width'),
-      );
-    expect(width(WEB, DB)).toBeCloseTo(1.3 + 0.9 * Math.log2(5), 1);
-    expect(width(WEB, API)).toBeCloseTo(1.3, 1);
+  it('keeps the count and the status of the edges in the scene', async () => {
+    await render();
+    expect(edge(WEB, DB)).toMatchObject({ count: 5, status: 'unchanged' });
+    expect(edge(API, DB)?.status).toBe('added');
   });
 });

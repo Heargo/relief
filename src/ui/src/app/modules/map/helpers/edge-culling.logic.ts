@@ -60,11 +60,6 @@ export function partitionEdges<T extends EdgeDetail>(
   return { full, merged };
 }
 
-/** The curves chained into one path data. */
-export function mergedEdgesPath(ds: readonly string[]): string {
-  return ds.join('');
-}
-
 const CURVE_STEPS = 16;
 
 function distanceToSegment(
