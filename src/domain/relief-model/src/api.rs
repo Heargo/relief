@@ -156,6 +156,29 @@ pub struct ReviewSummary {
     pub out_of_diff: Vec<OutOfDiffCaller>,
     pub couplings_added: Vec<ModuleCoupling>,
     pub couplings_removed: Vec<ModuleCoupling>,
+    /// Files changed the same way, three or more at a time.
+    #[serde(default)]
+    pub repeated: Vec<RepeatedChange>,
+}
+
+/// Files of the range that make the same change (same edges and symbols added / removed).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct RepeatedChange {
+    /// First member in reading order.
+    pub representative: NodeId,
+    /// File nodes, in reading order.
+    pub members: Vec<NodeId>,
+    pub summary: Vec<RepeatedChangeItem>,
+}
+
+/// One part of the change shared by the members of a [`RepeatedChange`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum RepeatedChangeItem {
+    EdgeAdded { kind: EdgeKind, target: NodeId },
+    EdgeRemoved { kind: EdgeKind, target: NodeId },
+    SymbolAdded { name: String },
+    SymbolRemoved { name: String },
 }
 
 /// A file of the range and its node.

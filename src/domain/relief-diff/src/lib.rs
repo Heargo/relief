@@ -11,8 +11,8 @@ pub use subgraph::{budgeted, review_subgraph};
 use relief_model::{
     EdgeChange, EdgeKind, EdgeStatus, FileChange, FileRef, FormatOnlyFile, GraphDiff,
     GraphSnapshot, ModuleCoupling, MovedFile, Node, NodeChange, NodeId, NodeKind, NodeStatus,
-    OutOfDiffCaller, ReviewSummary, SignatureChange, SignatureReason, SignatureSummary,
-    SignatureVerdict, Visibility,
+    OutOfDiffCaller, RepeatedChange, RepeatedChangeItem, ReviewSummary, SignatureChange,
+    SignatureReason, SignatureSummary, SignatureVerdict, Visibility,
 };
 pub use relief_model::{FileRename, FormatOnlySummary};
 
@@ -790,7 +790,125 @@ pub fn review_summary(
         out_of_diff: out_of_diff_callers,
         couplings_added: of(CouplingStatus::New),
         couplings_removed: of(CouplingStatus::Gone),
+        repeated: repeated_changes(diff, head),
     }
+}
+
+/// Minimum number of files with the same change to make a group.
+const REPEATED_MIN_FILES: usize = 3;
+
+/// Groups the files of the reading order whose change has the same signature: the
+/// added / removed edges (kind + target) seen from the file or its symbols, and the
+/// added / removed symbols by name. Groups of fewer than three files are dropped;
+/// the representative is the first member in reading order, and groups follow the
+/// reading position of their representative.
+pub fn repeated_changes(diff: &GraphDiff, head: &GraphSnapshot) -> Vec<RepeatedChange> {
+    let mut groups: Vec<RepeatedChange> = Vec::new();
+    let mut by_signature: HashMap<Vec<RepeatedChangeItem>, usize> = HashMap::new();
+    let by_file = changes_by_file(diff);
+    for item in reading_order(diff, head, Granularity::File) {
+        let Some(path) = item.id.file_path() else {
+            continue;
+        };
+        let summary = change_signature(by_file.get(path));
+        if summary.is_empty() {
+            continue;
+        }
+        match by_signature.get(&summary) {
+            Some(&i) => groups[i].members.push(item.id),
+            None => {
+                by_signature.insert(summary.clone(), groups.len());
+                groups.push(RepeatedChange {
+                    representative: item.id.clone(),
+                    members: vec![item.id],
+                    summary,
+                });
+            }
+        }
+    }
+    groups.retain(|g| g.members.len() >= REPEATED_MIN_FILES);
+    groups
+}
+
+/// What one file added and removed, collected in one pass over the diff.
+#[derive(Default)]
+struct FileChanges {
+    edges_added: Vec<(EdgeKind, NodeId)>,
+    edges_removed: Vec<(EdgeKind, NodeId)>,
+    symbols_added: Vec<String>,
+    symbols_removed: Vec<String>,
+}
+
+fn changes_by_file(diff: &GraphDiff) -> HashMap<&str, FileChanges> {
+    let mut by_file: HashMap<&str, FileChanges> = HashMap::new();
+    for e in &diff.edges {
+        let Some(path) = e.from.file_path() else {
+            continue;
+        };
+        // Imports are compared at the file; other kinds keep their target symbol.
+        let target = if e.kind == EdgeKind::Imports {
+            e.to.file_id()
+        } else {
+            e.to.clone()
+        };
+        let changes = by_file.entry(path).or_default();
+        match e.status {
+            EdgeStatus::Added => changes.edges_added.push((e.kind, target)),
+            EdgeStatus::Removed => changes.edges_removed.push((e.kind, target)),
+            EdgeStatus::Moved => {}
+        }
+    }
+    for n in &diff.nodes {
+        let (Some(path), Some(name)) = (n.id.file_path(), n.id.symbol_key()) else {
+            continue;
+        };
+        match n.status {
+            NodeStatus::Added => by_file.entry(path).or_default().symbols_added.push(name),
+            NodeStatus::Removed => by_file.entry(path).or_default().symbols_removed.push(name),
+            _ => {}
+        }
+    }
+    by_file
+}
+
+/// Added edges, removed edges, added symbols, removed symbols of one file, each sorted.
+fn change_signature(changes: Option<&FileChanges>) -> Vec<RepeatedChangeItem> {
+    let Some(c) = changes else {
+        return Vec::new();
+    };
+    let sorted = |mut v: Vec<(EdgeKind, NodeId)>| {
+        v.sort();
+        v.dedup();
+        v
+    };
+    let names = |v: &[String]| {
+        let mut v = v.to_vec();
+        v.sort();
+        v.dedup();
+        v
+    };
+    let mut items = Vec::new();
+    items.extend(
+        sorted(c.edges_added.clone())
+            .into_iter()
+            .map(|(kind, target)| RepeatedChangeItem::EdgeAdded { kind, target }),
+    );
+    items.extend(
+        sorted(c.edges_removed.clone())
+            .into_iter()
+            .map(|(kind, target)| RepeatedChangeItem::EdgeRemoved { kind, target }),
+    );
+    items.extend(
+        names(&c.symbols_added)
+            .into_iter()
+            .map(|name| RepeatedChangeItem::SymbolAdded { name }),
+    );
+    items.extend(
+        names(&c.symbols_removed)
+            .into_iter()
+            .map(|name| RepeatedChangeItem::SymbolRemoved { name }),
+    );
+    items
 }
 
 /// Id of the file node of `path` in `graph`.

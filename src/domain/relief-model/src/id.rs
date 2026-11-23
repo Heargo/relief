@@ -3,7 +3,7 @@ use std::str::FromStr;
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 enum SegmentKind {
     Package,
     File,
@@ -33,7 +33,7 @@ impl SegmentKind {
 ///
 /// Inside a name, `\` and `:` are escaped with a backslash so that a name
 /// never produces a spurious separator.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct NodeId {
     segments: Vec<(SegmentKind, String)>,
 }
@@ -68,6 +68,19 @@ impl NodeId {
             .iter()
             .find(|(k, _)| *k == SegmentKind::File)
             .map(|(_, name)| name.as_str())
+    }
+
+    /// The id cut after its file segment (the id itself when it has no symbol).
+    #[must_use]
+    pub fn file_id(&self) -> Self {
+        let end = self
+            .segments
+            .iter()
+            .position(|(k, _)| *k == SegmentKind::File)
+            .map_or(self.segments.len(), |i| i + 1);
+        Self {
+            segments: self.segments[..end].to_vec(),
+        }
     }
 
     /// Names of the symbol segments, joined by `::`, if the id has any.

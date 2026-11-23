@@ -127,6 +127,28 @@ export type SignatureReason =
       code: 'unspecified';
     };
 /**
+ * One part of the change shared by the members of a [`RepeatedChange`].
+ */
+export type RepeatedChangeItem =
+  | {
+      kind: EdgeKind;
+      target: NodeId;
+      type: 'edge_added';
+    }
+  | {
+      kind: EdgeKind;
+      target: NodeId;
+      type: 'edge_removed';
+    }
+  | {
+      name: string;
+      type: 'symbol_added';
+    }
+  | {
+      name: string;
+      type: 'symbol_removed';
+    };
+/**
  * Why a file or symbol is on the reading list.
  */
 export type ReadingReason =
@@ -383,6 +405,10 @@ export interface ReviewSummary {
   outOfDiff: OutOfDiffCaller[];
   removedFiles: FileRef[];
   /**
+   * Files changed the same way, three or more at a time.
+   */
+  repeated?: RepeatedChange[];
+  /**
    * Breaking signatures first.
    */
   signatures: SignatureSummary[];
@@ -432,6 +458,20 @@ export interface OutOfDiffCaller {
    * A test reaches it directly.
    */
   tested: boolean;
+}
+/**
+ * Files of the range that make the same change (same edges and symbols added / removed).
+ */
+export interface RepeatedChange {
+  /**
+   * File nodes, in reading order.
+   */
+  members: NodeId[];
+  /**
+   * First member in reading order.
+   */
+  representative: string;
+  summary: RepeatedChangeItem[];
 }
 /**
  * A symbol whose signature changed, with the callers it reaches in the head.

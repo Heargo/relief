@@ -46,6 +46,14 @@
         "$ref": "#/$defs/FileRef"
       }
     },
+    "repeated": {
+      "description": "Files changed the same way, three or more at a time.",
+      "type": "array",
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/RepeatedChange"
+      }
+    },
     "signatures": {
       "description": "Breaking signatures first.",
       "type": "array",
@@ -198,6 +206,111 @@
         "node",
         "calls",
         "tested"
+      ]
+    },
+    "RepeatedChange": {
+      "description": "Files of the range that make the same change (same edges and symbols added / removed).",
+      "type": "object",
+      "properties": {
+        "members": {
+          "description": "File nodes, in reading order.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/NodeId"
+          }
+        },
+        "representative": {
+          "description": "First member in reading order.",
+          "$ref": "#/$defs/NodeId"
+        },
+        "summary": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/RepeatedChangeItem"
+          }
+        }
+      },
+      "required": [
+        "representative",
+        "members",
+        "summary"
+      ]
+    },
+    "RepeatedChangeItem": {
+      "description": "One part of the change shared by the members of a [`RepeatedChange`].",
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "$ref": "#/$defs/EdgeKind"
+            },
+            "target": {
+              "$ref": "#/$defs/NodeId"
+            },
+            "type": {
+              "type": "string",
+              "const": "edge_added"
+            }
+          },
+          "required": [
+            "type",
+            "kind",
+            "target"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "$ref": "#/$defs/EdgeKind"
+            },
+            "target": {
+              "$ref": "#/$defs/NodeId"
+            },
+            "type": {
+              "type": "string",
+              "const": "edge_removed"
+            }
+          },
+          "required": [
+            "type",
+            "kind",
+            "target"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "const": "symbol_added"
+            }
+          },
+          "required": [
+            "type",
+            "name"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "const": "symbol_removed"
+            }
+          },
+          "required": [
+            "type",
+            "name"
+          ]
+        }
       ]
     },
     "SignatureSummary": {

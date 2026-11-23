@@ -1,0 +1,9 @@
+# E08: a migration where 4 files add the same import (helpers) and 2 others add a different one (other).
+commits:
+  - id: base
+    message: "chore: feature files without shared helpers"
+    date: "2024-01-01T10:00:00Z"
+  - id: migrate
+    message: "refactor: migrate features to the shared helpers"
+    date: "2024-01-02T10:00:00Z"
+    branch: feat/migration
