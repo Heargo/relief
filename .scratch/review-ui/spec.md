@@ -29,3 +29,14 @@ Retours de `quicknotes.md` : se perdre dans les dépendances transitives, garder
 - **Lire le code** : identifiants cliquables (R14), diff coloré avec contexte dépliable (R15).
 - **Ranger l'espace** : masquer des éléments (U27), disposition à la main (U28), panneau détaché dans sa propre fenêtre pour le multi-écran (N11). U28 et N11 commencent par une maquette.
 - **Écarté pour l'instant** : publier les notes en commentaires GitHub (reste dans « Plus tard ») ; notes partagées entre relecteurs.
+
+## Phase 14 : lisibilité des grosses PR (retour du 2026-11-23)
+
+Capture d'une relecture de migration (S16 : ~30 specs e2e qui importent les mêmes helpers) : des centaines d'arêtes « new » en étoile vers un hub, au niveau symbole, chacune étiquetée. La carte est fidèle mais illisible. Principe : **alléger par défaut, ne rien perdre** — ce qui disparaît des traits revient en compteur, en badge, au survol ou à la sélection.
+
+- **Moins de texte** : étiquettes d'arête au survol et à la sélection seulement ; au repos, une pastille par faisceau (U29).
+- **Moins de traits** : arêtes agrégées au niveau affiché, celles des symboles seulement pour le nœud sélectionné ou survolé (U30) ; arêtes inchangées masquées par défaut en relecture (R16) ; arêtes des tests repliées en badge sur leur cible (R17).
+- **Traits groupés** : faisceaux qui convergent vers un port d'entrée par boîte, avec leur compteur (U31) ; tracés le long des couloirs entre les boîtes (U32).
+- **Changements répétitifs** : le cœur reconnaît un même changement fait dans N fichiers (E08) ; la vue d'ensemble en fait un constat et la carte montre un représentant « ×N » (R18).
+- **Pas à pas** : en suivant l'ordre de lecture, seules les arêtes de l'élément en cours et de ses voisins directs restent vives (R19).
+- Décision (utilisateur, 2026-11-23) : tout faire, sans attendre de maquette ; les choix de design sont notés dans chaque ticket.

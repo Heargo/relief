@@ -204,6 +204,22 @@ Brainstorm du 2026-11-20 (`quicknotes.md`) : en relecture on se perd dans les d�
 | ☐ | 65 | **U28** Ranger la carte à la main | Disposition personnelle ; maquette d'abord. | U04, U27 |
 | ☐ | 66 | **N11** Détacher un panneau dans sa propre fenêtre | Multi-écran : la carte d'un côté, le code de l'autre ; maquette d'abord. | N05 |
 
+## Phase 14 : lisibilité des grosses PR
+
+Retour du 2026-11-23 : sur une PR de migration, des centaines d'arêtes « new » en étoile rendent la carte illisible. Alléger par défaut sans rien perdre ; décisions dans `review-ui/spec.md` (« Phase 14 »). L'utilisateur a demandé de tout faire, sans maquette préalable.
+
+| ✓ | # | Ticket | Pourquoi maintenant | Bloqué par |
+| - | - | --- | --- | --- |
+| ☐ | 67 | **U29** Étiquettes d'arête à la demande | Des centaines de `new` peints sur la carte. | aucun |
+| ☐ | 68 | **U30** Arêtes agrégées au niveau affiché | Arêtes symbole → symbole au niveau Fichiers : ~10× trop de traits. | aucun |
+| ☐ | 69 | **R16** Arêtes inchangées masquées par défaut en relecture | Le gris se mêle au diff. | aucun |
+| ☐ | 70 | **R17** Les tests comme calque repliable | Le gros des arêtes d'une PR vient souvent des tests. | aucun |
+| ☐ | 71 | **E08** Changements répétitifs | Une migration = le même changement dans N fichiers. | aucun |
+| ☐ | 72 | **R18** Changements répétitifs dans la relecture | Un constat et un représentant au lieu de N. | E08 |
+| ☐ | 73 | **U31** Faisceaux d'arêtes et ports d'entrée | Une étoile devient un arbre lisible. | U30 |
+| ☐ | 74 | **R19** Relecture pas à pas | Seules les arêtes de l'élément en cours. | aucun |
+| ☐ | 75 | **U32** Tracés d'arête dans les couloirs | Les arêtes ne traversent plus les boîtes. | U31 |
+
 ## Plus tard (pas encore de tickets)
 
 Dans l'ordre probable, à transformer en specs quand la v1 est là :
