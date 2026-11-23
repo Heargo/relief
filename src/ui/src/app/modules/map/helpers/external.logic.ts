@@ -40,3 +40,21 @@ export function writeHideExternal(storage: FlagStorage, hide: boolean): void {
     // Storage unavailable: the preference is just not kept.
   }
 }
+
+export const EDGE_LABELS_ALWAYS_KEY = 'relief.edgeLabelsAlways';
+
+export function readEdgeLabelsAlways(storage: FlagStorage): boolean {
+  try {
+    return storage.getItem(EDGE_LABELS_ALWAYS_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+export function writeEdgeLabelsAlways(storage: FlagStorage, always: boolean): void {
+  try {
+    storage.setItem(EDGE_LABELS_ALWAYS_KEY, String(always));
+  } catch {
+    // Storage unavailable: the preference is just not kept.
+  }
+}

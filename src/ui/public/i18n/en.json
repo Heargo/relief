@@ -43,6 +43,7 @@
       "links_one": "{{count}} link",
       "new": "new",
       "moved": "moved",
+      "labelsAlways": "Edge labels: always",
       "unchanged": "Unchanged edges",
       "close": "Close"
     },
@@ -172,6 +173,7 @@
         "rules": "relief.config.yaml",
         "risk": "complexity × churn × no tests",
         "hide-external": "third-party packages and their links",
+        "edge-labels-always": "every label, not only hovered or selected edges",
         "co-change": "files that change together"
       }
     },

@@ -153,6 +153,40 @@ export function edgeLabelVisible(label: string, screenLength: number): boolean {
   return label !== '' && edgeLabelNeedsPlacement(screenLength);
 }
 
+/** An edge as the label rule sees it; `violation` keeps the label at rest. */
+export interface LabelEdge {
+  from: string;
+  to: string;
+  violation?: boolean;
+}
+
+/** What makes an individual edge label show: hover, selection, or the "always" switch. */
+export interface EdgeLabelContext {
+  hovered: { from: string; to: string } | null;
+  selectedNode: string | null;
+  selectedEdge: { from: string; to: string } | null;
+  always: boolean;
+}
+
+export const EDGE_LABELS_REST: EdgeLabelContext = {
+  hovered: null,
+  selectedNode: null,
+  selectedEdge: null,
+  always: false,
+};
+
+/** No label at rest, except a rule violation; hovered edge, edges of the selected node, selected edge. */
+export function edgeLabelShown(edge: LabelEdge, ctx: EdgeLabelContext): boolean {
+  if (ctx.always || edge.violation) return true;
+  const same = (o: { from: string; to: string } | null) =>
+    o !== null && o.from === edge.from && o.to === edge.to;
+  return (
+    same(ctx.hovered) ||
+    same(ctx.selectedEdge) ||
+    (ctx.selectedNode !== null && (ctx.selectedNode === edge.from || ctx.selectedNode === edge.to))
+  );
+}
+
 function defaultUnit(count: number): string {
   return count === 1 ? '1 link' : `${count} links`;
 }

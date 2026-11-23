@@ -2,7 +2,12 @@ import type { DiffStatus } from '../../review/helpers/diff-layer.logic';
 import { impactState, onImpactPath, type ImpactMarks } from '../../review/helpers/impact.logic';
 import type { ReadingNodeState } from '../../review/business/reading-order.business';
 import type { CoChangeLine, EdgeLine, VisibleNode } from '../business/map.business';
-import { edgeLabelVisible } from './edges.logic';
+import {
+  EDGE_LABELS_REST,
+  edgeLabelShown,
+  edgeLabelVisible,
+  type EdgeLabelContext,
+} from './edges.logic';
 import { edgeKey, type EdgeEmphasis, type NodeEmphasis } from './emphasis.logic';
 import { closedLabelVisible, headerLayout, type HeaderLabel } from './header.logic';
 import type { NodeInfo } from './node-info.logic';
@@ -82,6 +87,8 @@ export interface MapSceneInput {
     edges: ReadonlyMap<string, EdgeEmphasis>;
   };
   modesScale: number;
+  /** What shows the individual edge labels; absent means at rest. */
+  edgeLabels?: EdgeLabelContext;
   info: (id: string) => NodeInfo | undefined;
   t: (key: string, params?: Record<string, unknown>) => string;
   impact: ImpactMarks | null;
@@ -227,7 +234,14 @@ function labelRect(
 
 function sceneEdge(line: EdgeLine, merged: boolean, input: MapSceneInput): SceneEdge {
   const { edge, shape, violations } = line;
-  const labelVisible = edgeLabelVisible(line.label, shape.length);
+  const violating = violations.introduced > 0 || violations.existing > 0;
+  const labelVisible =
+    edgeLabelVisible(line.label, shape.length) &&
+    (merged ||
+      edgeLabelShown(
+        { from: edge.from, to: edge.to, violation: violating },
+        input.edgeLabels ?? EDGE_LABELS_REST,
+      ));
   return {
     from: edge.from,
     to: edge.to,

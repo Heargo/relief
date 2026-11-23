@@ -70,7 +70,9 @@ import { containerToLoad, zoomedBox } from '../helpers/subgraph.logic';
 import {
   DEFAULT_HIDE_EXTERNAL,
   hideExternalDeps,
+  readEdgeLabelsAlways,
   readHideExternal,
+  writeEdgeLabelsAlways,
   writeHideExternal,
 } from '../helpers/external.logic';
 import { buildSearchIndex, searchNodes, type SearchResult } from '../helpers/search.logic';
@@ -191,6 +193,13 @@ export class MapBusiness {
       return source ? readHideExternal(source) : DEFAULT_HIDE_EXTERNAL;
     })(),
   );
+  private readonly _edgeLabelsAlways = signal(
+    (() => {
+      const source = storage();
+      return source ? readEdgeLabelsAlways(source) : false;
+    })(),
+  );
+  private readonly _hoveredEdge = signal<{ from: string; to: string } | null>(null);
   /** The graph as received, before the display filters. */
   private sourceGraph: GraphSnapshot = EMPTY_GRAPH;
   private readonly _infos = signal<Map<string, NodeInfo>>(new Map());
@@ -918,6 +927,23 @@ export class MapBusiness {
     this.setCamera(this.fitCamera(), true);
     this._status.set('ready');
     for (const action of later) action();
+  }
+
+  readonly edgeLabelsAlways = this._edgeLabelsAlways.asReadonly();
+  readonly hoveredEdge = this._hoveredEdge.asReadonly();
+
+  /** The edge under the pointer, for its label. */
+  setHoveredEdge(edge: { from: string; to: string } | null): void {
+    const current = this._hoveredEdge();
+    if (current?.from === edge?.from && current?.to === edge?.to) return;
+    this._hoveredEdge.set(edge);
+  }
+
+  /** Shows every edge label, or only those asked for; the choice is remembered. */
+  setEdgeLabelsAlways(always: boolean): void {
+    this._edgeLabelsAlways.set(always);
+    const source = storage();
+    if (source) writeEdgeLabelsAlways(source, always);
   }
 
   /** Hides or shows the external dependencies; the map is laid out again where it is. */

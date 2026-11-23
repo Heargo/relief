@@ -331,6 +331,8 @@ describe('buildMapScene, nodes', () => {
   });
 });
 
+const ALWAYS = { hovered: null, selectedNode: null, selectedEdge: null, always: true };
+
 describe('buildMapScene, edges', () => {
   it('describes a plain edge', () => {
     const edge = edgeOf({ edgeLines: [line('a', 'b')] }, 'a', 'b');
@@ -355,6 +357,7 @@ describe('buildMapScene, edges', () => {
     const edge = edgeOf(
       {
         edgeLines: [line('a', 'b', { status: 'added', cls: 'add', label: 'new', selected: true })],
+        edgeLabels: ALWAYS,
       },
       'a',
       'b',
@@ -376,12 +379,18 @@ describe('buildMapScene, edges', () => {
 
   it('gives no label rect to a short edge with a label, and one to a long edge', () => {
     const short = edgeOf(
-      { edgeLines: [line('a', 'b', { label: 'new', shape: { ...SHAPE, length: 40 } })] },
+      {
+        edgeLines: [line('a', 'b', { label: 'new', shape: { ...SHAPE, length: 40 } })],
+        edgeLabels: ALWAYS,
+      },
       'a',
       'b',
     );
     const long = edgeOf(
-      { edgeLines: [line('a', 'b', { label: 'new', shape: { ...SHAPE, length: 200 } })] },
+      {
+        edgeLines: [line('a', 'b', { label: 'new', shape: { ...SHAPE, length: 200 } })],
+        edgeLabels: ALWAYS,
+      },
       'a',
       'b',
     );
@@ -390,7 +399,11 @@ describe('buildMapScene, edges', () => {
   });
 
   it('places the label rect around the middle, in world units (room is 28x16 screen pixels)', () => {
-    const edge = edgeOf({ edgeLines: [line('a', 'b', { label: 'new' })], modesScale: 2 }, 'a', 'b');
+    const edge = edgeOf(
+      { edgeLines: [line('a', 'b', { label: 'new' })], modesScale: 2, edgeLabels: ALWAYS },
+      'a',
+      'b',
+    );
     expect(edge.labelRect).toEqual({ x: 93, y: 46, w: 14, h: 8 });
   });
 
@@ -601,5 +614,98 @@ describe('buildMapScene on acme-shop', () => {
     expect(by(WEB)?.impact).toBe('hit');
     expect(by(API)?.impact).toBe('dim');
     expect(scene.edges.find((e) => e.from === WEB && e.to === DB)?.impactPath).toBe(true);
+  });
+});
+
+// U29: `input.edgeLabels` = { hovered, selectedNode, selectedEdge, always } (edges as { from, to });
+// absent means at rest. `label.visible` follows `edgeLabelShown`; merged edges keep their count badge.
+describe('buildMapScene, edge labels on demand', () => {
+  const REST = { hovered: null, selectedNode: null, selectedEdge: null, always: false };
+  const lines = () => [
+    line('a', 'b', { label: 'new', cls: 'add' }),
+    line('c', 'd', { label: '-1', cls: 'del' }),
+    line('b', 'c', { label: '3' }),
+  ];
+  const visible = (over: Partial<MapSceneInput>) =>
+    buildMapScene(input({ edgeLines: lines(), ...over })).edges.map((e) => e.label.visible);
+
+  it('has no visible label at rest, but keeps the text for the tooltip and inspector', () => {
+    const scene = buildMapScene(input({ edgeLines: lines(), edgeLabels: REST }));
+    expect(scene.edges.map((e) => e.label.visible)).toEqual([false, false, false]);
+    expect(scene.edges.map((e) => e.label.text)).toEqual(['new', '-1', '3']);
+    expect(scene.edges.map((e) => e.labelRect)).toEqual([null, null, null]);
+    expect(scene.edges[0]!.tooltip).toBe('a → b');
+  });
+
+  it('shows the label of the hovered edge', () => {
+    expect(visible({ edgeLabels: { ...REST, hovered: { from: 'c', to: 'd' } } })).toEqual([
+      false,
+      true,
+      false,
+    ]);
+    const hovered = edgeOf(
+      { edgeLines: lines(), edgeLabels: { ...REST, hovered: { from: 'c', to: 'd' } } },
+      'c',
+      'd',
+    );
+    expect(hovered.labelRect).not.toBeNull();
+  });
+
+  it('shows the labels of the edges of the selected node', () => {
+    expect(visible({ edgeLabels: { ...REST, selectedNode: 'b' } })).toEqual([true, false, true]);
+  });
+
+  it('shows the label of the selected edge', () => {
+    expect(visible({ edgeLabels: { ...REST, selectedEdge: { from: 'b', to: 'c' } } })).toEqual([
+      false,
+      false,
+      true,
+    ]);
+  });
+
+  it('keeps the label of a rule violation visible at rest', () => {
+    const scene = buildMapScene(
+      input({
+        edgeLines: [
+          line('a', 'b', { label: '⚠ 2', cls: 'viol', violations: { introduced: 2, existing: 0 } }),
+          line('c', 'd', {
+            label: '⚠ 1',
+            cls: 'violOld',
+            violations: { introduced: 0, existing: 1 },
+          }),
+          line('e', 'f', { label: 'new' }),
+        ],
+        edgeLabels: REST,
+      }),
+    );
+    expect(scene.edges.map((e) => e.label.visible)).toEqual([true, true, false]);
+  });
+
+  it('shows every label with "always"', () => {
+    expect(visible({ edgeLabels: { ...REST, always: true } })).toEqual([true, true, true]);
+  });
+
+  it('still hides the label of a short edge, whatever the rule says', () => {
+    const short = line('a', 'b', { label: 'new', shape: { ...SHAPE, length: 40 } });
+    const scene = buildMapScene(
+      input({ edgeLines: [short], edgeLabels: { ...REST, always: true } }),
+    );
+    expect(scene.edges[0]!.label.visible).toBe(false);
+  });
+
+  it('keeps the count badge of a merged edge at rest, one per pair', () => {
+    const scene = buildMapScene(
+      input({
+        edgeLines: [line('a', 'b', { label: 'new' })],
+        mergedEdgeLines: [line('c', 'd', { label: '12' }), line('e', 'f', { label: '7' })],
+        edgeLabels: REST,
+      }),
+    );
+    const merged = scene.edges.filter((e) => e.merged);
+    expect(merged.map((e) => [e.label.text, e.label.visible])).toEqual([
+      ['12', true],
+      ['7', true],
+    ]);
+    expect(scene.edges.find((e) => !e.merged)!.label.visible).toBe(false);
   });
 });

@@ -39,6 +39,10 @@ export class LayersSectionComponent {
   readonly hideExternal = input(true);
   /** Offered by the map page, not by every host. */
   readonly hasHideExternal = input(false);
+  readonly edgeLabelsAlways = input(false);
+  /** Offered by the map page, not by every host. */
+  readonly hasEdgeLabels = input(false);
+  readonly edgeLabelsAlwaysChange = output<boolean>();
   readonly hideExternalChange = output<boolean>();
   readonly diffChange = output<boolean>();
   readonly unchangedEdgesChange = output<boolean>();
@@ -63,6 +67,19 @@ export class LayersSectionComponent {
             shortcut: null,
             on: this.hideExternal(),
             toggle: () => this.hideExternalChange.emit(!this.hideExternal()),
+          },
+        ]
+      : []),
+    ...(this.hasEdgeLabels()
+      ? [
+          {
+            layer: 'edge-labels-always',
+            testId: 'toggle-edge-labels-always',
+            labelKey: 'map.edges.labelsAlways',
+            descriptionKey: 'review.layers.description.edge-labels-always',
+            shortcut: null,
+            on: this.edgeLabelsAlways(),
+            toggle: () => this.edgeLabelsAlwaysChange.emit(!this.edgeLabelsAlways()),
           },
         ]
       : []),

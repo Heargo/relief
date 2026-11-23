@@ -43,6 +43,7 @@
       "links_one": "{{count}} lien",
       "new": "nouveau",
       "moved": "déplacé",
+      "labelsAlways": "Étiquettes d'arête : toujours",
       "unchanged": "Arêtes inchangées",
       "close": "Fermer"
     },
@@ -172,6 +173,7 @@
         "rules": "relief.config.yaml",
         "risk": "complexité × churn × absence de tests",
         "hide-external": "paquets tiers et leurs liens",
+        "edge-labels-always": "toutes les étiquettes, pas seulement survol et sélection",
         "co-change": "fichiers qui changent ensemble"
       }
     },

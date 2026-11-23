@@ -126,6 +126,9 @@ export class MapCanvasComponent {
       this.map.camera();
       this.map.viewport();
       this.map.modesScale();
+      this.map.edgeLabelsAlways();
+      this.map.hoveredEdge();
+      this.map.selection();
       this.language.current();
       // The palette is read again when the theme changes.
       this.theme.dark();
@@ -195,12 +198,14 @@ export class MapCanvasComponent {
     this.hoverFrame = 0;
     this.hoverEvent = null;
     this.tip.set(null);
+    this.map.setHoveredEdge(null);
     this.surface().nativeElement.style.cursor = '';
   }
 
   private hover(event: PointerEvent): void {
     const hit = this.hitAt(event.clientX, event.clientY);
     this.surface().nativeElement.style.cursor = hit ? 'pointer' : '';
+    this.map.setHoveredEdge(hit && hit.kind !== 'node' ? { from: hit.from, to: hit.to } : null);
     let text = '';
     if (hit?.kind === 'node') {
       const node = this.nodeById().get(hit.id);
@@ -318,6 +323,12 @@ export class MapCanvasComponent {
       coChangeLines: this.map.coChangeLines(),
       emphasis: this.map.emphasis(),
       modesScale: this.map.modesScale(),
+      edgeLabels: {
+        hovered: this.map.hoveredEdge(),
+        selectedNode: this.map.selectedNodeId(),
+        selectedEdge: this.map.selectedEdge(),
+        always: this.map.edgeLabelsAlways(),
+      },
       info: (id) => this.map.info(id),
       t: (key, params) => this.language.t(key, params),
       impact: this.impact(),
@@ -395,6 +406,7 @@ export class MapCanvasComponent {
     const root = this.canvas().nativeElement;
     root.classList.add('panning');
     this.panning = true;
+    this.map.setHoveredEdge(null);
     this.tip.set(null);
     const move = (ev: PointerEvent) => {
       this.map.pan(ev.clientX - x, ev.clientY - y);
