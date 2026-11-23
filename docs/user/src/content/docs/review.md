@@ -114,6 +114,7 @@ La section **Calques** de la barre de gauche regroupe les interrupteurs de l'aff
 
 - **Calque de diff** : affiche ou masque les couleurs, les badges, les compteurs et les arêtes ajoutées ou retirées. Les nœuds supprimés restent dessinés, sans marque.
 - **Arêtes inchangées** : masque ou affiche les dépendances que le diff ne touche pas. En relecture, elles sont masquées par défaut (celles du nœud sélectionné restent visibles) ; en exploration, elles sont affichées. Votre choix est mémorisé pour chaque mode.
+- **Tests** : désactivé par défaut, les arêtes qui partent d'un fichier de test (un fichier sous un dossier `test`, `tests`, `__tests__`, `e2e` ou `spec`, ou nommé `*.test.*`, `*.spec.*` ou `*.e2e.*`, et les modules qui ne contiennent que des tests) ne sont pas tracées, pour lire le code d'abord. Les boîtes de test restent sur la carte, atténuées. Ce qu'elles testent porte un badge « testé par N » (« testé par N, dont M nouveaux » en relecture d'un diff). Cliquez le badge, ou sélectionnez un test, pour tracer ses arêtes ; activez le calque pour tout tracer. Votre choix est mémorisé.
 - **Focus PR** (touche `f`) : seuls les symboles changés et leurs voisins directs (ce qu'ils appellent et ce qui les appelle) restent nets, avec les boîtes qui les contiennent ; le reste est estompé. Sur acme-shop, `CheckoutPage` reste net, `LoginPage` (à deux sauts du changement le plus proche) est estompé.
 - **Rayon d'impact** (touche `i`) : voir [Rayon d'impact](#rayon-dimpact).
 

@@ -44,6 +44,7 @@ impl Detector for Fake {
             entry: false,
             entry_type: None,
             child_count: None,
+            is_test: false,
         };
         Some(Detection {
             detector: self.name.to_owned(),

@@ -244,3 +244,24 @@
   font-size: 12px;
   pointer-events: none;
 }
+
+.map-tested {
+  position: absolute;
+  z-index: 4;
+  transform: translate(-100%, -50%);
+  padding: 1px 7px;
+  border: 1px solid var(--relief-line);
+  border-radius: 9px;
+  background: var(--relief-panel);
+  color: var(--relief-muted);
+  font-size: 10.5px;
+  line-height: 15px;
+  white-space: nowrap;
+  cursor: pointer;
+
+  &:hover,
+  &.open {
+    color: var(--relief-text, inherit);
+    border-color: currentColor;
+  }
+}

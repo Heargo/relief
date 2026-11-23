@@ -315,6 +315,7 @@ impl LanguageAdapter for TsAdapter {
                 entry: false,
                 entry_type: None,
                 child_count: None,
+                is_test: false,
             })
             .collect();
         let extraction = Extraction {
@@ -602,6 +603,7 @@ fn external_node(name: &str, ctx: &LinkContext<'_>, out: &mut Extraction) -> Nod
         entry: false,
         entry_type: None,
         child_count: None,
+        is_test: false,
     };
     out.nodes
         .push(make(&group, NodeKind::Module, "external-group", ctx.repo));

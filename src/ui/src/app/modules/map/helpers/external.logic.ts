@@ -58,3 +58,22 @@ export function writeEdgeLabelsAlways(storage: FlagStorage, always: boolean): vo
     // Storage unavailable: the preference is just not kept.
   }
 }
+
+export const TEST_EDGES_KEY = 'relief.testEdges';
+
+/** The "Tests" layer: collapsed (false) by default. */
+export function readTestEdges(storage: FlagStorage): boolean {
+  try {
+    return storage.getItem(TEST_EDGES_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+export function writeTestEdges(storage: FlagStorage, on: boolean): void {
+  try {
+    storage.setItem(TEST_EDGES_KEY, String(on));
+  } catch {
+    // Storage unavailable: the preference is just not kept.
+  }
+}

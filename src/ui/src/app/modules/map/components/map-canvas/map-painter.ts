@@ -93,6 +93,7 @@ const FADED = 0.2;
 const IMPACT_DIM = 0.3;
 const EMPHASIS_DIM = 0.35;
 const SEEN = 0.45;
+const TEST_DIM = 0.55;
 const OLD_LOCATION = 0.75;
 const RISK_TINT = 0.32;
 const BOX_RADIUS = 6;
@@ -129,6 +130,7 @@ export function createMapPainter(
   const alphaOf = (n: SceneNode): number => {
     let a = 1;
     if (n.faded) a *= FADED;
+    if (n.test) a *= TEST_DIM;
     if (n.impact === 'dim') a *= IMPACT_DIM;
     if (n.emphasis === 'dim') a *= EMPHASIS_DIM;
     if (n.reading?.seen) a *= SEEN;

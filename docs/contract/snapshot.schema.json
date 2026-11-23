@@ -158,6 +158,10 @@
         "id": {
           "$ref": "#/$defs/NodeId"
         },
+        "isTest": {
+          "description": "A test file (test folder or `*.test.*`, `*.spec.*`, `*.e2e.*` name), or a container that\nholds nothing but tests.",
+          "type": "boolean"
+        },
         "kind": {
           "$ref": "#/$defs/NodeKind"
         },

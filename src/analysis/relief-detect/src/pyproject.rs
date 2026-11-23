@@ -360,6 +360,7 @@ fn build(
         }
     }
 
+    crate::generic::mark_tests(&mut nodes);
     Detection {
         detector: "pyproject".to_owned(),
         nodes,

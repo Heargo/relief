@@ -138,6 +138,7 @@ export class MapCanvasComponent {
       this.archi();
       this.risk();
       this.loading();
+      this.map.testBadges();
       untracked(() => this.schedule(draw));
     });
     afterNextRender(() => this.listen());
@@ -150,6 +151,40 @@ export class MapCanvasComponent {
   private readonly edgeByKey = computed(
     () => new Map(this.sceneMemo().edges.map((e) => [`${e.from}\0${e.to}`, e])),
   );
+  /** The "tested by N" badges, as buttons on the top right corner of the tested boxes. */
+  protected readonly testedBadges = computed(() => {
+    this.language.current();
+    const { scale, tx, ty } = this.map.camera();
+    const { width, height } = this.map.viewport();
+    const unfolded = this.map.unfoldedTests();
+    const badges: {
+      id: string;
+      label: string;
+      text: string;
+      open: boolean;
+      x: number;
+      y: number;
+    }[] = [];
+    for (const node of this.sceneMemo().nodes) {
+      if (!node.testedBy) continue;
+      const x = (node.rect.x + node.rect.w) * scale + tx;
+      const y = node.rect.y * scale + ty;
+      if (x < 0 || y < 0 || (width > 0 && x > width) || (height > 0 && y > height)) continue;
+      const { count, added } = node.testedBy;
+      badges.push({
+        id: node.id,
+        label: node.label,
+        text: this.language.t(added > 0 ? 'map.edges.testedByNew' : 'map.edges.testedBy', {
+          count,
+          added,
+        }),
+        open: unfolded.has(node.id),
+        x,
+        y,
+      });
+    }
+    return badges;
+  });
   private panning = false;
   /** Ends the pan in progress (listeners on `window`), if any. */
   private endPan: (() => void) | null = null;
@@ -337,6 +372,7 @@ export class MapCanvasComponent {
       archi: this.archi(),
       risk: this.risk(),
       loading: this.loading(),
+      tests: { isTest: (id) => this.map.isTest(id), badges: this.map.testBadges() },
       measureLabel,
     });
   }
@@ -383,14 +419,14 @@ export class MapCanvasComponent {
 
   protected onDoubleClick(event: MouseEvent): void {
     const target = event.target instanceof Element ? event.target : null;
-    if (target?.closest('.map-levels, .map-crumbs, .map-legend')) return;
+    if (target?.closest('.map-levels, .map-crumbs, .map-legend, .map-tested')) return;
     const hit = this.hitAt(event.clientX, event.clientY);
     if (hit?.kind === 'node') this.map.dive(hit.id);
   }
 
   /** A click without drag: a node box selects it, an edge too, empty map deselects. */
   private onClick(target: Element | null, at: { x: number; y: number }): void {
-    if (!target || target.closest('.map-levels, .map-crumbs, .map-legend')) return;
+    if (!target || target.closest('.map-levels, .map-crumbs, .map-legend, .map-tested')) return;
     // The strokes of the common path are thin, and nodes may lie under them: pick by proximity.
     const hit = this.hitAt(at.x, at.y);
     if (hit?.kind === 'node') this.map.selectNode(hit.id);
@@ -400,7 +436,8 @@ export class MapCanvasComponent {
 
   protected startPan(event: PointerEvent): void {
     const target = event.target instanceof Element ? event.target : null;
-    if (event.button !== 0 || target?.closest('.map-levels, .map-crumbs, .map-legend')) return;
+    if (event.button !== 0 || target?.closest('.map-levels, .map-crumbs, .map-legend, .map-tested'))
+      return;
     let x = event.clientX;
     let y = event.clientY;
     const root = this.canvas().nativeElement;

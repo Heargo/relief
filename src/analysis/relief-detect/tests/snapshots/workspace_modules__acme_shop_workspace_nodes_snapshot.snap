@@ -55,7 +55,8 @@ expression: nodes
     "parent": "pkg:@acme/api/billing",
     "lang": "ts",
     "visibility": "public",
-    "contentHash": "f32a5c97a9151fb0"
+    "contentHash": "f32a5c97a9151fb0",
+    "isTest": true
   },
   {
     "id": "pkg:@acme/api/billing::file:apps/api/billing/invoice.ts",
@@ -82,7 +83,8 @@ expression: nodes
     "parent": "pkg:@acme/api/billing",
     "lang": "ts",
     "visibility": "public",
-    "contentHash": "66d287cdc049fd5c"
+    "contentHash": "66d287cdc049fd5c",
+    "isTest": true
   },
   {
     "id": "pkg:@acme/api/billing::file:apps/api/billing/payment.ts",
@@ -127,7 +129,8 @@ expression: nodes
     "parent": "pkg:@acme/api/routes",
     "lang": "ts",
     "visibility": "public",
-    "contentHash": "77029a46c468a386"
+    "contentHash": "77029a46c468a386",
+    "isTest": true
   },
   {
     "id": "pkg:@acme/api/routes::file:apps/api/routes/checkout.ts",
@@ -145,7 +148,8 @@ expression: nodes
     "parent": "pkg:@acme/api/routes",
     "lang": "ts",
     "visibility": "public",
-    "contentHash": "4c3d0d8320965f5c"
+    "contentHash": "4c3d0d8320965f5c",
+    "isTest": true
   },
   {
     "id": "pkg:@acme/api/routes::file:apps/api/routes/invoices.ts",
@@ -163,7 +167,8 @@ expression: nodes
     "parent": "pkg:@acme/api/routes",
     "lang": "ts",
     "visibility": "public",
-    "contentHash": "8841c71f89c8463b"
+    "contentHash": "8841c71f89c8463b",
+    "isTest": true
   },
   {
     "id": "pkg:@acme/api/routes::file:apps/api/routes/middleware.ts",

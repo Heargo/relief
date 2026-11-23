@@ -213,7 +213,7 @@ Retour du 2026-11-23 : sur une PR de migration, des centaines d'arêtes « new �
 | ✓ | 67 | **U29** Étiquettes d'arête à la demande | Des centaines de `new` peints sur la carte. | aucun |
 | ✓ | 68 | **U30** Arêtes agrégées au niveau affiché | Arêtes symbole → symbole au niveau Fichiers : ~10× trop de traits. | aucun |
 | ✓ | 69 | **R16** Arêtes inchangées masquées par défaut en relecture | Le gris se mêle au diff. | aucun |
-| ☐ | 70 | **R17** Les tests comme calque repliable | Le gros des arêtes d'une PR vient souvent des tests. | aucun |
+| ✓ | 70 | **R17** Les tests comme calque repliable | Le gros des arêtes d'une PR vient souvent des tests. | aucun |
 | ☐ | 71 | **E08** Changements répétitifs | Une migration = le même changement dans N fichiers. | aucun |
 | ☐ | 72 | **R18** Changements répétitifs dans la relecture | Un constat et un représentant au lieu de N. | E08 |
 | ☐ | 73 | **U31** Faisceaux d'arêtes et ports d'entrée | Une étoile devient un arbre lisible. | U30 |
@@ -225,7 +225,7 @@ Retour du 2026-11-23 : sur une PR de migration, des centaines d'arêtes « new �
 Dans l'ordre probable, à transformer en specs quand la v1 est là :
 
 - Précision `resolved` par SCIP (`scip-typescript`, puis les autres indexers).
-- Adapter Go, puis Java.
+- Adapter Java puis Rust.
 - CI (GitHub Actions) dès que le dépôt a un remote : `just lint`, `just test`, `just e2e` (Linux, `tauri-driver`).
 - Partage d'index par `git notes` ou artefact de CI.
 - Paquets `.dmg` (macOS) et `.msi` (Windows) : `tauri-driver` ne tourne pas sous macOS, à reprendre sur demande.

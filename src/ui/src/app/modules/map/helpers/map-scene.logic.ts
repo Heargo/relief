@@ -11,6 +11,7 @@ import {
 import { edgeKey, type EdgeEmphasis, type NodeEmphasis } from './emphasis.logic';
 import { closedLabelVisible, headerLayout, type HeaderLabel } from './header.logic';
 import type { NodeInfo } from './node-info.logic';
+import type { TestedBy } from './test-edges.logic';
 import { nodeContent, sizeClass, type NodeContent } from './node-content.logic';
 
 /** A rectangle in world units. */
@@ -42,6 +43,10 @@ export interface SceneNode {
   loading: boolean;
   risk: number | null;
   faded: boolean;
+  /** A test box: drawn dimmed. */
+  test?: boolean;
+  /** "Tested by N (of which M new)" on the target of folded test edges, null without. */
+  testedBy?: TestedBy | null;
   emphasis: NodeEmphasis | null;
   rect: SceneRect;
   /** Height in pixels of the header of an open container, 0 for the others. */
@@ -97,6 +102,8 @@ export interface MapSceneInput {
   archi: ReadonlySet<string> | null;
   risk: ReadonlyMap<string, number> | null;
   loading: ReadonlySet<string>;
+  /** Tells the test boxes (dimmed) and the "tested by" badge of the targets of folded edges. */
+  tests?: { isTest: (id: string) => boolean; badges: ReadonlyMap<string, TestedBy> };
   /** Width in pixels of a text in a CSS font; the component measures with a canvas. */
   measureLabel?: (text: string, font: string) => number;
 }
@@ -202,6 +209,8 @@ function sceneNode(node: VisibleNode, input: MapSceneInput, selecting: boolean):
     loading: input.loading.has(node.id),
     risk: input.risk ? (input.risk.get(node.id) ?? 0) : null,
     faded: !!input.focus && !input.focus.has(node.id),
+    test: input.tests?.isTest(node.id) ?? false,
+    testedBy: input.tests?.badges.get(node.id) ?? null,
     emphasis: emphasis === 'dim' && kept ? null : emphasis,
     rect: { x: node.x, y: node.y, w: node.w, h: node.h },
     headerHeight: open ? open.height : 0,

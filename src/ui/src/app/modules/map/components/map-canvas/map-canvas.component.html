@@ -23,6 +23,22 @@
       {{ t.text }}
     </div>
   }
+  @for (badge of testedBadges(); track badge.id) {
+    <button
+      type="button"
+      class="map-tested"
+      data-testid="tested-by-badge"
+      [attr.data-node]="badge.id"
+      [class.open]="badge.open"
+      [style.left.px]="badge.x"
+      [style.top.px]="badge.y"
+      [title]="'map.edges.testedByLabel' | translate: { name: badge.label }"
+      (pointerdown)="$event.stopPropagation()"
+      (click)="map.toggleTestEdges(badge.id)"
+    >
+      {{ badge.text }}
+    </button>
+  }
   <nav
     class="map-crumbs"
     data-testid="breadcrumbs"

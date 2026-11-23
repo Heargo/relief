@@ -33,6 +33,7 @@ fn external(name: &str) -> (NodeId, Node) {
         entry: false,
         entry_type: None,
         child_count: None,
+        is_test: false,
     };
     (id, node)
 }

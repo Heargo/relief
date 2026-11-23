@@ -107,6 +107,10 @@ pub struct Node {
     /// children are not all in it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub child_count: Option<usize>,
+    /// A test file (test folder or `*.test.*`, `*.spec.*`, `*.e2e.*` name), or a container that
+    /// holds nothing but tests.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub is_test: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]

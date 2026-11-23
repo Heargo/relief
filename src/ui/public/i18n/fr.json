@@ -45,6 +45,10 @@
       "moved": "déplacé",
       "labelsAlways": "Étiquettes d'arête : toujours",
       "unchanged": "Arêtes inchangées",
+      "tests": "Tests",
+      "testedBy": "testé par {{count}}",
+      "testedByNew": "testé par {{count}}, dont {{added}} nouveaux",
+      "testedByLabel": "Tracer les tests de {{name}}",
       "close": "Fermer"
     },
     "node": {
@@ -168,6 +172,7 @@
       "description": {
         "diff": "couleurs ajouté / modifié / supprimé",
         "unchanged-edges": "sinon seulement les dépendances qui bougent",
+        "tests": "sinon les arêtes qui partent d'un test sont repliées en un badge sur ce qu'il teste",
         "focus": "le changé + 1 saut, le reste estompé",
         "impact": "à la sélection d'un nœud",
         "rules": "relief.config.yaml",

@@ -45,6 +45,10 @@
       "moved": "moved",
       "labelsAlways": "Edge labels: always",
       "unchanged": "Unchanged edges",
+      "tests": "Tests",
+      "testedBy": "tested by {{count}}",
+      "testedByNew": "tested by {{count}}, {{added}} new",
+      "testedByLabel": "Draw the tests of {{name}}",
       "close": "Close"
     },
     "node": {
@@ -168,6 +172,7 @@
       "description": {
         "diff": "added / modified / removed colours",
         "unchanged-edges": "otherwise only the dependencies that move",
+        "tests": "otherwise the edges that start at a test are folded into a badge on what they test",
         "focus": "the change + 1 hop, the rest faded",
         "impact": "when a node is selected",
         "rules": "relief.config.yaml",

@@ -38,6 +38,8 @@ export interface SceneNode extends ClientRect {
   risk: number | null;
   faded: boolean;
   emphasis: 'sharp' | 'dim' | null;
+  /** R17: "tested by N" badge on the target of folded test edges, null without. */
+  testedBy: { count: number; added: number } | null;
 }
 
 export interface SceneEdge {

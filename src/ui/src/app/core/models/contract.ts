@@ -208,6 +208,11 @@ export interface Node {
    */
   entryType?: string | null;
   id: NodeId;
+  /**
+   * A test file (test folder or `*.test.*`, `*.spec.*`, `*.e2e.*` name), or a container that
+   * holds nothing but tests.
+   */
+  isTest?: boolean;
   kind: NodeKind;
   lang?: string | null;
   metrics?: Metrics | null;

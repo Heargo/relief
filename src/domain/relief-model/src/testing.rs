@@ -41,6 +41,7 @@ impl GraphBuilder {
             entry: false,
             entry_type: None,
             child_count: None,
+            is_test: false,
         });
         id
     }

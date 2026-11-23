@@ -114,6 +114,7 @@ The **Layers** section of the left sidebar groups the display switches, each wit
 
 - **Diff layer**: shows or hides the colours, badges, counters and the added or removed edges. Removed nodes stay drawn, without a mark.
 - **Unchanged edges**: hides or shows the dependencies the diff does not touch. In review they are hidden by default (those of the selected node stay visible); in exploration they are shown. Your choice is remembered for each mode.
+- **Tests**: off by default, the edges that start at a test file (a file under a `test`, `tests`, `__tests__`, `e2e` or `spec` folder, or named `*.test.*`, `*.spec.*` or `*.e2e.*`, and the modules that hold only tests) are not drawn, so that the code reads first. The test boxes stay on the map, dimmed. What they test carries a badge "tested by N" ("tested by N, M new" when reviewing a diff). Click the badge, or select a test, to draw its edges; switch the layer on to draw them all. Your choice is remembered.
 - **PR focus** (key `f`): only the changed symbols and their direct neighbours (what they call and what calls them) stay sharp, with the boxes that hold them; the rest is faded. On acme-shop, `CheckoutPage` stays sharp, `LoginPage` (two hops from the nearest change) is faded.
 - **Impact radius** (key `i`): see [Impact radius](#impact-radius).
 

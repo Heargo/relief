@@ -42,6 +42,10 @@ export class LayersSectionComponent {
   readonly edgeLabelsAlways = input(false);
   /** Offered by the map page, not by every host. */
   readonly hasEdgeLabels = input(false);
+  readonly testEdges = input(false);
+  /** Offered by the map page, not by every host. */
+  readonly hasTestEdges = input(false);
+  readonly testEdgesChange = output<boolean>();
   readonly edgeLabelsAlwaysChange = output<boolean>();
   readonly hideExternalChange = output<boolean>();
   readonly diffChange = output<boolean>();
@@ -57,6 +61,19 @@ export class LayersSectionComponent {
       (row) =>
         !(row.layer === 'diff' && !this.hasDiff()) && !(row.layer === 'focus' && !this.hasFocus()),
     ),
+    ...(this.hasTestEdges()
+      ? [
+          {
+            layer: 'tests',
+            testId: 'toggle-test-edges',
+            labelKey: 'map.edges.tests',
+            descriptionKey: 'review.layers.description.tests',
+            shortcut: null,
+            on: this.testEdges(),
+            toggle: () => this.testEdgesChange.emit(!this.testEdges()),
+          },
+        ]
+      : []),
     ...(this.hasHideExternal()
       ? [
           {

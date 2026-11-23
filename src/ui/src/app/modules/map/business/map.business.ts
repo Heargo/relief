@@ -63,6 +63,7 @@ import {
   type EdgeDetail,
 } from '../helpers/edge-culling.logic';
 import { onImpactPath, type ImpactMarks } from '../../review/helpers/impact.logic';
+import { foldTestEdges, testNodeIds } from '../helpers/test-edges.logic';
 import { buildNodeInfos, type NodeInfo } from '../helpers/node-info.logic';
 import { headRef } from '../helpers/repo.logic';
 import { containerToLoad, zoomedBox } from '../helpers/subgraph.logic';
@@ -70,6 +71,8 @@ import {
   DEFAULT_HIDE_EXTERNAL,
   hideExternalDeps,
   readEdgeLabelsAlways,
+  readTestEdges,
+  writeTestEdges,
   readHideExternal,
   writeEdgeLabelsAlways,
   writeHideExternal,
@@ -202,6 +205,16 @@ export class MapBusiness {
       return source ? readEdgeLabelsAlways(source) : false;
     })(),
   );
+  private readonly _showTestEdges = signal(
+    (() => {
+      const source = storage();
+      return source ? readTestEdges(source) : false;
+    })(),
+  );
+  /** Targets whose test edges were unfolded by a click on their badge. */
+  private readonly _unfoldedTests = signal<ReadonlySet<string>>(new Set());
+  /** The nodes the core flags as tests, and the nodes under them. */
+  private readonly _testIds = signal<ReadonlySet<string>>(new Set());
   private readonly _hoveredEdge = signal<{ from: string; to: string } | null>(null);
   /** The graph as received, before the display filters. */
   private sourceGraph: GraphSnapshot = EMPTY_GRAPH;
@@ -437,9 +450,21 @@ export class MapBusiness {
   );
 
   readonly showUnchangedEdges = this._showUnchangedEdges.asReadonly();
-  /** Aggregated edges for the current visibility, after the "unchanged edges" layer. */
+  /** The "Tests" layer on every edge: those that start at a test are folded, and the badges count
+   * all the tests of a target, whatever the "unchanged edges" layer hides. */
+  private readonly testFold = computed(() => {
+    const id = this._selectedNodeId();
+    return foldTestEdges(this.allEdges(), {
+      isTest: (end) => this._testIds().has(end),
+      layerOn: this._showTestEdges(),
+      selected: id === null ? null : (this.visibleOf(id) ?? id),
+      unfolded: this._unfoldedTests(),
+      changed: (edge) => edge.changed,
+    });
+  });
+  /** Aggregated edges drawn: after the "Tests" layer, then the "unchanged edges" layer. */
   readonly edges = computed(() => {
-    const all = this.allEdges();
+    const all = this.testFold().edges;
     // In review without a diff nothing is "changed": the layer has nothing to hide.
     if (this._showUnchangedEdges() || (this._reviewMode() && !this._diff())) return all;
     // The unchanged edges of the selected node stay, to keep the context of what is read. A
@@ -448,8 +473,30 @@ export class MapBusiness {
     const holder = id === null ? null : (this.visibleOf(id) ?? id);
     const touches = (end: string) =>
       id !== null && holder !== null && (this.within(end, id) || this.within(end, holder));
-    return all.filter((e) => e.changed || touches(e.from) || touches(e.to));
+    // A test edge that survived the fold was unfolded on purpose: it stays.
+    const unfolded = (end: string) => !this._showTestEdges() && this._testIds().has(end);
+    return all.filter((e) => e.changed || touches(e.from) || touches(e.to) || unfolded(e.from));
   });
+  /** "Tested by N" badges, by target box; empty while the "Tests" layer is expanded. */
+  readonly testBadges = computed(() => this.testFold().badges);
+  readonly showTestEdges = this._showTestEdges.asReadonly();
+  readonly unfoldedTests = this._unfoldedTests.asReadonly();
+  /** Whether a node is a test, or lies under one. */
+  isTest(id: string): boolean {
+    return this._testIds().has(id);
+  }
+  setShowTestEdges(on: boolean): void {
+    this._showTestEdges.set(on);
+    this._unfoldedTests.set(new Set());
+    const source = storage();
+    if (source) writeTestEdges(source, on);
+  }
+  /** A click on the badge of a target: draws, or folds again, the edges of its tests. */
+  toggleTestEdges(target: string): void {
+    const next = new Set(this._unfoldedTests());
+    if (!next.delete(target)) next.add(target);
+    this._unfoldedTests.set(next);
+  }
   readonly selectedNodeId = this._selectedNodeId.asReadonly();
   /** What the map emphasises: the selected node, else the selected edge, else nothing. */
   readonly selection = computed<Selection | null>(() => {
@@ -958,8 +1005,10 @@ export class MapBusiness {
     // built on them are made again as one when they change.
     this._infos.set(buildNodeInfos(graph));
     this._edges.set(graph.edges);
+    this._testIds.set(testNodeIds(graph.nodes));
     this._parents.set(new Map(graph.nodes.map((n) => [n.id, n.parent ?? null])));
     if (!keepView) {
+      this._unfoldedTests.set(new Set());
       this.clearEdgeSelection();
       this._history.update(clearHistory);
     }

@@ -33,6 +33,7 @@ impl Detector for WithEntries {
             entry: false,
             entry_type: None,
             child_count: None,
+            is_test: false,
         };
         let root = NodeId::package("app");
         let pkg = NodeId::package("lib");
