@@ -156,8 +156,8 @@ Brainstorm du 2026-11-20 : la carte rame sur un gros écran et les budgets de S0
 | ✓ | 51f | **S09** Disposition et croisements hors du thread principal | Seulement si S05 trouve une longue tâche au chargement. | S05 |
 | ✓ | 51g | **S10** Indexation parallèle | Indexation mono-thread : n8n 54 s à froid. | S04 |
 | ✓ | 51h | **S11** Analyse incrémentale d'une plage | Diff d'une PR : 3,1 s et 65 s pour un budget de 1 s. | S04 |
-| ☐ | 51i | **S12** Afficher la carte avant la fin de l'indexation | Seulement si un gros dépôt reste lent à froid après S10 et S11. | S10, S11 |
-| ☐ | 51j | **S13** Sélection sous le budget | Mesure après S07 : ~160 ms pour 100, surtout hors marques (panneau, style). | S07 |
+| ✗ | 51i | **S12** Afficher la carte avant la fin de l'indexation | Seulement si un gros dépôt reste lent à froid après S10 et S11. | S10, S11 |
+| ✓ | 51j | **S13** Sélection sous le budget | Mesure après S07 : ~160 ms pour 100, surtout hors marques (panneau, style). | S07 |
 | ✓ | 51k | **S14** Refondre le rendu de la carte : canvas, WebGL ou autre | Après S08, le zoom (41 à 204 ms) et la sélection (~160 ms) restent hors budget : limite du DOM + SVG ; spike et ADR d'abord. | S08 |
 | ✓ | 51l | **S15** API de scène de la carte, indépendante du moteur | Les e2e lisent le DOM de la carte, que le Canvas n'aura plus (ADR 0009). | S14 |
 | ✓ | 51m | **S16** Migrer les e2e et les captures sur l'API de scène | ~29 specs et 2 captures lisent encore `map-node` / `map-edge`. | S15 |

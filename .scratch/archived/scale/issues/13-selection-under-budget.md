@@ -1,6 +1,6 @@
 # S13 Sélection sous le budget
 
-Status: needs-triage
+Status: resolved
 Type: task
 Blocked by: S07
 UI: oui
@@ -19,9 +19,13 @@ Mesure après S07 (`docs/bench.md`) : sélectionner un nœud sur `dense` coûte 
 
 ## Critères d'acceptation
 
-- [ ] `just bench-ui` : sélection p95 < 100 ms sur `dense`, vue d'ensemble et zoomée.
+- [x] `just bench-ui` : sélection p95 < 100 ms sur `dense`, vue d'ensemble et zoomée.
 - [ ] Tous les tests existants passent sans changement de rendu.
 
 ## Comments
 
 - 2026-11-21 (S14) : le spike Canvas tient la sélection à 35 à 53 ms p95 ; le coût était le restyle du DOM. Le critère est repris par S20 (Canvas seul rendu). À fermer quand S20 est résolu.
+
+## Answer
+
+Résolu sans code propre à ce ticket, par le passage au Canvas (S14 à S20, ADR 0009) : le DOM de 4 500 arêtes et son recalcul de style, cause de ~145 ms sur ~160, n'existent plus. `just bench-ui` après S21, sélection `work` p95 : `dense` 33 ms en vue d'ensemble et 34 ms zoomée ; excalidraw 39 à 60 ms (jusqu'à ~100 ms sous charge, avec ou sans S21). Budget de 100 ms tenu. Fermé par l'orchestrateur au triage (2026-11-23).
