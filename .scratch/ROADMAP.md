@@ -2,7 +2,7 @@
 
 Status: proposed (2026-11-18)
 
-Tickets répartis en 16 features, chacune avec son code : `foundations/` (F), `graph-model/` (M), `git-source/` (G), `detectors/` (D), `lang-ts/` (T), `index/` (I), `diff-engine/` (E), `cli/` (C), `map-ui/` (U), `review-ui/` (R), `arch-rules/` (A), `explore/` (X), `scale/` (S), `languages/` (L), `native-app/` (N), `packaging/` (P). `G02` = `.scratch/git-source/issues/02-*.md`.
+Tickets répartis en 17 features, chacune avec son code : `foundations/` (F), `graph-model/` (M), `git-source/` (G), `detectors/` (D), `lang-ts/` (T), `index/` (I), `diff-engine/` (E), `cli/` (C), `map-ui/` (U), `review-ui/` (R), `arch-rules/` (A), `explore/` (X), `scale/` (S), `languages/` (L), `native-app/` (N), `packaging/` (P), `multi-repo/` (K). `G02` = `.scratch/git-source/issues/02-*.md`.
 
 L'ordre suit les lignes `Blocked by:`, et à l'intérieur :
 
@@ -80,6 +80,9 @@ Le prochain ticket est la première ligne non cochée dont tous les bloquants so
 | ✓ | 32m | **U19** Barre du haut : choisir base et head | Comparer deux branches ou deux commits quelconques ; commande `log` côté cœur. | U15 |
 | ✓ | 32n | **U20** Inspecteur d'arête : les utilisations dans le code | Où et comment A se sert de ce qu'il importe de B. | U17 |
 | ✓ | 32o | **U21** Utilisations d'arête : imports par défaut et `* as` | Ils affichaient « jamais utilisé » ; résolus comme à l'indexation (workspace compris). | U20 |
+| ✓ | 32p | **U22** Un fichier ajouté n'apparaît pas sur la carte | Bug (retour du 2026-11-20). | aucun |
+| ✓ | 32q | **U23** Choix base / head : quelle est la référence ? | On ne sait pas dans quel sens se lit la comparaison ; maquette d'abord. | U19 |
+| ✓ | 32r | **U24** Masquer les dépendances internes du nœud sélectionné | Elles encombrent la sélection ; masquées à la sélection. | U18 |
 
 ## Phase 5 : relire une PR
 
@@ -136,14 +139,35 @@ Le prochain ticket est la première ligne non cochée dont tous les bloquants so
 | ✓ | 48a | **F06** e2e : choisir la fixture par spec | Les e2e de `tiny` et `wide` ; un état « vu » propre entre specs. | N09 |
 | ✓ | 49 | **X04** Couplage logique (co-change) | Des arêtes pour **n'importe quel langage**, même sans adapter. **Jalon G : comprendre un repo inconnu.** | X03, F06 |
 
-## Phase 10 : passage à l'échelle
+## Phase 10 : passage à l'échelle et performances
+
+Brainstorm du 2026-11-20 : la carte rame sur un gros écran et les budgets de S02 ne sont pas tenus. Décisions dans `scale/spec.md` (« Phase 10 »). Mesurer avant d'optimiser : S05 fixe le budget de rendu.
 
 | ✓ | # | Ticket | Pourquoi maintenant | Bloqué par |
 | - | - | --- | --- | --- |
 | ✓ | 50 | **S01** Sous-graphes au-delà de 2 000 nœuds | Les monorepos. | R01, I02, F06 |
-| ☐ | 50a | **S03** Relecture d'un gros dépôt : l'UI lit le sous-graphe de relecture | Suite de S01 : les changés visibles sans zoom, budget IPC aussi en relecture. | S01 |
+| ✓ | 50a | **S03** Relecture d'un gros dépôt : l'UI lit le sous-graphe de relecture | Suite de S01 : les changés visibles sans zoom, budget IPC aussi en relecture. | S01 |
 | ✓ | 51 | **S02** Benchmarks sur de vrais dépôts | Des budgets mesurés, pas supposés. | S01 |
-| ☐ | 51a | **S04** Garder l'index de fichier en cache | Suite de S02 : les budgets à chaud et de diff ne sont pas tenus faute de cet index en cache. | S02 |
+| ✓ | 51a | **S04** Garder l'index de fichier en cache | Suite de S02 : les budgets à chaud et de diff ne sont pas tenus faute de cet index en cache. | S02 |
+| ✓ | 51b | **S05** Mesurer le rendu de la carte | La carte rame sur un gros écran ; fixture `dense`, `just bench-ui` et budget de rendu. | S02 |
+| ✓ | 51c | **S06** Caméra en un seul transform | Un pan ne recalcule plus rien ; le zoom recalcule au repos. | S05 |
+| ✓ | 51d | **S07** Ne recalculer à chaque frame que ce qui suit la caméra | Modes, état des arêtes, emphase et étiquettes recalculés à chaque frame. | S05 |
+| ✓ | 51e | **S08** Arêtes : hors de la vue et niveau de détail | Toutes les arêtes du niveau sont dans le DOM. | S06 |
+| ✓ | 51f | **S09** Disposition et croisements hors du thread principal | Seulement si S05 trouve une longue tâche au chargement. | S05 |
+| ✓ | 51g | **S10** Indexation parallèle | Indexation mono-thread : n8n 54 s à froid. | S04 |
+| ✓ | 51h | **S11** Analyse incrémentale d'une plage | Diff d'une PR : 3,1 s et 65 s pour un budget de 1 s. | S04 |
+| ✗ | 51i | **S12** Afficher la carte avant la fin de l'indexation | Seulement si un gros dépôt reste lent à froid après S10 et S11. | S10, S11 |
+| ✓ | 51j | **S13** Sélection sous le budget | Mesure après S07 : ~160 ms pour 100, surtout hors marques (panneau, style). | S07 |
+| ✓ | 51k | **S14** Refondre le rendu de la carte : canvas, WebGL ou autre | Après S08, le zoom (41 à 204 ms) et la sélection (~160 ms) restent hors budget : limite du DOM + SVG ; spike et ADR d'abord. | S08 |
+| ✓ | 51l | **S15** API de scène de la carte, indépendante du moteur | Les e2e lisent le DOM de la carte, que le Canvas n'aura plus (ADR 0009). | S14 |
+| ✓ | 51m | **S16** Migrer les e2e et les captures sur l'API de scène | ~29 specs et 2 captures lisent encore `map-node` / `map-edge`. | S15 |
+| ✓ | 51n | **S17** Peintre Canvas : caméra, boîtes et texte | Premier morceau du moteur Canvas, à côté du DOM. | S15 |
+| ✓ | 51o | **S18** Peintre Canvas : arêtes, étiquettes et co-changements | Parité des arêtes avec le SVG. | S17 |
+| ✓ | 51p | **S19** Interactions sur le canvas : clic, survol, infobulles, clavier | Hit-testing par géométrie ; toute la suite e2e en Canvas. | S18, S16 |
+| ✓ | 51q | **S20** Canvas seul rendu de la carte | Retrait du DOM de la carte ; budgets mesurés. | S19 |
+| ✓ | 51r | **S21** Arêtes au franchissement de seuil sous une frame | 25 à 35 ms de calcul d'arêtes au seuil : 60 fps au zoom. | S20 |
+| ✓ | 51s | **S22** Étiquettes d'arête sous une frame | Reste de S21 : ~20 ms p95 au zoom de `dense`, placement des étiquettes. | S21 |
+| ✓ | 51t | **S23** `analyse` d'un très gros dépôt sous le budget | Reste de S11 : n8n 5,7 s pour 1 s ; base reconstruite, détecteur, `diff_graphs`. | S11 |
 
 ## Phase 11 : second langage et paquets
 
@@ -152,6 +176,33 @@ Le prochain ticket est la première ligne non cochée dont tous les bloquants so
 | ✓ | 52 | **L01** Adapter Python | Valide l'abstraction multi-langage. | T03, E02, I02 |
 | ✓ | 53a | **D04** Fichiers hors système en dossiers, fixtures ignorées | `relief .` sur relief : une fixture `pyproject.toml` devient le système et tout le reste est à plat. | D03, L01 |
 | ✓ | 53 | **P01** Paquets `.deb` et AppImage | Installer relief sans compiler (`tauri build`). **Jalon H : relief v1.** | L01 |
+| ✓ | 53c | **P02** Construire et installer en une commande, sans admin | `./install.sh` : build Docker de la branche courante, installation dans le dossier de l'utilisateur, OS détecté. | P01 |
+| ☐ | 53b | **N10** Icône cassée dans le gestionnaire de tâches | Icône générique sous KDE/Wayland (`app_id` ≠ `relief.desktop` ?). | aucun |
+
+## Phase 12 : multirepo (nouvelles fonctionnalités)
+
+| ✓ | # | Ticket | Pourquoi maintenant | Bloqué par |
+| - | - | --- | --- | --- |
+| ☐ | 54 | **K01** Cadrer le multirepo | Un changement full stack sur plusieurs dépôts ; un niveau « dépôt » au-dessus du système. Spec `.scratch/multi-repo/spec.md`. | aucun |
+
+## Phase 13 : confort de relecture (nouvelles fonctionnalités)
+
+Brainstorm du 2026-11-20 (`quicknotes.md`) : en relecture on se perd dans les dépendances transitives, on veut garder ce qu'on pense en lisant et ranger la carte et les panneaux à sa main. Décisions dans `review-ui/spec.md` (« Phase 13 »). Volontairement en dernier : polir l'existant avant d'ajouter des fonctionnalités.
+
+| ✓ | # | Ticket | Pourquoi maintenant | Bloqué par |
+| - | - | --- | --- | --- |
+| ☐ | 55 | **R09** Notes de relecture ancrées sur la carte | Garder ce qu'on pense en lisant ; note, question, à corriger. | R05 |
+| ☐ | 56 | **R11** Suivre les dépendances transitives sans se perdre | Où suis-je, revenir à l'entrée en cours, « vérifié » hors diff. | R05, R04 |
+| ✓ | 57 | **U25** Historique de navigation : précédent / suivant | Revenir au nœud d'avant après avoir suivi des arêtes. | U05 |
+| ☐ | 58 | **R12** Profondeur du rayon d'impact sur la carte | Un symbole très utilisé rend toute la carte orange. | R04 |
+| ☐ | 59 | **R15** Diff lisible : coloration et contexte | Le diff n'est pas coloré, son contexte est fixe. | R02 |
+| ☐ | 60 | **R14** Naviguer depuis le code | Un appel dans le diff n'est que du texte. | R02, U20 |
+| ☐ | 61 | **R13** Chemin entre deux nœuds | « Pourquoi A dépend de B » sans suivre les arêtes une à une. | E06 |
+| ☐ | 62 | **U27** Masquer des éléments de la carte | Modules générés ou d'outillage qui encombrent. | U13 |
+| ☐ | 63 | **R10** Exporter la relecture en Markdown | Coller notes et signaux dans la PR. | R09 |
+| ☐ | 64 | **U26** Mini-carte | Savoir où on est, zoomé dans un gros dépôt. | U02, S06 |
+| ☐ | 65 | **U28** Ranger la carte à la main | Disposition personnelle ; maquette d'abord. | U04, U27 |
+| ☐ | 66 | **N11** Détacher un panneau dans sa propre fenêtre | Multi-écran : la carte d'un côté, le code de l'autre ; maquette d'abord. | N05 |
 
 ## Plus tard (pas encore de tickets)
 
@@ -160,7 +211,6 @@ Dans l'ordre probable, à transformer en specs quand la v1 est là :
 - Précision `resolved` par SCIP (`scip-typescript`, puis les autres indexers).
 - Adapter Go, puis Java.
 - CI (GitHub Actions) dès que le dépôt a un remote : `just lint`, `just test`, `just e2e` (Linux, `tauri-driver`).
-- Multirepo : manifeste `relief.workspace.yaml`, submodules, arêtes inter-services.
 - Partage d'index par `git notes` ou artefact de CI.
 - Paquets `.dmg` (macOS) et `.msi` (Windows) : `tauri-driver` ne tourne pas sous macOS, à reprendre sur demande.
 - Détachement du terminal (`--wait`) et instance unique pour plusieurs fenêtres.

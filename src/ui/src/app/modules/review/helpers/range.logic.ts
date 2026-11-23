@@ -91,3 +91,28 @@ export function shortcutRefs(
   const lastTag = tags.at(-1);
   return [...(main ? [main] : []), 'HEAD~1', ...(lastTag ? [lastTag] : [])];
 }
+
+/** The arrow between the two sides: from the merge base (`···→`) or a direct diff (`→`). */
+export function rangeArrow(mergeBase: boolean): string {
+  return mergeBase ? '···→' : '→';
+}
+
+/** The i18n key and params of the line saying what the map shows for a range. */
+export function readingLine(
+  parts: RangeParts,
+  baseResolved: string,
+): { key: string; params: Record<string, string> } {
+  if (parts.head === WORKTREE_RANGE) {
+    return {
+      key: 'review.range.reading.worktree',
+      params: { base: 'HEAD', sha: baseResolved },
+    };
+  }
+  if (parts.mergeBase) {
+    return {
+      key: 'review.range.reading.mergeBase',
+      params: { head: parts.head, base: parts.base, sha: baseResolved },
+    };
+  }
+  return { key: 'review.range.reading.direct', params: { base: parts.base } };
+}

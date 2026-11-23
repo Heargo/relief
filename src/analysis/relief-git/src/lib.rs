@@ -237,6 +237,35 @@ pub struct TouchingCommit {
     pub files: Vec<TouchedFile>,
 }
 
+/// Blob reader shareable between threads, from [`GitSource::blob_reader`].
+pub struct BlobReader {
+    repo: gix::ThreadSafeRepository,
+    worktree_blobs: HashMap<gix::ObjectId, PathBuf>,
+}
+
+impl BlobReader {
+    /// A reader for the current thread.
+    pub fn local(&self) -> LocalBlobReader<'_> {
+        LocalBlobReader {
+            repo: self.repo.to_thread_local(),
+            worktree_blobs: &self.worktree_blobs,
+        }
+    }
+}
+
+/// Blob reader bound to one thread.
+pub struct LocalBlobReader<'a> {
+    repo: gix::Repository,
+    worktree_blobs: &'a HashMap<gix::ObjectId, PathBuf>,
+}
+
+impl LocalBlobReader<'_> {
+    /// Reads the content of a blob.
+    pub fn read_blob(&self, blob: &BlobId) -> Result<Vec<u8>, GitError> {
+        read_blob_from(&self.repo, self.worktree_blobs, blob)
+    }
+}
+
 /// A read-only view on a git repository.
 pub struct GitSource {
     repo: gix::Repository,
@@ -317,13 +346,15 @@ impl GitSource {
 
     /// Reads the content of a blob.
     pub fn read_blob(&self, blob: &BlobId) -> Result<Vec<u8>, GitError> {
-        if let Ok(object) = self.repo.find_object(blob.0) {
-            return Ok(object.detach().data);
-        }
-        let path = self.worktree_blobs.borrow().get(&blob.0).cloned();
-        match path {
-            Some(path) => read_worktree_file(&path),
-            None => Err(GitError::Backend(format!("blob {blob} not found"))),
+        read_blob_from(&self.repo, &self.worktree_blobs.borrow(), blob)
+    }
+
+    /// A reader of blobs that several threads can share (each takes its own [`LocalBlobReader`]).
+    /// It knows the working-tree blobs listed so far.
+    pub fn blob_reader(&self) -> BlobReader {
+        BlobReader {
+            repo: self.repo.clone().into_sync(),
+            worktree_blobs: self.worktree_blobs.borrow().clone(),
         }
     }
 
@@ -890,6 +921,20 @@ impl GitSource {
 
 /// Content of a working-tree file as git would store it: the link target for
 /// a symlink.
+fn read_blob_from(
+    repo: &gix::Repository,
+    worktree_blobs: &HashMap<gix::ObjectId, PathBuf>,
+    blob: &BlobId,
+) -> Result<Vec<u8>, GitError> {
+    if let Ok(object) = repo.find_object(blob.0) {
+        return Ok(object.detach().data);
+    }
+    match worktree_blobs.get(&blob.0) {
+        Some(path) => read_worktree_file(path),
+        None => Err(GitError::Backend(format!("blob {blob} not found"))),
+    }
+}
+
 fn read_worktree_file(path: &Path) -> Result<Vec<u8>, GitError> {
     let meta = std::fs::symlink_metadata(path).map_err(backend)?;
     if meta.is_symlink() {

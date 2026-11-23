@@ -89,11 +89,11 @@ it('swap exchanges base and head, the PR becomes empty', async () => {
 it('the ... button switches to a direct diff (..) and back', async () => {
   await openLoaded();
   await tid('range-mode').click();
-  await expect(tid('range-mode')).toHaveText('..');
+  await expect(tid('range-mode')).toHaveText('→');
   await browser.waitUntil(async () => (await rangeParam()) === 'main..feat/promo-codes');
   expect(await rangeParam()).toBe('main..feat/promo-codes');
   await tid('range-mode').click();
-  await expect(tid('range-mode')).toHaveText('...');
+  await expect(tid('range-mode')).toHaveText('···→');
   await browser.waitUntil(async () => (await rangeParam()) === 'main...feat/promo-codes');
   expect(await rangeParam()).toBe('main...feat/promo-codes');
 });

@@ -64,13 +64,18 @@
     "layout": {
       "title": "Disposition",
       "fewerCrossings": "Moins de croisements",
-      "rawGrid": "Grille brute",
-      "optimizedTotal": "Moins de croisements : {{count}}",
-      "rawTotal": "Grille brute : {{count}}",
-      "visible": "À l'écran : {{count}}",
-      "totals": "Croisements, tous niveaux"
+      "rawGrid": "Grille brute"
+    },
+    "canvasLabel": "Carte du dépôt",
+    "announce": {
+      "node": "{{name}} sélectionné",
+      "edge": "Lien de {{from}} vers {{to}} sélectionné"
     },
     "breadcrumbs": "Fil d'Ariane",
+    "history": {
+      "back": "Étape précédente de la navigation",
+      "forward": "Étape suivante de la navigation"
+    },
     "shortcutsList": {
       "rangeBase": "Choisir la base de la plage",
       "rangeHead": "Choisir le head de la plage",
@@ -129,8 +134,8 @@
       "head": "Head",
       "worktree": "Arbre de travail",
       "swap": "Échanger base et head",
-      "mergeBase": "base...head : compare depuis l'ancêtre commun des deux côtés (ce que la PR ajoute). Cliquer pour un diff direct.",
-      "direct": "base..head : compare les deux côtés tels quels (diff direct). Cliquer pour comparer depuis l'ancêtre commun.",
+      "mergeBase": "base ···→ head : compare depuis l'ancêtre commun des deux côtés (ce que la PR ajoute). Clic pour un diff direct (base → head).",
+      "direct": "base → head : compare les deux côtés tels quels (diff direct). Clic pour comparer depuis l'ancêtre commun (base ···→ head).",
       "filter": "Filtrer par nom, sujet ou SHA",
       "tabs": {
         "branches": "Branches",
@@ -142,9 +147,18 @@
       "marks": {
         "base": "BASE",
         "head": "HEAD"
+      },
+      "roleBase": "Référence · base",
+      "roleHead": "Changements · head",
+      "swapDisabled": "Inversion impossible : head est le working tree"
+    },
+    "range": {
+      "reading": {
+        "mergeBase": "La carte montre ce que {{head}} change par rapport à {{base}}, depuis leur ancêtre commun {{sha}}",
+        "direct": "La carte montre ce que head change par rapport à {{base}} tel quel (diff direct)",
+        "worktree": "La carte montre ce que vos modifications non commitées changent par rapport à {{base}} ({{sha}})"
       }
     },
-    "range": "Plage",
     "worktree": "arbre de travail vs HEAD",
     "layers": {
       "title": "Calques",

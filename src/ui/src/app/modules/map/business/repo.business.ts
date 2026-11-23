@@ -2,11 +2,11 @@ import { computed, inject, Injectable, signal } from '@angular/core';
 
 import type { MetaResponse, SnapshotResponse } from '../../../core/models/contract';
 import { ReliefApiService } from '../../../core/services/relief-api.service';
-import { displayRef } from '../helpers/repo.logic';
+import { headRef } from '../helpers/repo.logic';
 import { ancestorIds, mergeExpanded } from '../helpers/subgraph.logic';
 
 /** Most nodes the map asks for: the core closes the containers below. */
-const DISPLAY_BUDGET = 2000;
+export const DISPLAY_BUDGET = 2000;
 
 export type RepoStatus = 'loading' | 'error' | 'ready';
 
@@ -19,6 +19,7 @@ export class RepoBusiness {
   private readonly _error = signal<string | null>(null);
   private readonly _meta = signal<MetaResponse | null>(null);
   private readonly _snapshot = signal<SnapshotResponse | null>(null);
+  private readonly _ref = signal<string | null>(null);
   private readonly _loading = signal<ReadonlySet<string>>(new Set());
   /** The containers opened on demand, asked again with each read of the snapshot. */
   private expanded: string[] = [];
@@ -31,10 +32,7 @@ export class RepoBusiness {
   readonly loading = this._loading.asReadonly();
   readonly repoName = computed(() => this._meta()?.repo ?? null);
   readonly range = computed(() => this._meta()?.range ?? null);
-  readonly ref = computed(() => {
-    const meta = this._meta();
-    return meta ? displayRef(meta.range, meta.branches) : null;
-  });
+  readonly ref = this._ref.asReadonly();
   readonly isEmpty = computed(
     () => this._status() === 'ready' && (this._snapshot()?.graph.nodes.length ?? 0) === 0,
   );
@@ -46,9 +44,9 @@ export class RepoBusiness {
     try {
       const meta = await this.api.meta();
       this._meta.set(meta);
-      this._snapshot.set(
-        await this.api.snapshot(displayRef(meta.range, meta.branches), DISPLAY_BUDGET),
-      );
+      const ref = headRef(meta.range);
+      this._snapshot.set(await this.api.snapshot(ref, DISPLAY_BUDGET));
+      this._ref.set(ref);
       this._status.set('ready');
     } catch (error) {
       this._error.set(error instanceof Error ? error.message : String(error));
@@ -57,19 +55,13 @@ export class RepoBusiness {
   }
 
   /**
-   * Reads the snapshot of `ref` again, keeping the status: the working tree changed under us. A
-   * graph that was whole and small is asked whole; else the budget and the opened containers are
-   * asked again.
+   * Reads the snapshot of `ref` again, keeping the status: the working tree changed under us. The
+   * budget and the opened containers are asked again.
    */
   async refreshSnapshot(ref: string): Promise<void> {
-    const graph = this._snapshot()?.graph;
-    const whole =
-      !!graph && graph.nodes.length < DISPLAY_BUDGET && !graph.nodes.some((n) => n.childCount);
-    this._snapshot.set(
-      whole
-        ? await this.api.snapshot(ref)
-        : await this.api.snapshot(ref, DISPLAY_BUDGET, this.expanded),
-    );
+    if (ref !== this._ref()) this.expanded = [];
+    this._snapshot.set(await this.api.snapshot(ref, DISPLAY_BUDGET, this.expanded));
+    this._ref.set(ref);
   }
 
   /** Loads the content of a closed container. False when nothing was loaded. */

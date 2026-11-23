@@ -5,15 +5,55 @@
   (pointerdown)="startPan($event)"
   (dblclick)="onDoubleClick($event)"
 >
-  <div #layer class="map-layer"></div>
-  <svg #edgesLayer class="map-edges" data-testid="map-edges" (click)="onEdgesClick($event)">
-    <defs></defs>
-  </svg>
+  <canvas
+    #surface
+    class="map-surface"
+    data-testid="map-surface"
+    tabindex="0"
+    [attr.aria-label]="'map.canvasLabel' | translate"
+    (pointermove)="onHover($event)"
+    (pointerleave)="onHoverLeave()"
+    (keydown)="onSurfaceKey($event)"
+  ></canvas>
+  <div class="map-announce" data-testid="map-announce" aria-live="polite">
+    {{ announcement() }}
+  </div>
+  @if (tip(); as t) {
+    <div class="map-tooltip" data-testid="map-tooltip" [style.left.px]="t.x" [style.top.px]="t.y">
+      {{ t.text }}
+    </div>
+  }
   <nav
     class="map-crumbs"
     data-testid="breadcrumbs"
     [attr.aria-label]="'map.breadcrumbs' | translate"
   >
+    <button
+      type="button"
+      class="history"
+      data-testid="history-back"
+      [disabled]="!map.canGoBack()"
+      [attr.aria-label]="'map.history.back' | translate"
+      [title]="'map.history.back' | translate"
+      (click)="map.goBack()"
+    >
+      <svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true">
+        <path d="M10 3 5 8l5 5" fill="none" stroke="currentColor" stroke-width="2" />
+      </svg>
+    </button>
+    <button
+      type="button"
+      class="history"
+      data-testid="history-forward"
+      [disabled]="!map.canGoForward()"
+      [attr.aria-label]="'map.history.forward' | translate"
+      [title]="'map.history.forward' | translate"
+      (click)="map.goForward()"
+    >
+      <svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true">
+        <path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="2" />
+      </svg>
+    </button>
     @for (crumb of map.breadcrumbs(); track $index; let last = $last) {
       <button
         type="button"

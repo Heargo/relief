@@ -116,8 +116,9 @@ describe('ReloadBusiness', () => {
     resetCalls();
     await reload.onWindowFocus();
     expect(api.diff).toHaveBeenCalledTimes(1);
-    expect(api.diff).toHaveBeenCalledWith(range);
-    expect(api.snapshot).toHaveBeenCalledWith(range);
+    expect(api.diff.mock.calls[0]?.[0]).toBe(range);
+    expect(api.diff.mock.calls[0]?.[1]).toBe(2000);
+    expect(api.snapshot).toHaveBeenCalledWith(range, 2000, []);
   });
 
   it('does not reload on focus for a range between commits', async () => {
@@ -142,8 +143,9 @@ describe('ReloadBusiness', () => {
     current = graphOf([KEPT, GONE, ADDED]);
     resetCalls();
     await reload.reload();
-    expect(api.snapshot).toHaveBeenCalledWith('WORKTREE');
-    expect(api.diff).toHaveBeenCalledWith('WORKTREE');
+    expect(api.snapshot).toHaveBeenCalledWith('WORKTREE', 2000, []);
+    expect(api.diff.mock.calls[0]?.[0]).toBe('WORKTREE');
+    expect(api.diff.mock.calls[0]?.[1]).toBe(2000);
     expect(map.search('brandNewHelper').map((r) => r.id)).toEqual([ADDED]);
   });
 

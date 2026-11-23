@@ -2,6 +2,7 @@
 //! the import declaration and outside any scope that shadows the local name.
 
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use relief_adapter_api::{LinkContext, ResolveEnv, Usage};
 use relief_model::NodeId;
@@ -18,8 +19,13 @@ const IDENTIFIERS: [&str; 3] = [
     "shorthand_property_identifier",
 ];
 
-pub(crate) fn usages(path: &str, bytes: &[u8], bindings: &[String]) -> Vec<Usage> {
-    collect(path, bytes, |bs| {
+pub(crate) fn usages(
+    path: &str,
+    bytes: &[u8],
+    bindings: &[String],
+    parses: &AtomicUsize,
+) -> Vec<Usage> {
+    collect(path, bytes, parses, |bs| {
         bs.into_iter()
             .filter(|b| bindings.contains(&b.imported))
             .map(|b| (b.local, b.imported))
@@ -34,6 +40,7 @@ pub(crate) fn module_usages(
     bytes: &[u8],
     target: &str,
     env: &ResolveEnv<'_>,
+    parses: &AtomicUsize,
 ) -> Vec<Usage> {
     let repo = NodeId::package("");
     let files: HashMap<String, NodeId> = env
@@ -51,9 +58,10 @@ pub(crate) fn module_usages(
         nodes: &nodes,
         routes: &routes,
         repo: &repo,
+        indexes: &HashMap::new(),
     };
     let memo = JsonMemo::default();
-    collect(path, bytes, |bs| {
+    collect(path, bytes, parses, |bs| {
         bs.into_iter()
             .filter(|b| matches!(b.imported.as_str(), "default" | "*"))
             .filter(|b| resolve(&b.specifier, &ctx, &memo) == Resolution::File(target.to_owned()))
@@ -65,6 +73,7 @@ pub(crate) fn module_usages(
 fn collect(
     path: &str,
     bytes: &[u8],
+    parses: &AtomicUsize,
     pick: impl FnOnce(Vec<refs::Binding>) -> HashMap<String, String>,
 ) -> Vec<Usage> {
     let ext = path.rsplit_once('.').map_or("", |(_, e)| e);
@@ -77,6 +86,7 @@ fn collect(
     if parser.set_language(&language.into()).is_err() {
         return Vec::new();
     }
+    parses.fetch_add(1, Ordering::Relaxed);
     let Some(tree) = parser.parse(bytes, None) else {
         return Vec::new();
     };

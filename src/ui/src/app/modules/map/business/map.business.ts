@@ -1,5 +1,7 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 
+import { measured } from '../../../core/helpers/perf';
+
 import type {
   DiffResponse,
   Edge,
@@ -8,7 +10,7 @@ import type {
   Violation,
   ViolationEdge,
 } from '../../../core/models/contract';
-import { edgeViolations, type Split } from '../../rules/helpers/rules.logic';
+import type { Split } from '../../rules/helpers/rules.logic';
 import { ReliefApiService } from '../../../core/services/relief-api.service';
 import {
   type Camera,
@@ -26,6 +28,8 @@ import {
 import {
   type AggregatedEdge,
   aggregateEdges,
+  edgeGeometry,
+  type EdgeGeometry,
   edgeShape,
   type EdgeShape,
   filterEdges,
@@ -33,24 +37,35 @@ import {
   visibleAncestor,
 } from '../helpers/edges.logic';
 import {
-  aggregateEdgeStatus,
   diffMarks,
   type DiffStatus,
   edgeStatus,
   type NodeMark,
 } from '../../review/helpers/diff-layer.logic';
 import { breadcrumbTrail, type Crumb } from '../helpers/breadcrumb.logic';
-import { crossingsOfEdges, layoutCrossings } from '../helpers/crossings.logic';
-import { alphabeticalOrder, optimizeOrder } from '../helpers/layout-optimize.logic';
+import { layoutCrossings } from '../helpers/crossings.logic';
+import { computeLayouts, type Layouts } from '../helpers/layout-compute.logic';
+import { LAYOUT_EXECUTOR, onThreadExecutor } from './layout-executor';
 import {
   DEFAULT_LAYOUT_MODE,
   type LayoutMode,
   readLayoutMode,
   writeLayoutMode,
 } from '../helpers/layout-mode.logic';
-import { interpolateLayout, layoutGraph, type MapLayout } from '../helpers/layout.logic';
+import { interpolateLayout, type MapLayout, type Rect } from '../helpers/layout.logic';
+import { createBoxGrid } from '../helpers/box-grid.logic';
+import { type EdgeState } from '../helpers/edge-state.logic';
+import { createEdgeAggregator } from '../helpers/edge-aggregator.logic';
+import { createEdgeStateCache } from '../helpers/edge-state-cache.logic';
+import {
+  edgeBounds,
+  edgeInView,
+  partitionEdges,
+  type EdgeDetail,
+} from '../helpers/edge-culling.logic';
+import { onImpactPath, type ImpactMarks } from '../../review/helpers/impact.logic';
 import { buildNodeInfos, type NodeInfo } from '../helpers/node-info.logic';
-import { displayRef } from '../helpers/repo.logic';
+import { headRef } from '../helpers/repo.logic';
 import { containerToLoad, zoomedBox } from '../helpers/subgraph.logic';
 import {
   DEFAULT_HIDE_EXTERNAL,
@@ -60,8 +75,31 @@ import {
 } from '../helpers/external.logic';
 import { buildSearchIndex, searchNodes, type SearchResult } from '../helpers/search.logic';
 import { edgesAround, nodeEdges } from '../helpers/node-edges.logic';
-import type { Selection } from '../helpers/emphasis.logic';
+import {
+  edgeEmphasis,
+  edgeKey,
+  nodeEmphasis,
+  type EdgeEmphasis,
+  type Selection,
+} from '../helpers/emphasis.logic';
+import {
+  canGoBack,
+  canGoForward,
+  clearHistory,
+  currentStep,
+  emptyHistory,
+  goBack,
+  goForward,
+  type History,
+  pushStep,
+} from '../helpers/history.logic';
 import { escapeStep } from '../helpers/shortcuts.logic';
+import {
+  layerTransform,
+  REST_DELAY_MS,
+  shouldRecomputeModes,
+  viewLeavesRenderedArea,
+} from '../helpers/camera-layer.logic';
 import {
   computeModes,
   isInViewport,
@@ -69,9 +107,20 @@ import {
   type NodeMode,
 } from '../helpers/visibility.logic';
 
+/** A step of the navigation: what is selected, and where the camera is. */
+interface NavStep {
+  nodeId: string | null;
+  edgeKey: string | null;
+  listedEdge: AggregatedEdge | null;
+  fine: ViolationEdge | null;
+  camera: Camera;
+  level: number | null;
+  cap: number | null;
+}
+
 export type MapStatus = 'loading' | 'error' | 'ready';
 
-/** A node to draw, in screen pixels. */
+/** A node to draw, in world units (the camera is the transform of the layer). */
 export interface VisibleNode {
   id: string;
   kind: string;
@@ -84,38 +133,19 @@ export interface VisibleNode {
   mark: NodeMark | null;
 }
 
-/** An aggregated edge placed on screen. */
-export interface EdgeLine {
+/** An aggregated edge placed in the world. */
+export interface EdgeLine extends EdgeState {
   edge: AggregatedEdge;
   shape: EdgeShape;
   selected: boolean;
-  /** Diff status of the edge (unchanged while the layer is off). */
-  status: DiffStatus;
-  /** Violating fine links of the edge; zeros while the rules layer is off. */
-  violations: Split<number>;
-  /** Fine links added, removed and moved by the diff; zeros while the layer is off. */
-  added: number;
-  removed: number;
-  moved: number;
-  /** The diff layer is on. */
-  review: boolean;
 }
 
-/** A logical coupling edge placed on screen. */
+interface DetailedEdgeLine extends EdgeLine, EdgeDetail {}
+
+/** A logical coupling edge placed in the world. */
 export interface CoChangeLine {
   edge: AggregatedEdge;
   shape: EdgeShape;
-}
-
-/** Crossings of the aggregated edges (module, file and symbol levels) of the two layouts. */
-export interface CrossingTotals {
-  optimized: number;
-  raw: number;
-}
-
-interface Layouts {
-  optimized: MapLayout;
-  raw: MapLayout;
 }
 
 function storage(): Storage | null {
@@ -163,9 +193,13 @@ export class MapBusiness {
   );
   /** The graph as received, before the display filters. */
   private sourceGraph: GraphSnapshot = EMPTY_GRAPH;
-  private readonly _crossingTotals = signal<CrossingTotals>({ optimized: 0, raw: 0 });
   private readonly _infos = signal<Map<string, NodeInfo>>(new Map());
   private readonly _camera = signal<Camera>({ scale: 1, tx: 0, ty: 0 });
+  /** The camera the modes, headers and edge shapes were computed for (it lags during a zoom). */
+  private readonly _modesCamera = signal<Camera>({ scale: 1, tx: 0, ty: 0 });
+  /** The camera the nodes were culled for (it lags during a pan, up to the render margin). */
+  private readonly _cullCamera = signal<Camera>({ scale: 1, tx: 0, ty: 0 });
+  private restTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly _viewport = signal<Viewport>({ width: 0, height: 0 });
   /** Level chosen explicitly (button, key, fit, dive); cleared by zooming. */
   private readonly _forcedLevel = signal<number | null>(null);
@@ -181,6 +215,10 @@ export class MapBusiness {
   private readonly _listedEdge = signal<AggregatedEdge | null>(null);
   private readonly _showUnchangedEdges = signal(true);
   private readonly _diff = signal<DiffResponse | null>(null);
+  /** The language of the edge texts: the translator changes with the language. */
+  private readonly _translate = signal<{
+    t: (key: string, params?: Record<string, unknown>) => string;
+  }>({ t: (key) => key });
   private readonly _violations = signal<readonly Violation[]>([]);
   /** A violating fine edge picked from a rule: the aggregated edge holding it is selected. */
   private readonly _selectedFine = signal<ViolationEdge | null>(null);
@@ -196,17 +234,30 @@ export class MapBusiness {
   private readonly _diveTarget = signal<string | null>(null);
   /** What to do once the next graph is laid out (the content of a container just arrived). */
   private afterShow: (() => void)[] = [];
+  private showRequest = 0;
+  /** A first layout is on its way: the actions of the user wait for it, as they would for the map. */
+  private layingOut = false;
+  private readonly executeLayout = inject(LAYOUT_EXECUTOR);
+
+  private readonly _history = signal<History<NavStep>>(emptyHistory());
+  /** Where the running camera flight ends; meaningful while `animation` is set. */
+  private flightTarget: Camera | null = null;
 
   private pristine = true;
   private beforeFrame: { camera: Camera; level: number | null } | null = null;
   private animation = 0;
   private pendingSettle: (() => void) | null = null;
 
+  readonly canGoBack = computed(() => canGoBack(this._history()));
+  readonly canGoForward = computed(() => canGoForward(this._history()));
   readonly status = this._status.asReadonly();
   readonly layoutMode = this._layoutMode.asReadonly();
   readonly hideExternal = this._hideExternal.asReadonly();
-  readonly crossingTotals = this._crossingTotals.asReadonly();
   readonly camera = this._camera.asReadonly();
+  /** The whole camera, as the CSS transform of the layer that holds the nodes and the edges. */
+  readonly layerTransform = computed(() => layerTransform(this._camera()));
+  /** Scale the modes, headers and edge shapes are drawn for (the scale at rest). */
+  readonly modesScale = computed(() => this._modesCamera().scale);
   readonly viewport = this._viewport.asReadonly();
 
   private readonly scales = computed(() => levelScales(this._layout(), this._viewport()));
@@ -231,39 +282,62 @@ export class MapBusiness {
     );
   });
 
-  readonly visibleNodes = computed<VisibleNode[]>(() => {
-    const layout = this._layout();
-    const camera = this._camera();
-    const viewport = this._viewport();
-    const modes = computeModes(layout, camera, this._cap() ?? 3);
-    const marks = this.marks();
-    // A ring around the screen is drawn too, so that nodes just out of sight do not pop in.
-    const padded: Viewport = {
-      width: viewport.width + 2 * RENDER_MARGIN,
-      height: viewport.height + 2 * RENDER_MARGIN,
-    };
-    const shifted: Camera = {
-      ...camera,
-      tx: camera.tx + RENDER_MARGIN,
-      ty: camera.ty + RENDER_MARGIN,
-    };
-    const result: VisibleNode[] = [];
-    for (const node of layout.nodes.values()) {
-      const mode = modes.get(node.id);
-      if (!mode || mode === 'hidden' || !isInViewport(node, shifted, padded)) continue;
-      result.push({
-        id: node.id,
-        kind: node.kind,
-        mode,
-        x: node.x * camera.scale + camera.tx,
-        y: node.y * camera.scale + camera.ty,
-        w: node.w * camera.scale,
-        h: node.h * camera.scale,
-        mark: marks.get(node.id) ?? null,
-      });
-    }
-    return result;
-  });
+  /** What each node shows (open, box, ghost), for the scale of the last rest or threshold. */
+  private readonly modes = computed(() =>
+    measured('modes', () =>
+      computeModes(this._layout(), { scale: this.modesScale(), tx: 0, ty: 0 }, this._cap() ?? 3),
+    ),
+  );
+
+  readonly visibleNodes = computed<VisibleNode[]>(() =>
+    measured('visibleNodes', () => {
+      const layout = this._layout();
+      const camera = this._cullCamera();
+      const viewport = this._viewport();
+      const modes = this.modes();
+      const marks = this.marks();
+      // A ring around the screen is drawn too, so that nodes just out of sight do not pop in.
+      const padded: Viewport = {
+        width: viewport.width + 2 * RENDER_MARGIN,
+        height: viewport.height + 2 * RENDER_MARGIN,
+      };
+      const shifted: Camera = {
+        ...camera,
+        tx: camera.tx + RENDER_MARGIN,
+        ty: camera.ty + RENDER_MARGIN,
+      };
+      const result: VisibleNode[] = [];
+      for (const node of layout.nodes.values()) {
+        const mode = modes.get(node.id);
+        if (!mode || mode === 'hidden' || !isInViewport(node, shifted, padded)) continue;
+        result.push({
+          id: node.id,
+          kind: node.kind,
+          mode,
+          x: node.x,
+          y: node.y,
+          w: node.w,
+          h: node.h,
+          mark: marks.get(node.id) ?? null,
+        });
+      }
+      return result;
+    }),
+  );
+
+  /** The closed boxes, wherever they are (camera-free): the edge labels slide off them. */
+  private readonly visibleBoxes = computed<Rect[]>(() =>
+    measured('visibleBoxes', () => {
+      const modes = this.modes();
+      const boxes: Rect[] = [];
+      for (const node of this._layout().nodes.values()) {
+        if (modes.get(node.id) === 'box') boxes.push(node);
+      }
+      return boxes;
+    }),
+  );
+
+  private readonly boxGrid = computed(() => createBoxGrid(this.visibleBoxes()));
 
   /** The closed container the user zooms into, whose content is to be loaded; null for none. */
   readonly containerToLoad = computed<string | null>(() => {
@@ -272,48 +346,60 @@ export class MapBusiness {
     // (a camera in flight would open every container it flies over).
     const point = this._zoomPoint();
     if (!point) return containerToLoad(graph, this._diveTarget());
-    const boxes = this.visibleNodes().filter((n) => n.mode === 'box');
+    const camera = this._camera();
+    const layout = this._layout();
+    const boxes = (this.visibleBoxes() as Array<Rect & { id: string }>)
+      .filter((n) => layout.nodes.has(n.id))
+      .map((n) => ({
+        id: n.id,
+        x: n.x * camera.scale + camera.tx,
+        y: n.y * camera.scale + camera.ty,
+        w: n.w * camera.scale,
+        h: n.h * camera.scale,
+      }));
     const focus = zoomedBox(boxes, point, (id) => containerToLoad(graph, id) !== null);
     return containerToLoad(graph, focus);
   });
 
   /** Boxes the edges attach to: open or closed boxes, not the ghosts drawn inside them. */
   private readonly boxIds = computed(
-    () => {
-      const modes = computeModes(this._layout(), this._camera(), this._cap() ?? 3);
-      const ids = new Set<string>();
-      for (const [id, mode] of modes) if (mode === 'open' || mode === 'box') ids.add(id);
-      return ids;
-    },
+    () =>
+      measured('boxIds', () => {
+        const modes = this.modes();
+        const ids = new Set<string>();
+        for (const [id, mode] of modes) if (mode === 'open' || mode === 'box') ids.add(id);
+        return ids;
+      }),
     { equal: (a, b) => a.size === b.size && [...a].every((id) => b.has(id)) },
   );
 
-  private readonly allEdges = computed(() => {
+  /** Kept from one visibility to the next: a mode change rebuilds only the pairs it touches. */
+  private readonly edgeAggregator = computed(() => {
     const diff = this._diff()?.diff;
-    return aggregateEdges(this._edges(), this._parents(), this.boxIds(), {
+    return createEdgeAggregator(this._edges(), this._parents(), {
       changed: (edge) => diff !== undefined && edgeStatus(edge, diff) !== 'unchanged',
     });
   });
 
+  private readonly allEdges = computed(() =>
+    measured('allEdges', () => this.edgeAggregator().update(this.boxIds())),
+  );
+
   /** The logical coupling edges, aggregated for the current visibility and placed on screen. */
-  readonly coChangeLines = computed<CoChangeLine[]>(() => {
-    const layout = this._layout();
-    const camera = this._camera();
-    const boxes = this.visibleNodes().filter((n) => n.mode === 'box');
-    const screen = (n: { x: number; y: number; w: number; h: number }) => ({
-      x: n.x * camera.scale + camera.tx,
-      y: n.y * camera.scale + camera.ty,
-      w: n.w * camera.scale,
-      h: n.h * camera.scale,
-    });
-    const lines: CoChangeLine[] = [];
-    for (const edge of aggregateEdges(this._coChangeEdges(), this._parents(), this.boxIds())) {
-      const a = layout.nodes.get(edge.from);
-      const b = layout.nodes.get(edge.to);
-      if (a && b) lines.push({ edge, shape: edgeShape(screen(a), screen(b), boxes) });
-    }
-    return lines;
-  });
+  readonly coChangeLines = computed<CoChangeLine[]>(() =>
+    measured('coChangeLines', () => {
+      const layout = this._layout();
+      const scale = this.modesScale();
+      const boxes = this.boxGrid();
+      const lines: CoChangeLine[] = [];
+      for (const edge of aggregateEdges(this._coChangeEdges(), this._parents(), this.boxIds())) {
+        const a = layout.nodes.get(edge.from);
+        const b = layout.nodes.get(edge.to);
+        if (a && b) lines.push({ edge, shape: edgeShape(a, b, boxes, scale) });
+      }
+      return lines;
+    }),
+  );
 
   readonly showUnchangedEdges = this._showUnchangedEdges.asReadonly();
   /** Aggregated edges for the current visibility, after the "unchanged edges" layer. */
@@ -345,73 +431,182 @@ export class MapBusiness {
       level: this.level(),
     }),
   );
-  readonly selectedEdge = computed<AggregatedEdge | null>(() => {
-    const fine = this._selectedFine();
-    if (fine) {
+  readonly selectedEdge = computed<AggregatedEdge | null>(() =>
+    measured('selectedEdge', () => {
+      const fine = this._selectedFine();
+      if (fine) {
+        return (
+          this.allEdges().find((e) =>
+            e.links.some((l) => l.from === fine.from && l.to === fine.to && l.kind === fine.kind),
+          ) ?? null
+        );
+      }
+      const key = this._selectedEdgeKey();
+      if (key === null) return null;
+      const listed = this._listedEdge();
       return (
-        this.allEdges().find((e) =>
-          e.links.some((l) => l.from === fine.from && l.to === fine.to && l.kind === fine.kind),
-        ) ?? null
+        this.allEdges().find((e) => pairKey(e.from, e.to) === key) ??
+        (listed && pairKey(listed.from, listed.to) === key ? listed : null)
       );
-    }
-    const key = this._selectedEdgeKey();
-    if (key === null) return null;
-    const listed = this._listedEdge();
-    return (
-      this.allEdges().find((e) => pairKey(e.from, e.to) === key) ??
-      (listed && pairKey(listed.from, listed.to) === key ? listed : null)
-    );
-  });
+    }),
+  );
 
   /** The edges of the selected node (its descendants folded in), at its own level. */
-  readonly selectedNodeEdges = computed(() => {
-    const id = this._selectedNodeId();
-    if (!id) return nodeEdges([], '');
-    const diff = this._diff()?.diff;
-    const around = edgesAround(this._edges(), this._parents(), this.boxIds(), id, (edge) => {
-      return diff !== undefined && edgeStatus(edge, diff) !== 'unchanged';
-    });
-    return nodeEdges(filterEdges(around, this._showUnchangedEdges()), id);
-  });
+  readonly selectedNodeEdges = computed(() =>
+    measured('selectedNodeEdges', () => {
+      const id = this._selectedNodeId();
+      if (!id) return nodeEdges([], '');
+      const diff = this._diff()?.diff;
+      const around = edgesAround(this._edges(), this._parents(), this.boxIds(), id, (edge) => {
+        return diff !== undefined && edgeStatus(edge, diff) !== 'unchanged';
+      });
+      return nodeEdges(filterEdges(around, this._showUnchangedEdges()), id);
+    }),
+  );
 
-  /** Edges in screen pixels, following the camera. */
-  readonly edgeLines = computed<EdgeLine[]>(() => {
-    const layout = this._layout();
-    const camera = this._camera();
-    const selected = this.selectedEdge();
+  /**
+   * What each edge says apart from its shape (diff, rules, counts, label, tooltip). The states are
+   * made on demand, for the edges in view only, and kept until the inputs change.
+   */
+  private readonly edgeStates = computed(() => {
+    const translate = this._translate().t;
     const diff = this._diff()?.diff;
     const violations = this._violations();
-    const lines: EdgeLine[] = [];
-    const boxes = this.visibleNodes().filter((n) => n.mode === 'box');
-    for (const edge of this.edges()) {
-      const a = layout.nodes.get(edge.from);
-      const b = layout.nodes.get(edge.to);
-      if (!a || !b) continue;
-      const screen = (n: typeof a) => ({
-        x: n.x * camera.scale + camera.tx,
-        y: n.y * camera.scale + camera.ty,
-        w: n.w * camera.scale,
-        h: n.h * camera.scale,
-      });
-      lines.push({
-        edge,
-        shape: edgeShape(screen(a), screen(b), boxes),
-        selected: selected !== null && selected.from === edge.from && selected.to === edge.to,
-        status: diff
-          ? aggregateEdgeStatus(edge.links.map((link) => edgeStatus(link, diff)))
-          : 'unchanged',
-        violations: edgeViolations(edge.links, violations),
-        ...linkCounts(edge.links, diff),
-        review: diff !== undefined,
-      });
-    }
-    return lines;
+    const context = {
+      diff,
+      violations,
+      words: {
+        new: translate('map.edges.new'),
+        moved: translate('map.edges.moved'),
+      },
+      label: (id: string) => this.label(id),
+      unit: (count: number) =>
+        translate(count === 1 ? 'map.edges.links_one' : 'map.edges.links', { count }),
+    };
+    const cache = createEdgeStateCache(context);
+    // Makes the missing states of `wanted` (one measure per batch) and returns them by edge.
+    return (wanted: readonly AggregatedEdge[]): ((edge: AggregatedEdge) => EdgeState) => {
+      if (wanted.some((edge) => !cache.has(edge))) {
+        measured('edgeStates', () => {
+          for (const edge of wanted) cache.get(edge);
+        });
+      }
+      return (edge) => cache.get(edge);
+    };
   });
 
-  /** Crossings among the edges drawn now, for the layout the map is at (not the one in flight). */
-  readonly visibleCrossings = computed(() => crossingsOfEdges(this._targetLayout(), this.edges()));
+  private readonly geometries = new WeakMap<
+    AggregatedEdge,
+    { a: Rect; b: Rect; scale: number; geometry: EdgeGeometry }
+  >();
+
+  /** The shape of an edge, made on demand: follows the layout, the last rest scale and the boxes. */
+  private readonly edgeShapes = computed(() => {
+    const layout = this._layout();
+    const scale = this.modesScale();
+    const boxes = this.boxGrid();
+    this.edges();
+    const cache = new Map<AggregatedEdge, EdgeShape>();
+    const geometries = this.geometries;
+    return (edge: AggregatedEdge, a: Rect, b: Rect): EdgeShape => {
+      let shape = cache.get(edge);
+      if (!shape) {
+        // The curve does not depend on the boxes to avoid: kept while the rects and the scale stay.
+        let kept = geometries.get(edge);
+        if (!kept || kept.a !== a || kept.b !== b || kept.scale !== scale) {
+          kept = { a, b, scale, geometry: edgeGeometry(a, b, scale) };
+          geometries.set(edge, kept);
+        }
+        shape = edgeShape(a, b, boxes, scale, kept.geometry);
+        cache.set(edge, shape);
+      }
+      return shape;
+    };
+  });
+
+  /** The impact radius painted on the map: its edges keep their full rendering. */
+  private readonly _impact = signal<ImpactMarks | null>(null);
+
+  /** The edges that meet the screen (and its render margin), with what decides their rendering. */
+  private readonly viewEdges = computed<DetailedEdgeLine[]>(() =>
+    measured('edgeLines', () => {
+      const shapes = this.edgeShapes();
+      const states = this.edgeStates();
+      const selected = this.selectedEdge();
+      const impact = this._impact();
+      const emphasis = this.selection() ? this.emphasis().edges : null;
+      const layout = this._layout();
+      const camera = this._cullCamera();
+      const viewport = this._viewport();
+      // Until the view is measured there is nothing to cut the edges against.
+      const measuredView = viewport.width > 0 && viewport.height > 0;
+      const inView: { edge: AggregatedEdge; a: Rect; b: Rect }[] = [];
+      for (const edge of this.edges()) {
+        const a = layout.nodes.get(edge.from);
+        const b = layout.nodes.get(edge.to);
+        if (!a || !b) continue;
+        if (measuredView && !edgeInView(edgeBounds(a, b), camera, viewport, RENDER_MARGIN))
+          continue;
+        inView.push({ edge, a, b });
+      }
+      const stateOf = states(inView.map((v) => v.edge));
+      const lines: DetailedEdgeLine[] = [];
+      for (const { edge, a, b } of inView) {
+        const shape = shapes(edge, a, b);
+        const state = stateOf(edge);
+        const isSelected =
+          selected !== null && selected.from === edge.from && selected.to === edge.to;
+        // An edge the selection singles out (linked, picked, folded) keeps its full rendering,
+        // so that the common path only holds edges the selection dims.
+        const onPath = onImpactPath(impact, edge.from, edge.to) || singledOut(edge, emphasis);
+        lines.push({
+          edge,
+          shape,
+          selected: isSelected,
+          ...state,
+          changed: edge.changed || state.status !== 'unchanged',
+          onImpactPath: onPath,
+        });
+      }
+      return lines;
+    }),
+  );
+
+  private readonly partitionedEdges = computed(() => partitionEdges(this.viewEdges()));
+
+  /** Edges in world units, in full rendering: they follow the camera through their layer. */
+  readonly edgeLines = computed<EdgeLine[]>(() => this.partitionedEdges().full);
+
+  /** The unchanged edges drawn in one common path once many are on screen. */
+  readonly mergedEdgeLines = computed<EdgeLine[]>(() => this.partitionedEdges().merged);
+
+  setImpact(impact: ImpactMarks | null): void {
+    this._impact.set(impact);
+  }
+
+  /** How the selection dims the nodes and the edges; it follows the selection, not the camera. */
+  readonly emphasis = computed(() =>
+    measured('emphasis', () => {
+      const selection = this.selection();
+      const edges = this.edges();
+      const modes = this.modes();
+      const ids: string[] = [];
+      for (const [id, mode] of modes) if (mode !== 'hidden') ids.push(id);
+      const visibleOf = (id: string) => this.visibleOf(id);
+      const within = (id: string, box: string) => this.within(id, box);
+      return {
+        nodes: nodeEmphasis(ids, edges, selection, visibleOf, new Set(), within),
+        edges: edgeEmphasis(edges, selection, visibleOf, within),
+      };
+    }),
+  );
 
   selectEdge(from: string, to: string): void {
+    this.applyEdge(from, to);
+    this.record();
+  }
+
+  private applyEdge(from: string, to: string): void {
     this._selectedNodeId.set(null);
     this._selectedFine.set(null);
     this._selectedEdgeKey.set(pairKey(from, to));
@@ -426,12 +621,14 @@ export class MapBusiness {
     this._selectedFine.set(edge);
     this._selectedNodeId.set(null);
     if (!this.selectedEdge()) this.focusNode(edge.from);
+    this.record();
   }
 
   /** Selects an edge listed by a node: the one the map draws, else the listed one itself. */
   selectListedEdge(edge: AggregatedEdge): void {
-    this.selectEdge(edge.from, edge.to);
+    this.applyEdge(edge.from, edge.to);
     if (!this.selectedEdge()) this._listedEdge.set(edge);
+    this.record();
   }
 
   clearEdgeSelection(): void {
@@ -449,6 +646,7 @@ export class MapBusiness {
   selectLink(edge: Edge): void {
     this.clearEdgeSelection();
     this._selectedNodeId.set(edge.from);
+    this.record();
   }
 
   setCoChangeEdges(edges: Edge[]): void {
@@ -462,6 +660,11 @@ export class MapBusiness {
   /** Applies a diff on the map, or none (the map alone). */
   setDiff(diff: DiffResponse | null): void {
     this._diff.set(diff);
+  }
+
+  /** Gives the map the translator of the current language (it writes the edge labels). */
+  setTranslator(t: (key: string, params?: Record<string, unknown>) => string): void {
+    this._translate.set({ t });
   }
 
   /** Colours only these files (the replay of one commit), or everything the diff says (null). */
@@ -497,19 +700,68 @@ export class MapBusiness {
 
   /** Selects a node without moving the camera (a click on its box). */
   selectNode(id: string): void {
+    if (this.deferUntilLaidOut(() => this.selectNode(id))) return;
     this.clearEdgeSelection();
     this._selectedNodeId.set(id);
+    this.record();
   }
 
   /** Clears the node selection (a click on empty map). */
   deselectNode(): void {
+    if (this.deferUntilLaidOut(() => this.deselectNode())) return;
     this._selectedNodeId.set(null);
   }
 
   /** Selects a node and frames it (the file, for a symbol). */
   selectResult(id: string): void {
+    if (this.deferUntilLaidOut(() => this.selectResult(id))) return;
     this.clearEdgeSelection();
     this.focusNode(id);
+    this.record();
+  }
+
+  /** Back to the previous step of the navigation: selection and camera. */
+  goBack(): void {
+    if (this.deferUntilLaidOut(() => this.goBack())) return;
+    this.restore(goBack(this._history()));
+  }
+
+  /** Forward to the next step of the navigation. */
+  goForward(): void {
+    if (this.deferUntilLaidOut(() => this.goForward())) return;
+    this.restore(goForward(this._history()));
+  }
+
+  private restore(history: History<NavStep>): void {
+    if (history === this._history()) return;
+    this._history.set(history);
+    const step = currentStep(history);
+    if (!step) return;
+    this.interrupt();
+    this._zoomPoint.set(null);
+    this._diveTarget.set(null);
+    this._selectedNodeId.set(step.nodeId);
+    this._selectedEdgeKey.set(step.edgeKey);
+    this._listedEdge.set(step.listedEdge);
+    this._selectedFine.set(step.fine);
+    this._forcedLevel.set(step.level);
+    this._cap.set(step.cap);
+    this.animateTo(step.camera);
+  }
+
+  /** Adds the current selection and camera (where a flight ends) as a step. */
+  private record(): void {
+    this._history.update((history) =>
+      pushStep(history, {
+        nodeId: this._selectedNodeId(),
+        edgeKey: this._selectedEdgeKey(),
+        listedEdge: this._listedEdge(),
+        fine: this._selectedFine(),
+        camera: this.animation && this.flightTarget ? this.flightTarget : this._camera(),
+        level: this._forcedLevel(),
+        cap: this._cap(),
+      }),
+    );
   }
 
   private focusNode(id: string): void {
@@ -523,6 +775,7 @@ export class MapBusiness {
   }
 
   selectCrumb(crumb: Crumb): void {
+    if (this.deferUntilLaidOut(() => this.selectCrumb(crumb))) return;
     if (crumb.kind === 'node') this.selectResult(crumb.id);
     else if (crumb.kind === 'root') {
       this._selectedNodeId.set(null);
@@ -532,6 +785,7 @@ export class MapBusiness {
 
   /** Closes the help, else deselects, else goes up a level, else shows everything. */
   escape(): void {
+    if (this.deferUntilLaidOut(() => this.escape())) return;
     switch (
       escapeStep({
         helpOpen: this._helpOpen(),
@@ -565,8 +819,17 @@ export class MapBusiness {
   }
 
   setViewport(width: number, height: number): void {
+    const unmeasured = this._viewport().width === 0 || this._viewport().height === 0;
     this._viewport.set({ width, height });
-    if (this.pristine && this._layout().roots.length > 0) this._camera.set(this.fitCamera());
+    if (this._layout().roots.length === 0) return;
+    if (this.pristine) this.setCamera(this.fitCamera(), true);
+    // A level chosen before the first measure was aimed at an empty view: aim at it again. The
+    // camera is fitted first: the flight to the level starts from the current camera, and
+    // interpolating from the one made for the empty view (negative scale) gives NaN.
+    else if (unmeasured && width > 0 && height > 0) {
+      this.setCamera(this.fitCamera(), true);
+      this.setLevel(this._forcedLevel() ?? 0);
+    }
   }
 
   async load(): Promise<void> {
@@ -574,8 +837,8 @@ export class MapBusiness {
     try {
       const meta = await this.api.meta();
       this._repoName.set(meta.repo);
-      const snapshot = await this.api.snapshot(displayRef(meta.range, meta.branches));
-      this.show(snapshot.graph);
+      const snapshot = await this.api.snapshot(headRef(meta.range));
+      await this.show(snapshot.graph);
     } catch {
       this._status.set('error');
     }
@@ -586,32 +849,65 @@ export class MapBusiness {
    * stay where they are (the same repository seen with another diff): a camera flight to a level
    * goes on and lands on it.
    */
-  show(received: GraphSnapshot, keepView = false): void {
+  show(received: GraphSnapshot, keepView = false): Promise<void> {
     this.sourceGraph = received;
     const graph = hideExternalDeps(received, this._hideExternal());
+    const request = ++this.showRequest;
+    if (!keepView) this.layingOut = true;
+    if (this.executeLayout === onThreadExecutor) {
+      this.applyShow(graph, computeLayouts(graph), keepView);
+      return Promise.resolve();
+    }
+    return this.executeLayout(graph)
+      .then((layouts) => {
+        // The graph was replaced while the layouts were computed: the map keeps the newer one.
+        if (request === this.showRequest) this.applyShow(graph, layouts, keepView);
+      })
+      .catch(() => {
+        if (request === this.showRequest) this._status.set('error');
+      });
+  }
+
+  /**
+   * While the first layout is on its way, the actions of the user wait for it (as they would for
+   * the map): `replay` is queued for the arrival and this returns true.
+   */
+  private deferUntilLaidOut(replay: () => void): boolean {
+    if (!this.layingOut) return false;
+    this.afterShow.push(replay);
+    return true;
+  }
+
+  private applyShow(graph: GraphSnapshot, layouts: Layouts, keepView: boolean): void {
+    this.layingOut = false;
     if (!keepView) {
       this.stopAnimation();
       this.pendingSettle = null;
     }
-    const layouts = this.buildLayouts(graph);
     this._layouts.set(layouts);
-    this._crossingTotals.set({
-      optimized: layoutCrossings(layouts.optimized, graph),
-      raw: layoutCrossings(layouts.raw, graph),
-    });
     const layout = layouts[layoutKey(this._layoutMode())];
+    const before = this._targetLayout().bounds;
     this._layout.set(layout);
     this._targetLayout.set(layout);
     this._graph.set(graph);
+    // `_infos`, `_edges` and `_parents` are set together: the edge aggregator and the edge states
+    // built on them are made again as one when they change.
     this._infos.set(buildNodeInfos(graph));
     this._edges.set(graph.edges);
     this._parents.set(new Map(graph.nodes.map((n) => [n.id, n.parent ?? null])));
-    if (!keepView) this.clearEdgeSelection();
+    if (!keepView) {
+      this.clearEdgeSelection();
+      this._history.update(clearHistory);
+    }
     const later = this.afterShow;
     this.afterShow = [];
     if (keepView) {
+      this.settle();
       if (!graph.nodes.some((n) => n.id === this._selectedNodeId())) this._selectedNodeId.set(null);
       this._status.set('ready');
+      // The map grew or shrank while a level is forced: aim at the level again, on the new layout.
+      const level = this._forcedLevel();
+      if (level !== null && level > 0 && !sameRect(before, layout.bounds)) this.setLevel(level);
       for (const action of later) action();
       return;
     }
@@ -619,7 +915,7 @@ export class MapBusiness {
     this.pristine = true;
     this._forcedLevel.set(0);
     this._cap.set(0);
-    this._camera.set(this.fitCamera());
+    this.setCamera(this.fitCamera(), true);
     this._status.set('ready');
     for (const action of later) action();
   }
@@ -630,11 +926,12 @@ export class MapBusiness {
     this._hideExternal.set(hide);
     const source = storage();
     if (source) writeHideExternal(source, hide);
-    if (this.sourceGraph.nodes.length > 0) this.show(this.sourceGraph, true);
+    if (this.sourceGraph.nodes.length > 0) void this.show(this.sourceGraph, true);
   }
 
   /** Switches the layout, animated; the choice is remembered. */
   setLayoutMode(mode: LayoutMode): void {
+    if (this.deferUntilLaidOut(() => this.setLayoutMode(mode))) return;
     const previous = this._layoutMode();
     this._layoutMode.set(mode);
     const source = storage();
@@ -657,7 +954,7 @@ export class MapBusiness {
     const start = performance.now();
     const settle = () => {
       this._layout.set(target);
-      this._camera.set(toCamera);
+      this.setCamera(toCamera, true);
     };
     this.pendingSettle = settle;
     const step = (now: number): void => {
@@ -670,25 +967,14 @@ export class MapBusiness {
       }
       const eased = easeInOutCubic(u);
       this._layout.set(interpolateLayout(from, target, eased));
-      this._camera.set(interpolateCamera(fromCamera, toCamera, eased, viewport));
+      this.setCamera(interpolateCamera(fromCamera, toCamera, eased, viewport), true);
       this.animation = requestAnimationFrame(step);
     };
     this.animation = requestAnimationFrame(step);
   }
 
-  /**
-   * "Fewer crossings" is the best of the searched order and the order of the snapshot, so it is
-   * never worse than the natural one (and keeps it when nothing crosses).
-   */
-  private buildLayouts(graph: GraphSnapshot): Layouts {
-    const searched = layoutGraph(graph, optimizeOrder(graph).order);
-    const natural = layoutGraph(graph);
-    const optimized =
-      layoutCrossings(searched, graph) < layoutCrossings(natural, graph) ? searched : natural;
-    return { optimized, raw: layoutGraph(graph, alphabeticalOrder(graph)) };
-  }
-
   setLevel(level: number): void {
+    if (this.deferUntilLaidOut(() => this.setLevel(level))) return;
     this.interrupt();
     this._zoomPoint.set(null);
     this._diveTarget.set(null);
@@ -711,18 +997,20 @@ export class MapBusiness {
   }
 
   zoomAt(factor: number, px: number, py: number): void {
+    if (this.deferUntilLaidOut(() => this.zoomAt(factor, px, py))) return;
     this.interrupt();
     this._forcedLevel.set(null);
     this._cap.set(null);
     this._zoomPoint.set(factor > 1 ? { x: px, y: py } : null);
-    this._camera.update((camera) => zoomAt(camera, factor, px, py, this.zoomBounds()));
+    this.setCamera(zoomAt(this._camera(), factor, px, py, this.zoomBounds()));
   }
 
   pan(dx: number, dy: number): void {
+    if (this.deferUntilLaidOut(() => this.pan(dx, dy))) return;
     this.interrupt();
     this._zoomPoint.set(null);
     this._diveTarget.set(null);
-    this._camera.update((camera) => panBy(camera, dx, dy));
+    this.setCamera(panBy(this._camera(), dx, dy));
   }
 
   fitAll(): void {
@@ -731,6 +1019,7 @@ export class MapBusiness {
 
   /** Frames a node, opening it if it can be opened. */
   dive(id: string, maxScale = 1.4): void {
+    if (this.deferUntilLaidOut(() => this.dive(id, maxScale))) return;
     const node = this._layout().nodes.get(id);
     if (!node) return;
     this.interrupt();
@@ -745,6 +1034,7 @@ export class MapBusiness {
 
   /** Frames the union of some nodes (the files of a replayed commit); `null` goes back to where the view was. */
   frameNodes(ids: readonly string[] | null): void {
+    if (this.deferUntilLaidOut(() => this.frameNodes(ids))) return;
     if (ids === null) {
       const saved = this.beforeFrame;
       this.beforeFrame = null;
@@ -768,6 +1058,45 @@ export class MapBusiness {
     this.animateTo(
       fitRect({ x, y, w: right - x, h: bottom - y }, this._viewport(), { pad: 60, maxScale: 1.4 }),
     );
+  }
+
+  /**
+   * Moves the camera. Only the transform of the layer follows at once: the modes, headers, edge
+   * shapes and culling wait for the rest, a container crossing its opening threshold, or the view
+   * leaving the rendered area. `rest` is the end of a move: everything is brought up to date.
+   */
+  private setCamera(camera: Camera, rest = false): void {
+    this._camera.set(camera);
+    if (rest) {
+      this.settle();
+      return;
+    }
+    if (shouldRecomputeModes(this._layout(), this._modesCamera(), camera, 0, this._cap() ?? 3)) {
+      this.settle();
+      return;
+    }
+    if (viewLeavesRenderedArea(this._cullCamera(), camera, this._viewport(), RENDER_MARGIN)) {
+      this._cullCamera.set(camera);
+    }
+    if (this.restTimer !== null) clearTimeout(this.restTimer);
+    this.restTimer = setTimeout(() => this.settle(), REST_DELAY_MS);
+  }
+
+  /** The camera is at rest: modes and culling are computed for it, when they are not already. */
+  private settle(): void {
+    if (this.restTimer !== null) clearTimeout(this.restTimer);
+    this.restTimer = null;
+    const camera = this._camera();
+    const scaleChanged = camera.scale !== this._modesCamera().scale;
+    if (scaleChanged) this._modesCamera.set(camera);
+    // After a pan alone, culling again only pays once half the render margin is used up.
+    const moved = viewLeavesRenderedArea(
+      this._cullCamera(),
+      camera,
+      this._viewport(),
+      RENDER_MARGIN / 2,
+    );
+    if (scaleChanged || moved) this._cullCamera.set(camera);
   }
 
   private fitCamera(): Camera {
@@ -794,6 +1123,7 @@ export class MapBusiness {
   private stopAnimation(): void {
     if (this.animation) cancelAnimationFrame(this.animation);
     this.animation = 0;
+    this.flightTarget = null;
   }
 
   private animateTo(target: Camera, onDone?: () => void): void {
@@ -802,10 +1132,12 @@ export class MapBusiness {
     const viewport = this._viewport();
     const start = performance.now();
     this.pendingSettle = onDone ?? null;
+    this.flightTarget = target;
     const step = (now: number): void => {
       const u = Math.min(1, (now - start) / ANIMATION_MS);
-      this._camera.set(
+      this.setCamera(
         u >= 1 ? target : interpolateCamera(from, target, easeInOutCubic(u), viewport),
+        u >= 1,
       );
       this.animation = u < 1 ? requestAnimationFrame(step) : 0;
       if (u >= 1) {
@@ -817,6 +1149,15 @@ export class MapBusiness {
   }
 }
 
+/** Whether the selection singles the edge out (linked, picked or folded), rather than dims it. */
+function singledOut(
+  edge: AggregatedEdge,
+  emphasis: ReadonlyMap<string, EdgeEmphasis> | null,
+): boolean {
+  const state = emphasis?.get(edgeKey(edge.from, edge.to));
+  return state !== undefined && state !== 'dim' && state !== 'normal';
+}
+
 function pairKey(from: string, to: string): string {
   return `${from}\u0000${to}`;
 }
@@ -825,17 +1166,6 @@ function layoutKey(mode: LayoutMode): keyof Layouts {
   return mode === 'raw-grid' ? 'raw' : 'optimized';
 }
 
-function linkCounts(
-  links: Edge[],
-  diff: GraphDiff | undefined,
-): { added: number; removed: number; moved: number } {
-  const counts = { added: 0, removed: 0, moved: 0 };
-  if (!diff) return counts;
-  for (const link of links) {
-    const status = edgeStatus(link, diff);
-    if (status === 'added') counts.added++;
-    else if (status === 'removed') counts.removed++;
-    else if (status === 'moved') counts.moved++;
-  }
-  return counts;
+function sameRect(a: Rect, b: Rect): boolean {
+  return a.x === b.x && a.y === b.y && a.w === b.w && a.h === b.h;
 }

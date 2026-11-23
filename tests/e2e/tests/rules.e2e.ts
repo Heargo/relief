@@ -1,6 +1,7 @@
-import { $, expect } from '@wdio/globals';
+import { expect } from '@wdio/globals';
 import { clearReviewState } from '../helpers/review-state';
 import { openRelief } from '../helpers/open-relief';
+import { waitForScene } from '../helpers/map-scene';
 import { poll, tid, tids } from '../helpers/ui';
 
 // Contract with the UI, on acme-shop main...feat/promo-codes (French UI, texts from the ticket):
@@ -43,7 +44,7 @@ describe('architecture rules in the map', () => {
   it('clicking routes-via-repos opens the edge panel saying it already existed on main', async () => {
     await tid('rules-section').waitForDisplayed();
     // The rows come with the summary; the map (nodes and edges) loads on its own.
-    await $('[data-testid="map-edge"]').waitForExist({ timeout: 15000 });
+    await waitForScene((s) => s.edges.length > 0, 15000);
     await (await rowOf('routes-via-repos')).click();
     await expect(tid('edge-panel')).toBeDisplayed();
     await expect(tid('edge-panel')).toHaveText(expect.stringContaining('existait déjà sur main'));

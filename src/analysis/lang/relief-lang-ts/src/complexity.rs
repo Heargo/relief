@@ -1,6 +1,8 @@
 //! Cyclomatic complexity of the symbols of a file: 1 plus the decision points inside the span.
 
 use relief_model::Span;
+use std::sync::atomic::{AtomicUsize, Ordering};
+
 use tree_sitter::{Language, Node, Parser};
 
 /// Node kinds that add a path.
@@ -19,7 +21,12 @@ const BRANCHES: [&str; 8] = [
 const SHORT_CIRCUITS: [&str; 3] = ["&&", "||", "??"];
 
 /// Complexity of each `(name, span)`; empty when the file cannot be parsed.
-pub fn per_symbol(path: &str, bytes: &[u8], spans: &[(String, Span)]) -> Vec<(String, u32)> {
+pub fn per_symbol(
+    path: &str,
+    bytes: &[u8],
+    spans: &[(String, Span)],
+    parses: &AtomicUsize,
+) -> Vec<(String, u32)> {
     let ext = path.rsplit_once('.').map_or("", |(_, e)| e);
     let language: Language = match ext {
         "ts" | "mts" | "cts" => tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into(),
@@ -29,6 +36,7 @@ pub fn per_symbol(path: &str, bytes: &[u8], spans: &[(String, Span)]) -> Vec<(St
     if parser.set_language(&language).is_err() {
         return Vec::new();
     }
+    parses.fetch_add(1, Ordering::Relaxed);
     let Some(tree) = parser.parse(bytes, None) else {
         return Vec::new();
     };

@@ -68,6 +68,19 @@ e2e: build
         npx wdio run wdio.conf.ts
     fi
 
+# Render benchmark of the map (pan, wheel zoom, selection) on dense and excalidraw (clone of `just bench`), numbers in target/bench-ui/*.json; not part of `just e2e`
+bench-ui: build
+    #!/usr/bin/env bash
+    set -euo pipefail
+    dir="${RELIEF_BENCH_DIR:-$HOME/dev/relief-bench}"
+    [ -d "$dir/excalidraw" ] || { echo "no clone in $dir/excalidraw: run just bench first" >&2; exit 1; }
+    cd tests/e2e
+    if command -v xvfb-run >/dev/null; then
+        GDK_BACKEND=x11 xvfb-run -a -s "-screen 0 3840x2160x24" npx wdio run wdio.bench.conf.ts
+    else
+        npx wdio run wdio.bench.conf.ts
+    fi
+
 # One line: e2e: N passed, S skipped, M failed
 e2e-summary: build
     #!/usr/bin/env bash
@@ -86,7 +99,7 @@ e2e-summary: build
     failed=$(count failing)
     skipped=$(( $(count skipped) + $(count pending) ))
     echo "e2e: ${passed:-0} passed, ${skipped:-0} skipped, ${failed:-0} failed"
-    [ "$code" -eq 0 ] && [ "${failed:-0}" -eq 0 ] && [ "${passed:-0}" -gt 0 ] || { echo "$out" | tail -40; exit 1; }
+    [ "$code" -eq 0 ] && [ "${failed:-0}" -eq 0 ] && [ "${passed:-0}" -gt 0 ] || { grep -E "✖|FAILED|Error:" <<<"$out" | grep -v WARN | head -20; echo "$out" | tail -40; exit 1; }
 
 lint:
     cargo fmt --check
@@ -151,6 +164,10 @@ bench:
 # Checks the .deb, the AppImage and the Arch PKGBUILD in target/release/bundle/ (run just package first)
 package-check:
     scripts/check-packages.sh
+
+# Tests install.sh: dry-run on the 3 OS, --help, no docker (fast). RELIEF_INSTALL_CHECK_FULL=1: real Docker install in a temp HOME. RELIEF_INSTALL_CHECK_WINDOWS=1: Windows cross-build
+install-check:
+    scripts/test-install.sh
 
 # Linux packages (.deb and AppImage) in target/release/bundle/: UI, embedded docs, then the Tauri bundler
 package: docs-build

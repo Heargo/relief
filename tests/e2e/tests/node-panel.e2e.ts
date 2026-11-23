@@ -1,6 +1,7 @@
 import { $, $$, expect } from '@wdio/globals';
 import { openRelief } from '../helpers/open-relief';
-import { press, settledAt, tid, typeText } from '../helpers/ui';
+import { clickNode, settledNode, waitForNodeMatching } from '../helpers/map-scene';
+import { press, tid, typeText } from '../helpers/ui';
 
 // Contract with the UI (data attributes, no i18n dependency):
 //  - the right panel of a selected node is `data-testid="selected-node"`; its code is
@@ -34,15 +35,19 @@ it('a plain click on the computeTotal box of the map selects it and shows its co
     'data-node-id',
     expect.stringMatching(/sym:computeTotal$/),
   );
-  await settledAt('[data-testid="map-node"][data-node-id$="sym:renderInvoice"]');
-  await $('[data-testid="map-node"][data-node-id$="sym:renderInvoice"]').click();
+  const idEnding = async (suffix: string) =>
+    (await waitForNodeMatching((id) => id.endsWith(suffix))).id;
+  const renderInvoice = await idEnding('sym:renderInvoice');
+  await settledNode(renderInvoice);
+  await clickNode(renderInvoice);
   await expect(tid('selected-node')).toHaveAttribute(
     'data-node-id',
     expect.stringMatching(/sym:renderInvoice$/),
   );
 
-  await settledAt('[data-testid="map-node"][data-node-id$="sym:computeTotal"]');
-  await $('[data-testid="map-node"][data-node-id$="sym:computeTotal"]').click();
+  const computeTotal = await idEnding('sym:computeTotal');
+  await settledNode(computeTotal);
+  await clickNode(computeTotal);
   await expect(tid('selected-node')).toHaveAttribute(
     'data-node-id',
     expect.stringMatching(/sym:computeTotal$/),

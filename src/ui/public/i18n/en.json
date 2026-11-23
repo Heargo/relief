@@ -64,13 +64,18 @@
     "layout": {
       "title": "Layout",
       "fewerCrossings": "Fewer crossings",
-      "rawGrid": "Raw grid",
-      "optimizedTotal": "Fewer crossings: {{count}}",
-      "rawTotal": "Raw grid: {{count}}",
-      "visible": "On screen: {{count}}",
-      "totals": "Crossings, all levels"
+      "rawGrid": "Raw grid"
+    },
+    "canvasLabel": "Map of the repository",
+    "announce": {
+      "node": "{{name}} selected",
+      "edge": "Link from {{from}} to {{to}} selected"
     },
     "breadcrumbs": "Breadcrumbs",
+    "history": {
+      "back": "Previous step of the navigation",
+      "forward": "Next step of the navigation"
+    },
     "shortcutsList": {
       "rangeBase": "Choose the base of the range",
       "rangeHead": "Choose the head of the range",
@@ -129,8 +134,8 @@
       "head": "Head",
       "worktree": "Working tree",
       "swap": "Swap base and head",
-      "mergeBase": "base...head: compares from the common ancestor of both sides (what the PR adds). Click for a direct diff.",
-      "direct": "base..head: compares the two sides as they are (a direct diff). Click to compare from the common ancestor.",
+      "mergeBase": "base ···→ head: compares from the common ancestor of both sides (what the PR adds). Click for a direct diff (base → head).",
+      "direct": "base → head: compares the two sides as they are (a direct diff). Click to compare from the common ancestor (base ···→ head).",
       "filter": "Filter by name, subject or SHA",
       "tabs": {
         "branches": "Branches",
@@ -142,9 +147,18 @@
       "marks": {
         "base": "BASE",
         "head": "HEAD"
+      },
+      "roleBase": "Reference · base",
+      "roleHead": "Changes · head",
+      "swapDisabled": "Swap is not available: the head is the working tree"
+    },
+    "range": {
+      "reading": {
+        "mergeBase": "The map shows what {{head}} changes compared to {{base}}, since their common ancestor {{sha}}",
+        "direct": "The map shows what the head changes compared to {{base}} as is (direct diff)",
+        "worktree": "The map shows what your uncommitted changes modify compared to {{base}} ({{sha}})"
       }
     },
-    "range": "Range",
     "worktree": "working tree vs HEAD",
     "layers": {
       "title": "Layers",

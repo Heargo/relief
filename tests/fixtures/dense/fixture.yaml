@@ -1,0 +1,11 @@
+# Generated: the files are written at build time, not committed (10 packages x 150 files). Each
+# file imports 3 files of the following packages; 30 files are rewritten in the working tree.
+commits:
+  - id: init
+    message: "feat: generated packages"
+    date: "2024-01-01T10:00:00Z"
+    generate:
+      packages: 10
+      files_per_package: 150
+      imports_per_file: 3
+      modified_files: 30

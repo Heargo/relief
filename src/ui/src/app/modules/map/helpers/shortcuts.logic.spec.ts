@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import { actionForKey, escapeStep, isTypingTarget, SHORTCUTS } from './shortcuts.logic';
+import {
+  actionForKey,
+  escapeStep,
+  historyMove,
+  isTypingTarget,
+  mouseHistoryMove,
+  SHORTCUTS,
+} from './shortcuts.logic';
 
 describe('actionForKey', () => {
   it('maps 0 to 3 to the level actions', () => {
@@ -83,5 +90,19 @@ describe('isTypingTarget', () => {
 describe('focus shortcut', () => {
   it('f toggles the PR focus layer', () => {
     expect(actionForKey('f')).toEqual({ type: 'focus' });
+  });
+});
+
+describe('history shortcuts', () => {
+  it('maps Alt arrows to back and forward', () => {
+    expect(historyMove('ArrowLeft')).toBe('back');
+    expect(historyMove('ArrowRight')).toBe('forward');
+    expect(historyMove('ArrowUp')).toBeNull();
+  });
+
+  it('maps mouse buttons 4 and 5 to back and forward', () => {
+    expect(mouseHistoryMove(3)).toBe('back');
+    expect(mouseHistoryMove(4)).toBe('forward');
+    for (const button of [0, 1, 2]) expect(mouseHistoryMove(button)).toBeNull();
   });
 });

@@ -192,5 +192,15 @@ describe('RepoBusiness', () => {
       expect(call?.[2]).toEqual([PACKAGES]);
       expect(ids(repo)).toEqual(expect.arrayContaining([P0, P1]));
     });
+
+    it('asks the budget even for a small whole graph', async () => {
+      // Everything open: a small graph with no closed container.
+      const { api, repo } = setup((_ref, _budget, expand) =>
+        Promise.resolve(serve(TREE.map(([id]) => id).concat(expand ?? []))),
+      );
+      await repo.load();
+      await repo.refreshSnapshot('WORKTREE');
+      expect(api.snapshot).toHaveBeenLastCalledWith('WORKTREE', 2000, []);
+    });
   });
 });

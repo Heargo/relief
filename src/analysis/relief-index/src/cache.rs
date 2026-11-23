@@ -9,15 +9,51 @@ use serde::{Deserialize, Serialize};
 
 use relief_adapter_api::Extraction;
 
-const SCHEMA_VERSION: i64 = 4;
+const SCHEMA_VERSION: i64 = 5;
 
-#[derive(Serialize, Deserialize)]
-struct Payload {
+#[derive(Clone, Serialize, Deserialize)]
+pub(crate) struct Payload {
     /// File node the extraction was made for; ids embed its path.
     file: NodeId,
     nodes: Vec<Node>,
     edges: Vec<Edge>,
     warnings: Vec<String>,
+    /// Adapter-private file index, kept so linking does not parse the file again.
+    #[serde(default)]
+    index: Option<String>,
+}
+
+impl Payload {
+    pub(crate) fn parse(json: &str) -> Option<Self> {
+        serde_json::from_str(json).ok()
+    }
+
+    pub(crate) fn new(file: &NodeId, extraction: &Extraction, index: Option<String>) -> Self {
+        Self {
+            file: file.clone(),
+            nodes: extraction.nodes.clone(),
+            edges: extraction.edges.clone(),
+            warnings: extraction.warnings.clone(),
+            index,
+        }
+    }
+
+    /// The extraction and index, rebased under `file` when made for another path.
+    pub(crate) fn into_parts(mut self, file: &NodeId) -> (Extraction, Option<String>) {
+        if &self.file != file {
+            // Same content at another path (a rename): rebase the ids.
+            rebase(&mut self, file);
+        }
+        (
+            Extraction {
+                nodes: self.nodes,
+                edges: self.edges,
+                warnings: self.warnings,
+                entries: Vec::new(),
+            },
+            self.index,
+        )
+    }
 }
 
 /// Rewrites the ids equal to the payload's file id, or below it (followed by
@@ -110,14 +146,9 @@ impl Cache {
         Ok(Self { conn })
     }
 
-    pub(crate) fn get(
-        &self,
-        blob: &str,
-        adapter: &str,
-        version: u32,
-        file: &NodeId,
-    ) -> Option<Extraction> {
-        let payload: String = self
+    /// The stored JSON of an extraction, to be parsed with [`Payload::parse`] outside any lock.
+    pub(crate) fn get(&self, blob: &str, adapter: &str, version: u32) -> Option<String> {
+        self
             .conn
             .query_row(
                 "SELECT payload FROM file_index WHERE blob = ?1 AND adapter = ?2 AND adapter_version = ?3",
@@ -125,35 +156,11 @@ impl Cache {
                 |r| r.get(0),
             )
             .optional()
-            .ok()??;
-        let mut p: Payload = serde_json::from_str(&payload).ok()?;
-        if &p.file != file {
-            // Same content at another path (a rename): rebase the ids.
-            rebase(&mut p, file);
-        }
-        Some(Extraction {
-            nodes: p.nodes,
-            edges: p.edges,
-            warnings: p.warnings,
-            entries: Vec::new(),
-        })
+            .ok()?
     }
 
-    pub(crate) fn put(
-        &self,
-        blob: &str,
-        adapter: &str,
-        version: u32,
-        file: &NodeId,
-        extraction: &Extraction,
-    ) {
-        let payload = Payload {
-            file: file.clone(),
-            nodes: extraction.nodes.clone(),
-            edges: extraction.edges.clone(),
-            warnings: extraction.warnings.clone(),
-        };
-        let Ok(json) = serde_json::to_string(&payload) else {
+    pub(crate) fn put(&self, blob: &str, adapter: &str, version: u32, payload: &Payload) {
+        let Ok(json) = serde_json::to_string(payload) else {
             return;
         };
         let _ = self.conn.execute(
@@ -213,6 +220,7 @@ mod tests {
                 count: None,
             }],
             warnings: Vec::new(),
+            index: None,
         };
         rebase(&mut payload, &id("pkg:p::file:lib/b.ts"));
         assert_eq!(payload.nodes[0].id, id("pkg:p::file:lib/b.ts::sym:f"));

@@ -1,7 +1,7 @@
 //! HTTP surface of a file: route declarations (`app.post("/x", handler)`) and
 //! client calls (`fetch("/x")`, wrappers such as `httpPost("/x")`).
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 type TsNode<'a> = tree_sitter::Node<'a>;
 
@@ -10,7 +10,7 @@ const VERBS: [&str; 5] = ["GET", "POST", "PUT", "PATCH", "DELETE"];
 pub(crate) const WILDCARD: char = '\u{0}';
 
 /// A client call with a literal path.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct HttpCall {
     /// Enclosing symbol.

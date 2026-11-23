@@ -277,3 +277,46 @@ describe('edgeShape length', () => {
     expect(length).toBeLessThan(320);
   });
 });
+
+describe('edgeShape in world units at a scale', () => {
+  // On screen (scale 1): a = 200x100 at the origin, b = 200x100 at x = 600. At scale 2 the same
+  // boxes are, in the world, 100x50 at the origin and at x = 300.
+  const A = { x: 0, y: 0, w: 100, h: 50 };
+  const B = { x: 300, y: 0, w: 100, h: 50 };
+  const numbers = (path: string): number[] => (path.match(/-?\d+(\.\d+)?/g) ?? []).map(Number);
+
+  it('is the screen shape mapped back to the world', () => {
+    const shape = edgeShape(A, B, [], 2);
+    expect(shape.d).toBe('M100,25Q200,55 300,25');
+    expect(shape.mx).toBeCloseTo(200, 6);
+    expect(shape.my).toBeCloseTo(40, 6);
+    expect(shape.covered).toBe(false);
+  });
+
+  it('keeps the arrow head 9 x 8 screen pixels, so smaller in the world', () => {
+    const [x0, y0, x1, y1, x2, y2] = numbers(edgeShape(A, B, [], 2).arrow);
+    expect([x0, y0]).toEqual([300, 25]);
+    expect(x1).toBeCloseTo(296.2644775, 5);
+    expect(y1).toBeCloseTo(28.2087181, 5);
+    expect(x2).toBeCloseTo(295.1150859, 5);
+    expect(y2).toBeCloseTo(24.3774129, 5);
+  });
+
+  it('caps the bend at 60 screen pixels, so 30 world units at scale 2', () => {
+    const far = { x: 500, y: 0, w: 100, h: 50 };
+    expect(edgeShape(A, far, [], 2).d).toBe('M100,25Q300,55 500,25');
+  });
+
+  it('slides the label off a box by its size in screen pixels', () => {
+    // The label is 28 x 16 px: 14 x 8 world units at scale 2, hence free at t = 0.4 here.
+    const shape = edgeShape(A, B, [{ x: 190, y: 30, w: 20, h: 20 }], 2);
+    expect(shape.mx).toBeCloseTo(180, 6);
+    expect(shape.my).toBeCloseTo(39.4, 6);
+    expect(shape.covered).toBe(false);
+  });
+
+  it('measures the length in screen pixels', () => {
+    expect(edgeShape(A, B, [], 2).length).toBeCloseTo(400, 6);
+    expect(edgeShape(A, B).length).toBeCloseTo(200, 6);
+  });
+});

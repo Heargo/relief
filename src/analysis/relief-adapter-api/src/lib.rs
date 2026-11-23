@@ -20,10 +20,51 @@ pub trait LanguageAdapter: Send + Sync {
     fn handles(&self, lang: &str) -> bool;
     /// Symbols, edges and warnings of `file`, a node of the graph, given its bytes.
     fn extract(&self, file: &Node, bytes: &[u8]) -> Extraction;
+    /// Like `extract`, plus an opaque, serialised per-file index that the index keeps in its
+    /// cache next to the extraction and hands back to `link_indexed`, so `link` does not
+    /// parse the file again. `None`: this adapter keeps nothing.
+    fn extract_indexed(&self, file: &Node, bytes: &[u8]) -> (Extraction, Option<String>) {
+        (self.extract(file, bytes), None)
+    }
+    /// Like `link`, given what `extract_indexed` returned for the same bytes (if anything).
+    fn link_indexed(
+        &self,
+        file: &Node,
+        bytes: &[u8],
+        _index: Option<&str>,
+        ctx: &LinkContext<'_>,
+    ) -> Extraction {
+        self.link(file, bytes, ctx)
+    }
     /// Second pass, once every file has been extracted: cross-file edges
     /// (imports) and the nodes they need (external packages).
     fn link(&self, _file: &Node, _bytes: &[u8], _ctx: &LinkContext<'_>) -> Extraction {
         Extraction::default()
+    }
+    /// Whether a change of `path`, a file this adapter does not extract (configuration, a
+    /// manifest...), can alter how other files link. The index then rebuilds from scratch.
+    /// `paths` and `read` describe the new tree. Conservative default: any such change does.
+    fn link_input(
+        &self,
+        _path: &str,
+        _paths: &[&str],
+        _read: &dyn Fn(&str) -> Option<Vec<u8>>,
+    ) -> bool {
+        true
+    }
+    /// Whether the links of the unchanged file `path` may differ now that the paths `added`
+    /// exist, or the routes changed. Asked for every unchanged file whose links do not point
+    /// into a changed file, on each incremental build. `index` is what `extract_indexed` returned for it;
+    /// `ctx` describes the new tree. Conservative default: yes.
+    fn link_affected(
+        &self,
+        _path: &str,
+        _index: Option<&str>,
+        _ctx: &LinkContext<'_>,
+        _added: &HashSet<String>,
+        _routes_changed: bool,
+    ) -> bool {
+        true
     }
     /// `(symbol name, normalised signature text)` of the symbols of one file
     /// of this language, identified by its repository path; empty when the
@@ -93,6 +134,9 @@ pub struct LinkContext<'a> {
     pub routes: &'a HashMap<NodeId, String>,
     /// Root node of the repository.
     pub repo: &'a NodeId,
+    /// Serialised per-file index (`extract_indexed`) of the files of this adapter, by path;
+    /// empty when unknown.
+    pub indexes: &'a HashMap<String, String>,
 }
 
 /// What an adapter extracts from one file.
@@ -137,4 +181,18 @@ pub trait Detector: Send + Sync {
         paths: &[&str],
         read_blob: &dyn Fn(&str) -> Option<Vec<u8>>,
     ) -> Option<Detection>;
+
+    /// Like `detect`, with the content hashes already known for some paths (`known(path)`):
+    /// a file whose hash is known is not read to be hashed. A detector that does not use
+    /// them ignores them.
+    fn detect_with(
+        &self,
+        repo_name: &str,
+        paths: &[&str],
+        read_blob: &dyn Fn(&str) -> Option<Vec<u8>>,
+        known: &dyn Fn(&str) -> Option<String>,
+    ) -> Option<Detection> {
+        let _ = known;
+        self.detect(repo_name, paths, read_blob)
+    }
 }

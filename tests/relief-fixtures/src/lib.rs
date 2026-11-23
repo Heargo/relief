@@ -45,6 +45,12 @@ struct Commit {
 struct Generate {
     packages: usize,
     files_per_package: usize,
+    /// Imports of files of the following packages (modulo the package count) written in each file.
+    #[serde(default)]
+    imports_per_file: usize,
+    /// Files rewritten in the working tree after the last commit, spread over the packages.
+    #[serde(default)]
+    modified_files: usize,
 }
 
 /// A fixture description: its directory and its ordered commits.
@@ -165,6 +171,9 @@ impl Fixture {
             let sha = git(dir, &["rev-parse", "HEAD"], None)?;
             shas.insert(commit.id.clone(), sha.trim().to_string());
         }
+        if let Some(generate) = self.commits.iter().rev().find_map(|c| c.generate.as_ref()) {
+            modify_generated(generate, dir)?;
+        }
         f(dir);
         Ok(BuiltRepo {
             path: dir.to_path_buf(),
@@ -182,9 +191,42 @@ fn write_generated(generate: &Generate, repo: &Path) -> Result<(), FixtureError>
         })?;
         for f in 0..generate.files_per_package {
             let file = pkg.join(format!("file-{f:03}.ts"));
-            let body = format!("export function f{p}x{f}(): number {{\n  return {f};\n}}\n");
+            let body = generated_body(generate, p, f, false);
             fs::write(&file, body).map_err(|source| FixtureError::Io { path: file, source })?;
         }
+    }
+    Ok(())
+}
+
+fn generated_body(generate: &Generate, p: usize, f: usize, modified: bool) -> String {
+    let mut imports = String::new();
+    let mut sum = String::new();
+    for k in 1..=generate.imports_per_file {
+        let tp = (p + k) % generate.packages;
+        let tf = (f * 7 + k) % generate.files_per_package;
+        imports.push_str(&format!(
+            "import {{ f{tp}x{tf} }} from \"../pkg-{tp:02}/file-{tf:03}\";\n"
+        ));
+        sum.push_str(&format!(" + f{tp}x{tf}()"));
+    }
+    let value = if modified { f + 1 } else { f };
+    format!("{imports}export function f{p}x{f}(): number {{\n  return {value}{sum};\n}}\n")
+}
+
+/// Rewrites `modified_files` generated files, one after the other across the packages.
+fn modify_generated(generate: &Generate, repo: &Path) -> Result<(), FixtureError> {
+    for n in 0..generate.modified_files {
+        let p = n % generate.packages;
+        let f = n / generate.packages;
+        if f >= generate.files_per_package {
+            break;
+        }
+        let file = repo
+            .join("packages")
+            .join(format!("pkg-{p:02}"))
+            .join(format!("file-{f:03}.ts"));
+        fs::write(&file, generated_body(generate, p, f, true))
+            .map_err(|source| FixtureError::Io { path: file, source })?;
     }
     Ok(())
 }

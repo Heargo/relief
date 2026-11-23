@@ -1,59 +1,49 @@
-import { $, $$, browser, expect } from '@wdio/globals';
+import { expect } from '@wdio/globals';
 import { openRelief } from '../helpers/open-relief';
+import { sceneEdge, waitForScene } from '../helpers/map-scene';
 import { tid } from '../helpers/ui';
 
-// Edge labels and node headers like the mockup, on acme-shop (main...feat/promo-codes), level 0:
-//  - an edge label is an SVG `text.el` inside the `data-testid="map-edge"` element, never a circle;
-//  - the label carries the status class (base | add | del | viol | mov);
-//  - a node label is `.lb` in the `.hd` header of a `data-testid="map-node"`.
+// Edge labels and node headers like the mockup, on acme-shop (main...feat/promo-codes), level 0,
+// read from the map scene:
+//  - an edge label is the scene `label` of the edge (text, `cls`: base | add | del | viol | mov);
+//  - a node label is the `label` of a scene node, shown in its header (``labelShown`, `labelClipped`).
 const WEB = 'pkg:@acme/web';
 const DB = 'pkg:@acme/db';
 const API = 'pkg:@acme/api';
 
 // A large viewport, so that the level-0 edges are longer than the 60 px under which a label is hidden.
-it('no edge label is a circle; web -> db reads "⚠ 2" (rule violation), web -> api "3 +1"', async () => {
+it('web -> db reads "⚠ 2" (rule violation), web -> api "3 +1"', async () => {
   await openRelief({ size: { width: 3200, height: 2000 } });
   await expect(tid('current-level')).toHaveAttribute('data-level', '0');
-  await expect($('[data-testid="map-edge"]')).toBeExisting();
-  await expect($$('[data-testid="map-edges"] circle')).toBeElementsArrayOfSize(0);
+  await waitForScene((s) => s.edges.length > 0);
 
-  const violation = $(`[data-testid="map-edge"][data-from="${WEB}"][data-to="${DB}"] text.el`);
-  await expect(violation).toBeExisting();
-  await expect(violation).toHaveText('⚠ 2');
-  await expect(violation).toHaveElementClass('viol');
+  const violation = (await sceneEdge(WEB, DB))!;
+  expect(violation.label.text).toBe('⚠ 2');
+  expect(violation.label.visible).toBe(true);
+  expect(violation.label.cls).toContain('viol');
 
-  const changed = $(`[data-testid="map-edge"][data-from="${WEB}"][data-to="${API}"] text.el`);
-  await expect(changed).toHaveText('3 +1');
-  await expect(changed).toHaveElementClass('base');
+  const changed = (await sceneEdge(WEB, API))!;
+  expect(changed.label.text).toBe('3 +1');
+  expect(changed.label.cls).toContain('base');
 });
 
 it('shows the whole label of every system at 1280 px, without ellipsis', async () => {
   await openRelief({ size: { width: 1280, height: 720 } });
   await expect(tid('current-level')).toHaveAttribute('data-level', '0');
-  const labels = await browser.execute(() =>
-    Array.from(
-      document.querySelectorAll<HTMLElement>(
-        '[data-testid="map-node"][data-kind="package"] > .hd > .lb',
-      ),
-    ).map((lb) => ({
-      text: lb.textContent ?? '',
-      clipped: lb.scrollWidth > lb.clientWidth,
-      flex: getComputedStyle(lb).flex,
-      headFont: getComputedStyle(lb.parentElement!).fontSize,
-      headHeight: getComputedStyle(lb.parentElement!).height,
-    })),
-  );
-  expect(labels.length).toBeGreaterThan(0);
-  for (const label of labels) {
+  const systems = (await waitForScene((s) => s.nodes.some((n) => n.kind === 'package'))).nodes
+    .filter((n) => n.kind === 'package' && n.mode !== 'ghost')
+    .map((n) => ({
+      text: n.label,
+      shown: n.labelShown,
+      clipped: n.labelClipped,
+    }));
+  expect(systems.length).toBeGreaterThan(0);
+  for (const label of systems) {
     expect(label.text.length).toBeGreaterThan(0);
-    expect({ text: label.text, clipped: label.clipped }).toEqual({
+    expect({ text: label.text, shown: label.shown, clipped: label.clipped }).toEqual({
       text: label.text,
+      shown: true,
       clipped: false,
-    });
-    // Mockup, `.k-system>.hd`: 15 px, 38 px high; the label never shrinks while the box has room.
-    expect({ text: label.text, head: [label.headFont, label.headHeight, label.flex] }).toEqual({
-      text: label.text,
-      head: ['15px', '38px', '0 0 auto'],
     });
   }
 });

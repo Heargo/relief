@@ -4,6 +4,11 @@
   "description": "Response of `GET /api/diff`.",
   "type": "object",
   "properties": {
+    "baseResolved": {
+      "description": "Short SHA (7 characters) of the base really compared: the merge base for `...`, the base\nas is for `..`, HEAD for the working tree.",
+      "type": "string",
+      "default": ""
+    },
     "diff": {
       "$ref": "#/$defs/GraphDiff"
     },

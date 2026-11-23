@@ -152,6 +152,29 @@ impl LanguageAdapter for PythonAdapter {
         lang == "py"
     }
 
+    /// Linking reads nothing but the paths of the tree and the workspace packages.
+    fn link_input(
+        &self,
+        _path: &str,
+        _paths: &[&str],
+        _read: &dyn Fn(&str) -> Option<Vec<u8>>,
+    ) -> bool {
+        false
+    }
+
+    /// A file that is gone is seen through the edges that point to it; a new one may be
+    /// what an import now resolves to.
+    fn link_affected(
+        &self,
+        _path: &str,
+        _index: Option<&str>,
+        _ctx: &LinkContext<'_>,
+        added: &std::collections::HashSet<String>,
+        _routes_changed: bool,
+    ) -> bool {
+        !added.is_empty()
+    }
+
     fn symbol_signatures(&self, path: &str, bytes: &[u8]) -> Vec<(String, String)> {
         if !path.ends_with(".py") {
             return Vec::new();

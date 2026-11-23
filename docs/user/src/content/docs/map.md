@@ -42,18 +42,20 @@ La carte est imbriquée : les systèmes (paquets, services, dépendances externe
 - Tant que le curseur est dans le champ, les touches tapées ne déclenchent aucun raccourci.
 - La recherche par route HTTP (`POST /checkout`) n'est pas encore disponible : cherchez le chemin du fichier.
 - **Fil d'Ariane** : en haut à gauche de la carte, le chemin du nœud sélectionné, par exemple `acme-shop › apps/api › auth/ › session.ts › SessionStore.refresh`. Un clic sur un ancêtre le sélectionne et le cadre. Sans sélection, le fil affiche le niveau courant.
+- **Précédent / suivant** : chaque sélection (nœud, arête, résultat de recherche, lien d'un panneau) est une étape d'un historique. Les deux flèches à gauche du fil d'Ariane, `Alt` + `←` / `→` ou les boutons latéraux de la souris reviennent à l'étape précédente ou suivante, sélection et cadrage compris. Déplacer ou zoomer à la main n'ajoute pas d'étape ; changer de plage vide l'historique.
 - **Échap**, hors du champ de recherche : désélectionne d'abord le nœud, puis remonte d'un niveau à chaque appui, jusqu'à tout voir.
 
 ## Raccourcis clavier
 
 La touche `?` (ou le bouton « ? » de la barre du haut) ouvre la liste des raccourcis ; Échap la ferme.
 
-| Touche    | Action                                                                   |
-| --------- | ------------------------------------------------------------------------ |
-| `0` à `3` | Niveau de zoom : système, modules, fichiers, symboles                    |
-| `/`       | Rechercher                                                               |
-| `?`       | Afficher l'aide des raccourcis                                           |
-| `Échap`   | Fermer l'aide, désélectionner, puis remonter d'un niveau, puis tout voir |
+| Touche            | Action                                                                   |
+| ----------------- | ------------------------------------------------------------------------ |
+| `0` à `3`         | Niveau de zoom : système, modules, fichiers, symboles                    |
+| `/`               | Rechercher                                                               |
+| `?`               | Afficher l'aide des raccourcis                                           |
+| `Alt` + `←` / `→` | Étape précédente / suivante de l'historique                              |
+| `Échap`           | Fermer l'aide, désélectionner, puis remonter d'un niveau, puis tout voir |
 
 ## Inspecter un nœud
 
@@ -69,7 +71,7 @@ Sélectionner un nœud (clic, recherche puis Entrée, fil d'Ariane) l'ouvre dans
 
 Le panneau ne montre que des faits tirés de git et du graphe : aucun texte n'est généré.
 
-Sur la carte, les arêtes du nœud sélectionné ressortent : les sortantes en couleur d'accent, les entrantes en couleur d'impact, plus épaisses ; les autres arêtes s'estompent, tout comme les nœuds qui ne sont pas ses voisins directs. Une arête sélectionnée reste seule nette avec ses deux extrémités. `Échap` ou un clic dans le vide rétablit tout.
+Sur la carte, les arêtes du nœud sélectionné ressortent : les sortantes en couleur d'accent, les entrantes en couleur d'impact, plus épaisses ; les autres arêtes s'estompent, tout comme les nœuds qui ne sont pas ses voisins directs. Les arêtes internes au nœud sélectionné, entre deux de ses enfants, sont masquées : seules ses dépendances vers l'extérieur restent. Une arête sélectionnée reste seule nette avec ses deux extrémités. `Échap` ou un clic dans le vide rétablit tout.
 
 ## Lire les dépendances
 
@@ -94,7 +96,9 @@ Au-delà d'environ 2 000 nœuds, relief n'envoie pas tout le graphe à l'écran 
 - **Zoomer** dans un conteneur fermé charge son contenu : un indicateur s'affiche dans la boîte le temps du chargement.
 - **Rechercher** (`/`) interroge tout le dépôt, pas seulement ce qui est affiché : choisir un résultat charge les conteneurs qui le contiennent et cadre la carte dessus.
 
-En relecture, un nœud modifié qui se trouve dans un conteneur encore fermé n'apparaît qu'une fois ce conteneur ouvert.
+En relecture, relief n'envoie que ce qui sert à la relecture : les nœuds changés, leurs voisins directs et leurs ancêtres ; les autres conteneurs restent fermés. La carte démarre au niveau Fichiers, si bien que les fichiers changés sont visibles sans zoomer.
+
+Sur une carte qui montre beaucoup d'arêtes à la fois (plus de 500 à l'écran), relief ne dessine en entier que celles qui comptent : changées, en violation, sélectionnées ou sur le rayon d'impact. Les autres sont tracées en traits fins, sans flèche ni étiquette ; un clic sur l'un de ces traits sélectionne quand même l'arête et ouvre son inspecteur. Les arêtes dont aucune partie n'est à l'écran ne sont pas dessinées.
 
 ## Disposition
 
@@ -102,6 +106,4 @@ La section **Disposition**, dans la barre de gauche, choisit comment les boîtes
 
 - **Moins de croisements** (par défaut) : relief change l'ordre des enfants de chaque boîte pour que les flèches se croisent moins aux niveaux Modules, Fichiers et Symboles. La grille et la taille des boîtes ne changent pas, seul l'ordre change. Le calcul est limité à 300 ms : sur un gros dépôt, relief garde le meilleur ordre trouvé dans ce délai. La première boîte de premier niveau reste à sa place.
 - **Grille brute** : les boîtes sont rangées par ordre alphabétique.
-- **Croisements, tous niveaux** : la ligne grise sous les deux choix donne le total pour chaque disposition, en additionnant les niveaux Modules, Fichiers et Symboles. Sur acme-shop, il passe de 586 en grille brute à 157. Un croisement compte deux flèches qui se coupent, en traçant chaque flèche d'un centre de boîte à l'autre.
-- **À l'écran** : à droite du titre de la section, le nombre de croisements entre les flèches dessinées en ce moment.
 - Passer d'une disposition à l'autre déplace les boîtes avec une animation. Le choix est retenu pour la prochaine ouverture.

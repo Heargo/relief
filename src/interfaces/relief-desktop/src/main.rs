@@ -36,7 +36,9 @@ fn open_session(cli: &Cli) -> Result<Session, relief_app::AppError> {
 }
 
 fn main() -> ExitCode {
-    let cli = Cli::parse();
+    let mut cli = Cli::parse();
+    // Under an AppImage, `relief .` must mean the folder of the terminal, not `$APPDIR/usr`.
+    cli.path = relief_desktop::repo_path(&cli.path, std::env::var_os("OWD"));
     // Before any window: a failure here starts nothing of Tauri.
     let session = match open_session(&cli) {
         Ok(session) => Arc::new(session),

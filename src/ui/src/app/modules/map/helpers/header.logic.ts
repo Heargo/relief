@@ -40,6 +40,11 @@ export function openHeader(kind: NodeKind | string, scale: number): OpenHeader {
   return { height, fontSize, labelVisible: fontSize >= MIN_FONT };
 }
 
+/** Font size of the title of an open container whose header is `height` px high. */
+export function headerFontSize(kind: NodeKind | string, height: number): number {
+  return Math.min(specOf(kind).maxFont, height * FONT_RATIO);
+}
+
 /** Under this font size (px) the title leaves the header for a tab on the border. */
 export const TAB_FONT = 11;
 
@@ -59,28 +64,4 @@ export function headerLayout(kind: NodeKind | string, scale: number): HeaderLayo
 
 export function closedLabelVisible(width: number, height: number): boolean {
   return width >= MIN_CLOSED_WIDTH && height >= MIN_CLOSED_HEIGHT;
-}
-
-/** Border width of a box: the header starts on it so that it ends where the layout says. */
-const BORDER = 1;
-const SUB_FONT = 11;
-
-export interface HeaderStyle {
-  height: string;
-  fontSize: string;
-  lineHeight: string;
-  marginTop: string;
-  /** Font of the sub-elements (sub text, chips, badges, icon). */
-  subFontSize: string;
-}
-
-/** The inline style of an open header. */
-export function headerStyle(open: Pick<OpenHeader, 'height' | 'fontSize'>): HeaderStyle {
-  return {
-    height: `${open.height}px`,
-    fontSize: `${open.fontSize}px`,
-    lineHeight: '1',
-    marginTop: `-${BORDER}px`,
-    subFontSize: `${Math.min(SUB_FONT, open.fontSize)}px`,
-  };
 }

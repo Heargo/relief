@@ -1,4 +1,5 @@
 import type { Edge, EdgeKind } from '../../../core/models/contract';
+import type { BoxGrid } from './box-grid.logic';
 import type { Rect } from './layout.logic';
 
 /** The fine edges between two visible boxes, merged into one directed pair. */
@@ -140,9 +141,16 @@ export function edgeLabel(edge: EdgeLabelInput, words: EdgeLabelWords): string {
   return text.trim();
 }
 
+const LABEL_MIN_SCREEN_LENGTH = 60;
+
+/** Whether an edge this long on screen can show a label, so is worth placing one. */
+export function edgeLabelNeedsPlacement(screenLength: number): boolean {
+  return screenLength > LABEL_MIN_SCREEN_LENGTH;
+}
+
 /** A label is written only on an edge longer than 60 px on screen. */
 export function edgeLabelVisible(label: string, screenLength: number): boolean {
-  return label !== '' && screenLength > 60;
+  return label !== '' && edgeLabelNeedsPlacement(screenLength);
 }
 
 function defaultUnit(count: number): string {
@@ -169,7 +177,7 @@ export interface EdgeShape {
   my: number;
   /** The label could not leave a box: it must not catch clicks meant for that box. */
   covered: boolean;
-  /** On-screen distance between the two borders. */
+  /** On-screen distance between the two borders (world distance times the scale). */
   length: number;
 }
 
@@ -191,14 +199,32 @@ function borderPoint(rect: Rect, target: Point): Point {
   return { x: cx + dx * s, y: cy + dy * s };
 }
 
+/** On-screen distance between the borders of two world rects drawn at `scale`. */
+function screenLength(a: Rect, b: Rect, scale: number): number {
+  const sa = { x: a.x * scale, y: a.y * scale, w: a.w * scale, h: a.h * scale };
+  const sb = { x: b.x * scale, y: b.y * scale, w: b.w * scale, h: b.h * scale };
+  const p0 = borderPoint(sa, { x: sb.x + sb.w / 2, y: sb.y + sb.h / 2 });
+  const p1 = borderPoint(sb, { x: sa.x + sa.w / 2, y: sa.y + sa.h / 2 });
+  return Math.hypot(p1.x - p0.x, p1.y - p0.y);
+}
+
 const LABEL_POSITIONS = [0.5, 0.4, 0.6, 0.3, 0.7, 0.2, 0.8];
 const LABEL_HALF_WIDTH = 14;
 const LABEL_HALF_HEIGHT = 8;
 const ARROW_LENGTH = 9;
 const ARROW_HALF_WIDTH = 4;
 
-/** Quadratic curve from box border to box border, bent to the side so both directions apart. */
-export function edgeShape(a: Rect, b: Rect, avoid: Rect[] = []): EdgeShape {
+/** What of an edge shape does not depend on the boxes to avoid: the curve, the arrow, the length. */
+export interface EdgeGeometry {
+  p0: Point;
+  c: Point;
+  p1: Point;
+  d: string;
+  arrow: string;
+  length: number;
+}
+
+export function edgeGeometry(a: Rect, b: Rect, scale = 1): EdgeGeometry {
   const ca = { x: a.x + a.w / 2, y: a.y + a.h / 2 };
   const cb = { x: b.x + b.w / 2, y: b.y + b.h / 2 };
   const p0 = borderPoint(a, cb);
@@ -206,40 +232,86 @@ export function edgeShape(a: Rect, b: Rect, avoid: Rect[] = []): EdgeShape {
   const dx = p1.x - p0.x;
   const dy = p1.y - p0.y;
   const len = Math.hypot(dx, dy) || 1;
-  const bend = Math.min(60, len * 0.18);
+  const bend = Math.min(60 / scale, len * 0.18);
   const c = { x: (p0.x + p1.x) / 2 - (dy / len) * bend, y: (p0.y + p1.y) / 2 + (dx / len) * bend };
   const tx = p1.x - c.x;
   const ty = p1.y - c.y;
   const tl = Math.hypot(tx, ty) || 1;
   const ux = tx / tl;
   const uy = ty / tl;
-  const bx = p1.x - ux * ARROW_LENGTH;
-  const by = p1.y - uy * ARROW_LENGTH;
+  const bx = p1.x - (ux * ARROW_LENGTH) / scale;
+  const by = p1.y - (uy * ARROW_LENGTH) / scale;
   const arrow =
-    `M${p1.x},${p1.y}L${bx - uy * ARROW_HALF_WIDTH},${by + ux * ARROW_HALF_WIDTH}` +
-    `L${bx + uy * ARROW_HALF_WIDTH},${by - ux * ARROW_HALF_WIDTH}Z`;
+    `M${p1.x},${p1.y}L${bx - (uy * ARROW_HALF_WIDTH) / scale},${by + (ux * ARROW_HALF_WIDTH) / scale}` +
+    `L${bx + (uy * ARROW_HALF_WIDTH) / scale},${by - (ux * ARROW_HALF_WIDTH) / scale}Z`;
+  return {
+    p0,
+    c,
+    p1,
+    d: `M${p0.x},${p0.y}Q${c.x},${c.y} ${p1.x},${p1.y}`,
+    arrow,
+    length: screenLength(a, b, scale),
+  };
+}
+
+/**
+ * Quadratic curve from box border to box border, bent to the side so both directions apart. The
+ * rects are in world units and so is the shape; `scale` (screen pixels per world unit) only sizes
+ * what is drawn in screen pixels (bend cap, arrow head, label room), so that the shape is
+ * the screen one mapped back to the world. `geometry` is the one `edgeGeometry` gave for the same
+ * rects and scale, when it is kept.
+ */
+export function edgeShape(
+  a: Rect,
+  b: Rect,
+  avoid: Rect[] | BoxGrid = [],
+  scale = 1,
+  geometry: EdgeGeometry = edgeGeometry(a, b, scale),
+): EdgeShape {
+  const { p0, c, p1 } = geometry;
   const at = (t: number): Point => ({
     x: (1 - t) * (1 - t) * p0.x + 2 * (1 - t) * t * c.x + t * t * p1.x,
     y: (1 - t) * (1 - t) * p0.y + 2 * (1 - t) * t * c.y + t * t * p1.y,
   });
+  // An edge too short on screen shows no label: keep it mid-curve, without looking at the boxes.
+  if (!edgeLabelNeedsPlacement(geometry.length)) {
+    const mid = at(0.5);
+    return {
+      d: geometry.d,
+      arrow: geometry.arrow,
+      mx: mid.x,
+      my: mid.y,
+      covered: false,
+      length: geometry.length,
+    };
+  }
   // The count tag sits mid-curve, slid along it off the boxes it would otherwise hide.
-  const free = LABEL_POSITIONS.find((t) => {
+  const halfW = LABEL_HALF_WIDTH / scale;
+  const halfH = LABEL_HALF_HEIGHT / scale;
+  let free: number | undefined;
+  for (const t of LABEL_POSITIONS) {
     const m = at(t);
-    return !avoid.some(
-      (r) =>
-        m.x + LABEL_HALF_WIDTH > r.x &&
-        m.x - LABEL_HALF_WIDTH < r.x + r.w &&
-        m.y + LABEL_HALF_HEIGHT > r.y &&
-        m.y - LABEL_HALF_HEIGHT < r.y + r.h,
-    );
-  });
+    const hit = Array.isArray(avoid)
+      ? avoid.some(
+          (r) =>
+            m.x + halfW > r.x &&
+            m.x - halfW < r.x + r.w &&
+            m.y + halfH > r.y &&
+            m.y - halfH < r.y + r.h,
+        )
+      : (avoid as BoxGrid).hits(m.x, m.y, halfW, halfH);
+    if (!hit) {
+      free = t;
+      break;
+    }
+  }
   const mid = at(free ?? 0.5);
   return {
-    d: `M${p0.x},${p0.y}Q${c.x},${c.y} ${p1.x},${p1.y}`,
-    arrow,
+    d: geometry.d,
+    arrow: geometry.arrow,
     mx: mid.x,
     my: mid.y,
     covered: free === undefined,
-    length: Math.hypot(dx, dy),
+    length: geometry.length,
   };
 }

@@ -55,6 +55,32 @@ describe('edgeEmphasis', () => {
   });
 });
 
+describe('edgeEmphasis, internal edges of the selected node', () => {
+  const FILE_A = `${API}::file:a.ts`;
+  const FILE_B = `${API}::file:b.ts`;
+  const within = (id: string, box: string) => id === box || id.startsWith(`${box}::`);
+  const EDGES_IN = [agg(FILE_A, FILE_B), agg(FILE_A, DB), agg(WEB, FILE_B), agg(WEB, DB)];
+
+  it('hides an edge whose two ends are inside the selected node', () => {
+    const result = edgeEmphasis(EDGES_IN, node(API), identity, within);
+    expect(result.get(edgeKey(FILE_A, FILE_B))).toBe('hidden');
+  });
+
+  it('keeps the edges to the outside out / in and dims the unrelated ones', () => {
+    const result = edgeEmphasis(EDGES_IN, node(API), identity, within);
+    expect(result.get(edgeKey(FILE_A, DB))).toBe('out');
+    expect(result.get(edgeKey(WEB, FILE_B))).toBe('in');
+    expect(result.get(edgeKey(WEB, DB))).toBe('dim');
+  });
+
+  it('hides nothing without a selection or when an edge is selected', () => {
+    const none = edgeEmphasis(EDGES_IN, null, identity, within);
+    expect(none.get(edgeKey(FILE_A, FILE_B))).toBe('normal');
+    const picked = edgeEmphasis(EDGES_IN, { kind: 'edge', from: FILE_A, to: DB }, identity, within);
+    expect(picked.get(edgeKey(FILE_A, FILE_B))).toBe('dim');
+  });
+});
+
 describe('nodeEmphasis', () => {
   const IDS = [WEB, API, DB, UI];
 

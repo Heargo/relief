@@ -128,7 +128,7 @@ describe('MapPageComponent, left panel like the mockup', () => {
     }
   });
 
-  it('shows the layout as a segmented control with the on-screen count in the title', async () => {
+  it('shows the layout as a segmented control', async () => {
     const { el } = await render();
     const section = byId(el, 'layout-section')!;
     const seg = section.querySelector('.seg')!;
@@ -137,21 +137,15 @@ describe('MapPageComponent, left panel like the mockup', () => {
     expect(byId(el, 'layout-fewer-crossings')?.getAttribute('aria-pressed')).toBe('true');
     expect(byId(el, 'layout-fewer-crossings')?.classList.contains('on')).toBe(true);
     expect(byId(el, 'layout-raw-grid')?.classList.contains('on')).toBe(false);
-    expect(section.querySelector('h3')?.contains(byId(el, 'crossings-visible'))).toBe(true);
+    expect(byId(el, 'crossings-visible')).toBeNull();
   });
 
-  it('shows the two layout totals on a single grey line, with their counts', async () => {
+  it('shows no crossing count, neither on screen nor as layout totals', async () => {
     const { el } = await render();
     const section = byId(el, 'layout-section')!;
-    const optimized = byId(el, 'crossings-optimized')!;
-    const raw = byId(el, 'crossings-raw')!;
-    expect(optimized.hasAttribute('data-count')).toBe(true);
-    expect(raw.hasAttribute('data-count')).toBe(true);
-    const line = optimized.closest('.hint');
-    expect(line).not.toBeNull();
-    expect(line?.contains(raw)).toBe(true);
-    expect(section.querySelectorAll('.hint')).toHaveLength(1);
-    expect(section.querySelectorAll('p')).toHaveLength(1);
+    expect(byId(el, 'crossings-optimized')).toBeNull();
+    expect(byId(el, 'crossings-raw')).toBeNull();
+    expect(section.querySelector('.hint')).toBeNull();
   });
 
   it('heads the PR card with the range, with no title and no old section heading', async () => {

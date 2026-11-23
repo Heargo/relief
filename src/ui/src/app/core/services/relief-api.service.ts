@@ -37,9 +37,12 @@ export class ReliefApiService {
     return this.command<SnapshotResponse>('snapshot', { rev: ref, budget, expand });
   }
 
-  /** Diff of a range (`A...B`); without one, the range the app was opened with. */
-  diff(range: string | null): Promise<DiffResponse> {
-    return this.command<DiffResponse>('diff', { range });
+  /**
+   * Diff of a range (`A...B`); without one, the range the app was opened with. With a `budget`,
+   * the response also carries `graph`, the review subgraph of the head (at most that many nodes).
+   */
+  diff(range: string | null, budget?: number, expand?: readonly string[]): Promise<DiffResponse> {
+    return this.command<DiffResponse>('diff', { range, budget, expand });
   }
 
   /** The nodes of the head of a range (the opening one by default) matching a name, best first. */

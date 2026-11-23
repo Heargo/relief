@@ -19,6 +19,17 @@ use tauri::{AppHandle, Builder, Manager, Runtime, State, WebviewUrl, WebviewWind
 
 type Shared<'a> = State<'a, Arc<Session>>;
 
+/// The repository path given on the command line, read from the folder the user started from.
+/// Under an AppImage, `AppRun` moves to `$APPDIR/usr` (the bundled webkit finds its helper
+/// processes from there, so relief stays) and that folder is in `OWD` (`main` passes
+/// `std::env::var_os("OWD")`). An absolute path, or no `OWD`, is kept as is.
+pub fn repo_path(path: &std::path::Path, owd: Option<std::ffi::OsString>) -> std::path::PathBuf {
+    match owd.filter(|dir| !dir.is_empty()) {
+        Some(dir) if path.is_relative() => std::path::PathBuf::from(dir).join(path),
+        _ => path.to_path_buf(),
+    }
+}
+
 /// Registers the session as state and the commands on a tauri builder.
 pub fn register<R: Runtime>(builder: Builder<R>, session: Arc<Session>) -> Builder<R> {
     builder

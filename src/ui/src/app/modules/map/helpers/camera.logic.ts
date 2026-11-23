@@ -1,4 +1,4 @@
-import { OPEN_THRESHOLDS } from './visibility.logic';
+import { computeModes, OPEN_THRESHOLDS } from './visibility.logic';
 import type { MapLayout, Rect } from './layout.logic';
 
 /** Screen position of a world point: `screen = world * scale + (tx, ty)`. */
@@ -154,6 +154,18 @@ export function levelCamera(
     }
   }
   if (!best) return cameraAt(scale, center, viewport);
+  // A small map: shown whole when it fits at that scale, or at a smaller one that keeps every
+  // container open that is open at this scale. Loose files and boxes beside the first show too.
+  const fit = fitScale(layout, viewport);
+  const wholeScale = Math.min(scale, fit);
+  if (wholeScale === scale || keepsOpen(layout, scale, wholeScale)) {
+    const { bounds } = layout;
+    return cameraAt(
+      wholeScale,
+      { x: bounds.x + bounds.w / 2, y: bounds.y + bounds.h / 2 },
+      viewport,
+    );
+  }
   const axis = (start: number, length: number, view: number): number =>
     length * scale + margin * 2 > view ? start + (view / 2 - margin) / scale : start + length / 2;
   return cameraAt(
@@ -161,4 +173,13 @@ export function levelCamera(
     { x: axis(best.x, best.w, viewport.width), y: axis(best.y, best.h, viewport.height) },
     viewport,
   );
+}
+
+/** Every container open at scale `from` is still open at the smaller scale `to`. */
+function keepsOpen(layout: MapLayout, from: number, to: number): boolean {
+  const at = (scale: number) => computeModes(layout, { scale, tx: 0, ty: 0 });
+  const before = at(from);
+  const after = at(to);
+  for (const [id, mode] of before) if (mode === 'open' && after.get(id) !== 'open') return false;
+  return true;
 }

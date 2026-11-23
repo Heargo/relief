@@ -10,6 +10,8 @@ import type {
 } from '../../../../core/models/contract';
 import { ReliefApiService } from '../../../../core/services/relief-api.service';
 import { TEST_PROVIDERS } from '../../../../../testing/test-providers';
+import { settleScene } from '../../../../../testing/settle-scene';
+import { MapBusiness } from '../../business/map.business';
 import { MapPageComponent } from './map-page.component';
 
 // Contract with the UI (ticket U20), in the panel of an edge:
@@ -123,11 +125,26 @@ async function render(lang: 'en' | 'fr' = 'en') {
   });
   await TestBed.inject(TranslateService).use(lang).toPromise();
   const fixture = TestBed.createComponent(MapPageComponent);
+  const map = fixture.debugElement.injector.get(MapBusiness);
+  map.setViewport(1000, 600);
   await fixture.whenStable();
+  // jsdom has no layout: the component measured 0 x 0 once rendered.
+  map.setViewport(1000, 600);
+  await fixture.whenStable();
+  await settleScene(fixture);
   const el = fixture.nativeElement as HTMLElement;
-  el.querySelector(`[data-testid="map-edge"][data-from="${WEB}"][data-to="${DB}"]`)?.dispatchEvent(
-    new MouseEvent('click', { bubbles: true }),
+  // A click, by the client coordinates of the edge in the scene: press on the map, release anywhere.
+  const scene = (
+    window as unknown as {
+      __reliefScene: () => { edges: { from: string; to: string; mid: { x: number; y: number } }[] };
+    }
+  ).__reliefScene();
+  const { mid } = scene.edges.find((e) => e.from === WEB && e.to === DB)!;
+  const init = { bubbles: true, clientX: mid.x, clientY: mid.y, button: 0 };
+  el.querySelector('[data-testid="map-canvas"]')!.dispatchEvent(
+    new MouseEvent('pointerdown', init),
   );
+  window.dispatchEvent(new MouseEvent('pointerup', init));
   await fixture.whenStable();
   return { fixture, el };
 }

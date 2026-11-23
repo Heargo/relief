@@ -1,30 +1,24 @@
-import { $, browser, expect } from '@wdio/globals';
+import { expect } from '@wdio/globals';
 import { openRelief } from '../helpers/open-relief';
+import { sceneNodes, waitForScene } from '../helpers/map-scene';
 import { poll, tid } from '../helpers/ui';
 
 // Contract with the UI (data attributes, no i18n dependency):
 //  - the "Disposition" / "Layout" section is `data-testid="layout-section"`, in the left panel;
 //  - its two options are buttons `data-testid="layout-fewer-crossings"` (default) and
 //    `data-testid="layout-raw-grid"`, the active one has `aria-pressed="true"`;
-//  - `data-testid="crossings-optimized"` and `data-testid="crossings-raw"` carry the totals of the
-//    two layouts in `data-count`; `data-testid="crossings-visible"` the crossings on screen.
-const NODES = '[data-testid="map-node"]:not([data-mode="ghost"])';
-
+//  - no crossing count is shown (removed in S14: not useful, and costly at every zoom step).
 async function positions(): Promise<Record<string, string>> {
-  return browser.execute((selector: string) => {
-    const entries: [string, string][] = [];
-    for (const n of document.querySelectorAll(selector)) {
-      const r = n.getBoundingClientRect();
-      entries.push([n.getAttribute('data-node-id') ?? '', `${Math.round(r.x)},${Math.round(r.y)}`]);
-    }
-    return Object.fromEntries(entries);
-  }, NODES);
+  const entries = (await sceneNodes())
+    .filter((n) => n.mode !== 'ghost')
+    .map((n): [string, string] => [n.id, `${Math.round(n.left)},${Math.round(n.top)}`]);
+  return Object.fromEntries(entries);
 }
 
 const same = (a: Record<string, string>, b: Record<string, string>) =>
   JSON.stringify(a) === JSON.stringify(b);
 
-it('the layout section offers "Fewer crossings" (default) and "Raw grid" with both totals', async () => {
+it('the layout section offers "Fewer crossings" (default) and "Raw grid", with no crossing count', async () => {
   await openRelief();
   const section = tid('layout-section');
   await expect(section).toBeDisplayed();
@@ -42,17 +36,15 @@ it('the layout section offers "Fewer crossings" (default) and "Raw grid" with bo
     'aria-pressed',
     'false',
   );
-  const optimized = Number(await tid('crossings-optimized').getAttribute('data-count'));
-  const raw = Number(await tid('crossings-raw').getAttribute('data-count'));
-  expect(raw).toBeGreaterThan(0);
-  expect(optimized).toBeLessThan(raw / 2);
-  await expect(tid('crossings-visible')).toHaveAttribute('data-count', /^\d+$/);
+  await expect(tid('crossings-optimized')).not.toBeExisting();
+  await expect(tid('crossings-raw')).not.toBeExisting();
+  await expect(tid('crossings-visible')).not.toBeExisting();
 });
 
 it('switching to "Raw grid" changes the layout, and the choice survives a reload', async () => {
   await openRelief();
   await expect(tid('map-canvas')).toBeDisplayed();
-  await expect($(NODES)).toBeDisplayed();
+  await waitForScene((s) => s.nodes.some((n) => n.mode !== 'ghost'));
   const optimized = await positions();
 
   await tid('layout-raw-grid').click();

@@ -314,16 +314,7 @@
             (coChangeChange)="coChangeState.setLayer($event)"
           />
           <section class="sec" data-testid="layout-section">
-            <h3>
-              {{ 'map.layout.title' | translate }}
-              <span
-                class="r"
-                data-testid="crossings-visible"
-                [attr.data-count]="map.visibleCrossings()"
-              >
-                {{ 'map.layout.visible' | translate: { count: map.visibleCrossings() } }}
-              </span>
-            </h3>
+            <h3>{{ 'map.layout.title' | translate }}</h3>
             <div class="seg">
               <button
                 type="button"
@@ -344,20 +335,6 @@
                 {{ 'map.layout.rawGrid' | translate }}
               </button>
             </div>
-            <p class="hint">
-              {{ 'map.layout.totals' | translate }} :
-              <span
-                data-testid="crossings-optimized"
-                [attr.data-count]="map.crossingTotals().optimized"
-                >{{
-                  'map.layout.optimizedTotal' | translate: { count: map.crossingTotals().optimized }
-                }}</span
-              >
-              ·
-              <span data-testid="crossings-raw" [attr.data-count]="map.crossingTotals().raw">{{
-                'map.layout.rawTotal' | translate: { count: map.crossingTotals().raw }
-              }}</span>
-            </p>
           </section>
         </div>
       }

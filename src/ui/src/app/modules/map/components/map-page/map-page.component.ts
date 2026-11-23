@@ -7,6 +7,7 @@ import {
   effect,
   ElementRef,
   inject,
+  PendingTasks,
   OnInit,
   signal,
   untracked,
@@ -62,8 +63,16 @@ import { PanelsBusiness } from '../../business/panels.business';
 import { RepoBusiness } from '../../business/repo.business';
 import { SubgraphBusiness } from '../../business/subgraph.business';
 import { repoMetaLine } from '../../helpers/repo-meta.logic';
+import { isPartial } from '../../../review/helpers/review-graph.logic';
 import type { SearchResult } from '../../helpers/search.logic';
-import { actionForKey, isTypingTarget, keyLabel, SHORTCUTS } from '../../helpers/shortcuts.logic';
+import {
+  actionForKey,
+  historyMove,
+  isTypingTarget,
+  keyLabel,
+  mouseHistoryMove,
+  SHORTCUTS,
+} from '../../helpers/shortcuts.logic';
 import { EdgeHeadComponent } from '../edge-head/edge-head.component';
 import { InspectorHeaderComponent } from '../inspector-header/inspector-header.component';
 import { NodeEdgesComponent } from '../node-edges/node-edges.component';
@@ -72,6 +81,9 @@ import { NodePanelComponent } from '../node-panel/node-panel.component';
 import { EdgeUsagesComponent } from '../edge-usages/edge-usages.component';
 import { EdgeUsagesBusiness } from '../../business/edge-usages.business';
 import { hasCodeUsages } from '../../helpers/edge-usages.logic';
+
+/** Level of the map at which the files are drawn: where a big review starts. */
+const CHANGED_FILES_LEVEL = 2;
 
 @Component({
   selector: 'app-map-page',
@@ -382,10 +394,24 @@ export class MapPageComponent implements OnInit {
     });
   }
 
+  private readonly pending = inject(PendingTasks);
+
   ngOnInit(): void {
-    void this.repo
-      .load()
-      .then(() => this.review.load(this.repo.range()).then(() => this.diffSettled.set(true)));
+    void this.repo.load().then(() => {
+      // The page is stable once the map is drawn, not as soon as the diff is read.
+      const done = this.pending.add();
+      return this.review
+        .load(this.repo.range())
+        .then(() => {
+          // A big repository: the review subgraph holds the changed files, shown without a zoom.
+          const diff = this.review.diff();
+          if (diff?.graph && diff.diff.nodes.length > 0 && isPartial(diff.graph)) {
+            this.map.whenShown(() => this.map.setLevel(CHANGED_FILES_LEVEL));
+          }
+          this.diffSettled.set(true);
+        })
+        .finally(done);
+    });
   }
 
   protected readonly settingsOpen = signal(false);
@@ -415,6 +441,15 @@ export class MapPageComponent implements OnInit {
     }
     if (event.key === 'Escape' && this.settingsOpen()) {
       this.settingsOpen.set(false);
+      return;
+    }
+    if (event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey) {
+      const target = event.target instanceof HTMLElement ? event.target : null;
+      const move = isTypingTarget(target) ? null : historyMove(event.key);
+      if (move) {
+        event.preventDefault();
+        this.moveInHistory(move);
+      }
       return;
     }
     if (event.ctrlKey || event.metaKey || event.altKey) return;
@@ -557,6 +592,20 @@ export class MapPageComponent implements OnInit {
       (count) =>
         this.language.t(count === 1 ? 'map.edges.links_one' : 'map.edges.links', { count }),
     );
+  }
+
+  /** The back / forward buttons of a mouse (buttons 4 and 5). */
+  @HostListener('window:mouseup', ['$event'])
+  protected onMouseButton(event: MouseEvent): void {
+    const move = mouseHistoryMove(event.button);
+    if (!move) return;
+    event.preventDefault();
+    this.moveInHistory(move);
+  }
+
+  private moveInHistory(move: 'back' | 'forward'): void {
+    if (move === 'back') this.map.goBack();
+    else this.map.goForward();
   }
 
   @HostListener('window:focus')

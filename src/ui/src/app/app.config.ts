@@ -16,6 +16,8 @@ import { firstValueFrom } from 'rxjs';
 import { DocumentTitleService } from './core/services/document-title.service';
 import { ReliefPreset } from './relief-preset';
 import { routes } from './app.routes';
+import { LAYOUT_EXECUTOR } from './modules/map/business/layout-executor';
+import { workerLayoutExecutor } from './modules/map/business/worker-layout-executor';
 import { DEFAULT_LANGUAGE } from './core/constants/languages';
 import { detectInitialLanguage } from './core/i18n/initial-language';
 import { translateSettings } from './core/i18n/translate-config';
@@ -41,6 +43,7 @@ export const appConfig: ApplicationConfig = {
     provideAppInitializer(() => {
       void inject(DocumentTitleService).init();
     }),
+    { provide: LAYOUT_EXECUTOR, useFactory: workerLayoutExecutor },
     MessageService,
     ConfirmationService,
     DialogService,

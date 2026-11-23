@@ -102,6 +102,8 @@ pub struct DiffAnalysis {
     pub head: GraphSnapshot,
     pub diff: GraphDiff,
     pub renames: Vec<FileRename>,
+    /// Short SHA of the base really compared.
+    pub base_resolved: String,
     /// Cache warnings raised while indexing.
     pub warnings: Vec<String>,
 }
@@ -113,6 +115,7 @@ impl DiffAnalysis {
             format_only: format_only_summary(&self.diff),
             renames: self.renames,
             diff: self.diff,
+            base_resolved: self.base_resolved,
             graph: None,
         }
     }
@@ -320,42 +323,11 @@ impl Session {
         let source = GitSource::open(&self.path)?;
         let head = self.sides(&source, request.range.as_ref())?.new;
         let graph = self.indexed_snapshot(&source, &head)?.graph;
-        let query = request.query.trim().to_lowercase();
-        if query.is_empty() {
-            return Ok(SearchResponse { hits: Vec::new() });
-        }
-        let mut ranked: Vec<(u8, usize)> = Vec::new();
-        for (order, node) in graph.nodes().iter().enumerate() {
-            if matches!(node.kind, NodeKind::Repo | NodeKind::External) {
-                continue;
-            }
-            let id = node.id.to_string().to_lowercase();
-            let label = id.rsplit("::").next().unwrap_or(&id);
-            let label = label.split_once(':').map_or(label, |(_, rest)| rest);
-            let name = label.rsplit(['.', '/']).next().unwrap_or(label);
-            let rank = if name == query || label == query {
-                0
-            } else if name.starts_with(&query) || label.starts_with(&query) {
-                1
-            } else if label.contains(&query) {
-                2
-            } else if id.contains(&query) {
-                3
-            } else {
-                continue;
-            };
-            ranked.push((rank, order));
-        }
-        ranked.sort_unstable();
-        let hits = ranked
+        let hits = relief_diff::rank_search(&graph, &request.query, request.limit)
             .into_iter()
-            .take(request.limit)
-            .map(|(_, order)| {
-                let node = &graph.nodes()[order];
-                SearchHit {
-                    id: node.id.clone(),
-                    kind: node.kind,
-                }
+            .filter_map(|id| {
+                let kind = graph.nodes().iter().find(|n| n.id == id)?.kind;
+                Some(SearchHit { id, kind })
             })
             .collect();
         Ok(SearchResponse { hits })
@@ -1003,19 +975,31 @@ impl Session {
         source: &GitSource,
         commit: &CommitId,
     ) -> Result<IndexedSnapshot, AppError> {
+        self.indexed_snapshot_from(source, commit, None)
+    }
+
+    /// Like `indexed_snapshot`; a snapshot to start from (its commit and the snapshot) lets
+    /// the indexer extract and link only what differs.
+    fn indexed_snapshot_from(
+        &self,
+        source: &GitSource,
+        commit: &CommitId,
+        from: Option<(&CommitId, &IndexedSnapshot)>,
+    ) -> Result<IndexedSnapshot, AppError> {
         let key = commit.to_string();
         let real = !is_virtual(commit);
         if real && let Some(hit) = self.memory.lock().ok().and_then(|m| m.get(&key).cloned()) {
             return Ok(hit);
         }
         let config = self.read_config(source, commit)?.and_then(|(_, c)| c.ok());
-        let indexed = match &config {
-            Some(config) => {
-                let exclude = |path: &str| config.is_excluded(path);
+        let exclude = |path: &str| config.as_ref().is_some_and(|c| c.is_excluded(path));
+        let exclude: Option<&dyn Fn(&str) -> bool> = config.as_ref().map(|_| &exclude as _);
+        let indexed = match from {
+            Some((base_commit, base)) => {
                 self.indexer
-                    .snapshot_excluding(source, commit, Some(&exclude))?
+                    .snapshot_from_excluding(source, base_commit, base, commit, exclude)?
             }
-            None => self.indexer.snapshot(source, commit)?,
+            None => self.indexer.snapshot_excluding(source, commit, exclude)?,
         };
         self.indexed.fetch_add(1, Ordering::SeqCst);
         if real && let Ok(mut memory) = self.memory.lock() {
@@ -1064,10 +1048,11 @@ impl Session {
         sides: &ResolvedRange,
     ) -> Result<DiffAnalysis, AppError> {
         let base = self.indexed_snapshot(source, &sides.old)?;
-        let head = self.indexed_snapshot(source, &sides.new)?;
+        let head = self.indexed_snapshot_from(source, &sides.new, Some((&sides.old, &base)))?;
         let mut warnings: Vec<String> =
             cache_warnings(&base).chain(cache_warnings(&head)).collect();
-        let (base, head) = (base.graph, head.graph);
+        let base_indexed = base;
+        let (base, head) = (&base_indexed.graph, head.graph);
         let changes = source.diff_trees(&sides.old, &sides.new)?;
         let renames: Vec<FileRename> = changes
             .iter()
@@ -1088,7 +1073,7 @@ impl Session {
             .collect();
         let new_paths: HashSet<&str> = changes.iter().map(|c| c.path.as_str()).collect();
         let signatures = SignatureTexts {
-            base: self.signature_texts(source, &sides.old, &base, &old_paths)?,
+            base: self.signature_texts(source, &sides.old, base, &old_paths)?,
             head: self.signature_texts(source, &sides.new, &head, &new_paths)?,
         };
         let files: Vec<FileChange> = changes
@@ -1114,21 +1099,26 @@ impl Session {
             compare: Some(&compare),
             ..DiffOptions::default()
         };
-        let mut diff = diff_graphs_with_options(&base, &head, &files, &options);
+        let mut diff = diff_graphs_with_options(base, &head, &files, &options);
         if !is_virtual(&sides.old) && !is_virtual(&sides.new) {
             let mut commits = Vec::new();
             for info in source.log(sides)? {
-                let snapshot = self.indexed_snapshot(source, &info.id)?;
+                let snapshot = self.indexed_snapshot_from(
+                    source,
+                    &info.id,
+                    Some((&sides.old, &base_indexed)),
+                )?;
                 warnings.extend(cache_warnings(&snapshot));
                 commits.push(snapshot.graph);
             }
             attribute_edge_commits(&mut diff, &commits);
         }
         Ok(DiffAnalysis {
-            base,
+            base: base_indexed.graph,
             head,
             diff,
             renames,
+            base_resolved: sides.old.to_string().chars().take(7).collect(),
             warnings,
         })
     }

@@ -3,6 +3,7 @@ source: src/app/relief-app/tests/python_diff.rs
 expression: diff()
 ---
 {
+  "baseResolved": "d45a2a6",
   "diff": {
     "base": "d45a2a625d804329673a05a7a989663d55baa7d4",
     "edges": [

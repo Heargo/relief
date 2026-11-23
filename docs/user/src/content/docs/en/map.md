@@ -42,18 +42,20 @@ The map is nested: systems (packages, services, external dependencies when shown
 - While the cursor is in the field, typed keys trigger no shortcut.
 - Search by HTTP route (`POST /checkout`) is not available yet: search for the file's path instead.
 - **Breadcrumbs**: at the top left of the map, the path of the selected node, for example `acme-shop › apps/api › auth/ › session.ts › SessionStore.refresh`. Click an ancestor to select and frame it. With nothing selected, the breadcrumbs show the current level.
+- **Back / forward**: each selection (node, edge, search result, panel link) is a step of a history. The two arrows left of the breadcrumbs, `Alt` + `←` / `→` or the mouse side buttons go back or forward one step, selection and framing included. Panning or zooming by hand adds no step; changing the range clears the history.
 - **Escape**, outside the search field: first deselects the node, then goes up one level per press, until everything is shown.
 
 ## Keyboard shortcuts
 
 The `?` key (or the "?" button in the top bar) opens the shortcut list; Escape closes it.
 
-| Key        | Action                                                             |
-| ---------- | ------------------------------------------------------------------ |
-| `0` to `3` | Zoom level: system, modules, files, symbols                        |
-| `/`        | Search                                                             |
-| `?`        | Show the shortcut help                                             |
-| `Esc`      | Close the help, deselect, then go up a level, then show everything |
+| Key               | Action                                                             |
+| ----------------- | ------------------------------------------------------------------ |
+| `0` to `3`        | Zoom level: system, modules, files, symbols                        |
+| `/`               | Search                                                             |
+| `?`               | Show the shortcut help                                             |
+| `Alt` + `←` / `→` | Previous / next step of the history                                |
+| `Esc`             | Close the help, deselect, then go up a level, then show everything |
 
 ## Inspecting a node
 
@@ -69,7 +71,7 @@ Selecting a node (click, search then Enter, breadcrumbs) opens it in the right p
 
 The panel only shows facts taken from git and the graph: no text is generated.
 
-On the map, the edges of the selected node stand out: outgoing ones in the accent colour, incoming ones in the impact colour, thicker; the other edges fade, and so do the nodes that are not its direct neighbours. A selected edge stays the only sharp one, with its two ends. `Esc` or a click on empty space restores everything.
+On the map, the edges of the selected node stand out: outgoing ones in the accent colour, incoming ones in the impact colour, thicker; the other edges fade, and so do the nodes that are not its direct neighbours. The edges inside the selected node, between two of its children, are hidden: only its dependencies to the outside remain. A selected edge stays the only sharp one, with its two ends. `Esc` or a click on empty space restores everything.
 
 ## Reading dependencies
 
@@ -94,7 +96,9 @@ Beyond about 2,000 nodes, relief does not send the whole graph to the screen at 
 - **Zooming** into a closed container loads its content: an indicator shows in the box while it loads.
 - **Searching** (`/`) queries the whole repository, not only what is displayed: picking a result loads the containers that hold it and frames the map on it.
 
-In review, a changed node that sits in a container still closed shows only once that container is open.
+In review, relief only sends what the review needs: the changed nodes, their direct neighbours and their ancestors; the other containers stay closed. The map starts at the Files level, so the changed files are visible without zooming.
+
+On a map that shows many edges at once (over 500 on screen), relief only draws in full the ones that matter: changed, breaking a rule, selected or on the impact radius. The others are drawn as thin lines, without arrow or label; clicking one of those lines still selects the edge and opens its inspector. Edges with no part on screen are not drawn.
 
 ## Layout
 
@@ -102,6 +106,4 @@ The **Layout** section, in the left sidebar, chooses how boxes are arranged insi
 
 - **Fewer crossings** (default): relief reorders the children of each box so that arrows cross less at the Modules, Files and Symbols levels. The grid and the box sizes stay the same; only the order changes. The computation is capped at 300 ms: on a large repository, relief keeps the best order found in that time. The first top-level box stays in place.
 - **Raw grid**: boxes are arranged in alphabetical order.
-- **Crossings, all levels**: the grey line under the two choices gives the total for each layout, summed over the Modules, Files and Symbols levels. On acme-shop, it goes from 586 in the raw grid to 157. A crossing is two arrows that cut each other, with each arrow drawn from one box centre to the other.
-- **On screen**: right of the section title, the number of crossings among the arrows drawn right now.
 - Switching layouts moves the boxes with an animation. The choice is remembered for the next visit.

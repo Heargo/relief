@@ -2,55 +2,39 @@ import {
   afterNextRender,
   ChangeDetectionStrategy,
   Component,
+  computed,
   DestroyRef,
   effect,
   ElementRef,
   inject,
   input,
+  signal,
   untracked,
   viewChild,
   ViewEncapsulation,
 } from '@angular/core';
+import { measured } from '../../../../core/helpers/perf';
 import { TranslatePipe } from '@ngx-translate/core';
 
+import { ThemeBusiness } from '../../../../core/business/theme.business';
 import { LanguageBusiness } from '../../../../core/business/language.business';
 import type { DiffResponse, GraphSnapshot, Violation } from '../../../../core/models/contract';
-import {
-  MapBusiness,
-  type CoChangeLine,
-  type EdgeLine,
-  type VisibleNode,
-} from '../../business/map.business';
+import { MapBusiness } from '../../business/map.business';
 import type { Crumb } from '../../helpers/breadcrumb.logic';
-import {
-  edgeLabel,
-  edgeLabelClass,
-  edgeLabelVisible,
-  type EdgeLabelClass,
-  edgeThickness,
-  edgeTooltip,
-} from '../../helpers/edges.logic';
-import {
-  closedLabelVisible,
-  headerStyle,
-  headerLayout,
-  type HeaderLayout,
-} from '../../helpers/header.logic';
-import { edgeEmphasis, edgeKey, nodeEmphasis } from '../../helpers/emphasis.logic';
-import { nodeContent, sizeClass } from '../../helpers/node-content.logic';
-import {
-  type ImpactMarks,
-  type ImpactState,
-  impactState,
-  onImpactPath,
-} from '../../../review/helpers/impact.logic';
+import type { ImpactMarks } from '../../../review/helpers/impact.logic';
 import type { ReadingNodeState } from '../../../review/business/reading-order.business';
-import type { Selection } from '../../helpers/emphasis.logic';
 import { isClick } from '../../helpers/pointer.logic';
+import { buildMapScene, type SceneRect } from '../../helpers/map-scene.logic';
+import { symbolIcon } from '../../helpers/node-content.logic';
+import { hitTest, type MapHit } from '../../helpers/map-hit.logic';
+import { createMapPainter, readPalette, type Palette } from './map-painter';
+
+/** Distance, in screen pixels, a pointer must move within one frame to be tested again. */
+const HOVER_STEP_PX = 3;
 
 /**
- * The map. Node positions are written straight into the DOM on every frame (one div per visible
- * node, no change detection per node, ADR 0002); only the level panel goes through the template.
+ * The map: a Canvas 2D painter draws the nodes and edges (ADR 0009), redrawn at most once per
+ * frame; only the breadcrumbs, the level panel and the legend go through the template.
  */
 @Component({
   selector: 'app-map-canvas',
@@ -86,9 +70,9 @@ export class MapCanvasComponent {
 
   protected readonly map = inject(MapBusiness);
   private readonly language = inject(LanguageBusiness);
+  private readonly theme = inject(ThemeBusiness);
   private readonly destroyRef = inject(DestroyRef);
   private readonly canvas = viewChild.required<ElementRef<HTMLElement>>('canvas');
-  private readonly layer = viewChild.required<ElementRef<HTMLElement>>('layer');
 
   protected readonly levels = [0, 1, 2, 3];
   protected readonly statuses = ['added', 'modified', 'removed', 'moved'] as const;
@@ -97,11 +81,10 @@ export class MapCanvasComponent {
     { status: 'removed', key: 'removedEdge' },
     { status: 'unchanged', key: 'unchangedEdge' },
   ] as const;
-  private readonly edgesLayer = viewChild.required<ElementRef<SVGSVGElement>>('edgesLayer');
   private shown = false;
-  private readonly elements = new Map<string, HTMLElement>();
-  private readonly edgeElements = new Map<string, SVGGElement>();
-  private readonly coChangeElements = new Map<string, SVGGElement>();
+  private readonly surface = viewChild.required<ElementRef<HTMLCanvasElement>>('surface');
+  private readonly painter = signal<(() => void) | null>(null);
+  private frame = 0;
 
   constructor() {
     effect(() => {
@@ -120,39 +103,262 @@ export class MapCanvasComponent {
       untracked(() => this.map.setViolations(violations));
     });
     effect(() => {
+      // A new object per language: the texts written on the edges follow it.
+      this.language.current();
+      untracked(() => this.map.setTranslator((key, params) => this.language.t(key, params)));
+    });
+    effect(() => {
       const name = this.repoName();
       untracked(() => this.map.setRepoName(name));
     });
     effect(() => {
-      const nodes = this.map.visibleNodes();
-      const lang = this.language.current();
       const impact = this.impact();
-      const reading = this.reading();
-      const focus = this.focus();
-      const archi = this.archi();
-      const risk = this.risk();
-      const loading = this.loading();
-      const selection = this.map.selection();
-      untracked(() => {
-        this.sync(nodes, lang, impact, reading, focus, archi, risk, loading);
-        this.syncNodeEmphasis(nodes, impact, selection);
-      });
+      untracked(() => this.map.setImpact(impact));
     });
     effect(() => {
-      const lines = this.map.edgeLines();
-      const lang = this.language.current();
-      const impact = this.impact();
-      const selection = this.map.selection();
-      untracked(() => {
-        this.syncEdges(lines, lang, impact);
-        this.syncEdgeEmphasis(lines, selection);
-      });
-    });
-    effect(() => {
-      const lines = this.map.coChangeLines();
-      untracked(() => this.syncCoChange(lines));
+      const draw = this.painter();
+      if (!draw) return;
+      // What a frame depends on: any change schedules one redraw, at most once per frame.
+      this.map.visibleNodes();
+      this.map.edgeLines();
+      this.map.mergedEdgeLines();
+      this.map.emphasis();
+      this.map.camera();
+      this.map.viewport();
+      this.map.modesScale();
+      this.language.current();
+      // The palette is read again when the theme changes.
+      this.theme.dark();
+      this.impact();
+      this.reading();
+      this.focus();
+      this.archi();
+      this.risk();
+      this.loading();
+      untracked(() => this.schedule(draw));
     });
     afterNextRender(() => this.listen());
+    this.destroyRef.onDestroy(() => this.endPan?.());
+  }
+
+  /** The scene, rebuilt only when what it reads changes. */
+  private readonly sceneMemo = computed(() => this.scene());
+  private readonly nodeById = computed(() => new Map(this.sceneMemo().nodes.map((n) => [n.id, n])));
+  private readonly edgeByKey = computed(
+    () => new Map(this.sceneMemo().edges.map((e) => [`${e.from}\0${e.to}`, e])),
+  );
+  private panning = false;
+  /** Ends the pan in progress (listeners on `window`), if any. */
+  private endPan: (() => void) | null = null;
+
+  /** What is under a client point, by geometry instead of the DOM. */
+  private hitAt(clientX: number, clientY: number): MapHit | null {
+    const rect = this.canvas().nativeElement.getBoundingClientRect();
+    const { scale, tx, ty } = this.map.camera();
+    const point = { x: (clientX - rect.left - tx) / scale, y: (clientY - rect.top - ty) / scale };
+    return hitTest(this.sceneMemo(), point, scale);
+  }
+
+  /** Tooltip shown near the pointer, in the coordinates of the map; null when there is none. */
+  protected readonly tip = signal<{ text: string; x: number; y: number } | null>(null);
+  private hoverEvent: PointerEvent | null = null;
+  private hoverFrame = 0;
+
+  private hoverAt = { x: 0, y: 0 };
+
+  /**
+   * The hit-test of the hover: within a frame, a move of less than `HOVER_STEP_PX` waits for the
+   * end of the frame (the browser already delivers one move per frame, so this only caps jitter).
+   */
+  protected onHover(event: PointerEvent): void {
+    if (this.panning) return;
+    const far =
+      Math.hypot(event.clientX - this.hoverAt.x, event.clientY - this.hoverAt.y) >= HOVER_STEP_PX;
+    if (this.hoverFrame && !far) {
+      this.hoverEvent = event;
+      return;
+    }
+    this.hoverAt = { x: event.clientX, y: event.clientY };
+    this.hoverEvent = null;
+    this.hover(event);
+    if (this.hoverFrame) return;
+    this.hoverFrame = requestAnimationFrame(() => {
+      this.hoverFrame = 0;
+      const last = this.hoverEvent;
+      this.hoverEvent = null;
+      if (last) this.hover(last);
+    });
+  }
+
+  protected onHoverLeave(): void {
+    cancelAnimationFrame(this.hoverFrame);
+    this.hoverFrame = 0;
+    this.hoverEvent = null;
+    this.tip.set(null);
+    this.surface().nativeElement.style.cursor = '';
+  }
+
+  private hover(event: PointerEvent): void {
+    const hit = this.hitAt(event.clientX, event.clientY);
+    this.surface().nativeElement.style.cursor = hit ? 'pointer' : '';
+    let text = '';
+    if (hit?.kind === 'node') {
+      const node = this.nodeById().get(hit.id);
+      if (node?.labelClipped) text = node.label;
+    } else if (hit) {
+      text = this.edgeByKey().get(`${hit.from}\0${hit.to}`)?.tooltip ?? '';
+    }
+    if (!text) {
+      this.tip.set(null);
+      return;
+    }
+    const rect = this.canvas().nativeElement.getBoundingClientRect();
+    this.tip.set({ text, x: event.clientX - rect.left + 12, y: event.clientY - rect.top + 16 });
+  }
+
+  /** What the live region says about the selection. */
+  protected readonly announcement = computed(() => {
+    this.language.current();
+    const selection = this.map.selection();
+    if (!selection) return '';
+    const label = (id: string) => this.nodeById().get(id)?.label ?? id;
+    if (selection.kind === 'node')
+      return this.language.t('map.announce.node', { name: label(selection.id) });
+    return this.language.t('map.announce.edge', {
+      from: label(selection.from),
+      to: label(selection.to),
+    });
+  });
+
+  protected onSurfaceKey(event: KeyboardEvent): void {
+    if (event.key !== 'Enter') return;
+    const id = this.map.selectedNodeId();
+    if (!id) return;
+    event.preventDefault();
+    this.map.dive(id);
+  }
+
+  /** Redraws on the next animation frame, once however many changes came before it. */
+  private schedule(draw: () => void): void {
+    if (this.frame) return;
+    this.frame = requestAnimationFrame(() => {
+      this.frame = 0;
+      measured('syncCanvas', draw);
+    });
+  }
+
+  /** The painter of the `<canvas>` of the template, with the palette of the current theme. */
+  private mountCanvas(): void {
+    const el = this.surface().nativeElement;
+    const ctx = el.getContext('2d');
+    if (!ctx) return;
+    let palette = readPalette(getComputedStyle(document.documentElement));
+    let stale = false;
+    const riskColors = () => {
+      const css = getComputedStyle(document.documentElement);
+      return [0, 1, 2, 3, 4].map((i) => css.getPropertyValue(`--relief-risk-${i}`).trim());
+    };
+    let painter = this.makePainter(ctx, palette, riskColors());
+    const draw = () => {
+      const dpr = window.devicePixelRatio || 1;
+      const { width, height } = this.map.viewport();
+      const w = Math.round(width * dpr);
+      const h = Math.round(height * dpr);
+      if (el.width !== w || el.height !== h) {
+        el.width = w;
+        el.height = h;
+      }
+      if (stale) {
+        stale = false;
+        palette = readPalette(getComputedStyle(document.documentElement));
+        painter = this.makePainter(ctx, palette, riskColors());
+      }
+      painter.paint(this.sceneMemo(), this.map.camera(), { width, height }, dpr);
+    };
+    this.painter.set(draw);
+    // Whatever changes the theme (the app, a script, the system): read the palette again.
+    const restyle = () => {
+      stale = true;
+      this.schedule(draw);
+    };
+    const observer = new MutationObserver(restyle);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    const dark =
+      typeof matchMedia === 'function' ? matchMedia('(prefers-color-scheme: dark)') : null;
+    dark?.addEventListener('change', restyle);
+    this.destroyRef.onDestroy(() => {
+      observer.disconnect();
+      dark?.removeEventListener('change', restyle);
+    });
+    // The icon font may load after the first frame: draw again once it is there.
+    void document.fonts?.ready.then(() => this.schedule(draw));
+    this.destroyRef.onDestroy(() => {
+      cancelAnimationFrame(this.frame);
+      cancelAnimationFrame(this.hoverFrame);
+    });
+  }
+
+  private makePainter(ctx: CanvasRenderingContext2D, palette: Palette, risk: string[]) {
+    return createMapPainter(ctx, palette, {
+      t: (key, params) => this.language.t(key, params),
+      icon: (id) => {
+        const info = this.map.info(id);
+        return info?.kind === 'symbol' ? (ICON_GLYPHS[symbolIcon(info.subkind)] ?? null) : null;
+      },
+      risk,
+    });
+  }
+
+  /** What is drawn, in world units, whatever draws it. */
+  private scene() {
+    return buildMapScene({
+      nodes: this.map.visibleNodes(),
+      edgeLines: this.map.edgeLines(),
+      mergedEdgeLines: this.map.mergedEdgeLines(),
+      coChangeLines: this.map.coChangeLines(),
+      emphasis: this.map.emphasis(),
+      modesScale: this.map.modesScale(),
+      info: (id) => this.map.info(id),
+      t: (key, params) => this.language.t(key, params),
+      impact: this.impact(),
+      reading: this.reading(),
+      focus: this.focus(),
+      archi: this.archi(),
+      risk: this.risk(),
+      loading: this.loading(),
+      measureLabel,
+    });
+  }
+
+  /** `window.__reliefScene()`: what is drawn, with client rectangles; computed on call only. */
+  private exposeScene(root: HTMLElement): void {
+    const w = window as unknown as { __reliefScene?: () => unknown };
+    w.__reliefScene = () => {
+      const scene = this.scene();
+      const rect = root.getBoundingClientRect();
+      const { scale, tx, ty } = this.map.camera();
+      const px = (x: number) => rect.left + x * scale + tx;
+      const py = (y: number) => rect.top + y * scale + ty;
+      const client = (r: SceneRect) => ({
+        left: px(r.x),
+        top: py(r.y),
+        width: r.w * scale,
+        height: r.h * scale,
+      });
+      return {
+        nodes: scene.nodes.map(({ rect: r, tabRect, ...node }) => ({
+          ...node,
+          ...client(r),
+          tabRect: tabRect ? client(tabRect) : null,
+        })),
+        edges: scene.edges.map(({ mid, labelRect, ...edge }) => ({
+          ...edge,
+          mid: { x: px(mid.x), y: py(mid.y) },
+          labelRect: labelRect ? client(labelRect) : null,
+        })),
+      };
+    };
+    this.destroyRef.onDestroy(() => delete w.__reliefScene);
   }
 
   protected crumbText(crumb: Crumb): string {
@@ -167,23 +373,18 @@ export class MapCanvasComponent {
   protected onDoubleClick(event: MouseEvent): void {
     const target = event.target instanceof Element ? event.target : null;
     if (target?.closest('.map-levels, .map-crumbs, .map-legend')) return;
-    const id = target?.closest<HTMLElement>('[data-node-id]')?.dataset['nodeId'];
-    if (id) this.map.dive(id);
+    const hit = this.hitAt(event.clientX, event.clientY);
+    if (hit?.kind === 'node') this.map.dive(hit.id);
   }
 
-  /** A click without drag: a node box selects it, empty map deselects (edges have their own). */
-  private onClick(target: Element | null): void {
-    if (!target || target.closest('.map-levels, .map-crumbs, .map-legend, [data-from]')) return;
-    const id = target.closest<HTMLElement>('[data-node-id]')?.dataset['nodeId'];
-    if (id) this.map.selectNode(id);
+  /** A click without drag: a node box selects it, an edge too, empty map deselects. */
+  private onClick(target: Element | null, at: { x: number; y: number }): void {
+    if (!target || target.closest('.map-levels, .map-crumbs, .map-legend')) return;
+    // The strokes of the common path are thin, and nodes may lie under them: pick by proximity.
+    const hit = this.hitAt(at.x, at.y);
+    if (hit?.kind === 'node') this.map.selectNode(hit.id);
+    else if (hit) this.map.selectEdge(hit.from, hit.to);
     else this.map.deselectNode();
-  }
-
-  protected onEdgesClick(event: MouseEvent): void {
-    const target = event.target instanceof Element ? event.target : null;
-    const edge = target?.closest<SVGElement>('[data-from]');
-    const { from, to } = edge?.dataset ?? {};
-    if (from && to) this.map.selectEdge(from, to);
   }
 
   protected startPan(event: PointerEvent): void {
@@ -193,24 +394,35 @@ export class MapCanvasComponent {
     let y = event.clientY;
     const root = this.canvas().nativeElement;
     root.classList.add('panning');
+    this.panning = true;
+    this.tip.set(null);
     const move = (ev: PointerEvent) => {
       this.map.pan(ev.clientX - x, ev.clientY - y);
       x = ev.clientX;
       y = ev.clientY;
     };
     const down = { x: event.clientX, y: event.clientY };
-    const up = (ev: PointerEvent) => {
+    const stop = () => {
       root.classList.remove('panning');
-      if (isClick(down, { x: ev.clientX, y: ev.clientY })) this.onClick(target);
+      this.panning = false;
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', up);
+      this.endPan = null;
     };
+    const up = (ev: PointerEvent) => {
+      stop();
+      if (isClick(down, { x: ev.clientX, y: ev.clientY }))
+        this.onClick(target, { x: ev.clientX, y: ev.clientY });
+    };
+    this.endPan = stop;
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', up);
   }
 
   private listen(): void {
     const root = this.canvas().nativeElement;
+    this.mountCanvas();
+    this.exposeScene(root);
     const measure = () => this.map.setViewport(root.clientWidth, root.clientHeight);
     measure();
     if (typeof ResizeObserver !== 'undefined') {
@@ -220,6 +432,7 @@ export class MapCanvasComponent {
     }
     const wheel = (event: WheelEvent) => {
       event.preventDefault();
+      this.tip.set(null);
       const rect = root.getBoundingClientRect();
       const delta = event.deltaMode === 1 ? event.deltaY * 16 : event.deltaY;
       this.map.zoomAt(
@@ -231,353 +444,29 @@ export class MapCanvasComponent {
     root.addEventListener('wheel', wheel, { passive: false });
     this.destroyRef.onDestroy(() => root.removeEventListener('wheel', wheel));
   }
-
-  private sync(
-    nodes: VisibleNode[],
-    lang: string,
-    impact: ImpactMarks | null,
-    reading: ((id: string) => ReadingNodeState | null) | null,
-    focus: ReadonlySet<string> | null,
-    archi: ReadonlySet<string> | null,
-    risk: ReadonlyMap<string, number> | null,
-    loading: ReadonlySet<string>,
-  ): void {
-    const layer = this.layer().nativeElement;
-    const seen = new Set<string>();
-    for (const node of nodes) {
-      seen.add(node.id);
-      let el = this.elements.get(node.id);
-      if (!el) {
-        el = document.createElement('div');
-        el.className = 'map-node';
-        el.setAttribute('data-testid', 'map-node');
-        el.dataset['nodeId'] = node.id;
-        el.dataset['kind'] = node.kind;
-        layer.appendChild(el);
-        this.elements.set(node.id, el);
-      }
-      el.style.transform = `translate(${node.x}px, ${node.y}px)`;
-      el.style.width = `${node.w}px`;
-      el.style.height = `${node.h}px`;
-      const size = sizeClass(node.w);
-      const mark = node.mark;
-      const badges = mark?.badges.join(' ') ?? '';
-      const inImpact = impact
-        ? impact.reached.has(node.id)
-          ? 'hit'
-          : impact.scope.has(node.id)
-            ? 'box'
-            : 'dim'
-        : '';
-      const boxCount = impact && inImpact === 'box' ? (impact.counts.get(node.id) ?? 0) : 0;
-      const progress = reading?.(node.id) ?? null;
-      const readingKey = progress
-        ? `${progress.seen}/${progress.count?.seen}/${progress.count?.total}`
-        : '';
-      const flagged = !!archi?.has(node.id);
-      const faded = !!focus && !focus.has(node.id);
-      if (risk) el.dataset['riskLevel'] = String(risk.get(node.id) ?? 0);
-      else delete el.dataset['riskLevel'];
-      if (faded) el.dataset['faded'] = 'true';
-      else delete el.dataset['faded'];
-      const open = node.mode === 'open' ? headerLayout(node.kind, this.map.camera().scale) : null;
-      const labelShown = open ? open.label === 'header' : closedLabelVisible(node.w, node.h);
-      const headKey = open ? `${open.height.toFixed(1)}${open.label}` : '';
-      const key = `${labelShown}|${headKey}|${node.mode}|${size}|${lang}|${mark?.status}|${mark?.intensity}|${mark?.oldLocation}|${badges}|${inImpact}|${boxCount}|${readingKey}|${flagged}|${loading.has(node.id)}`;
-      if (el.dataset['key'] !== key) {
-        el.dataset['key'] = key;
-        el.dataset['mode'] = node.mode;
-        el.className = `map-node k-${node.kind} ${node.mode}${open?.label === 'tab' ? ' has-tab' : ''}`;
-        this.mark(el, node);
-        this.fill(el, node, size, open, labelShown);
-        this.impactMark(el, inImpact, boxCount);
-        this.readingMark(el, progress);
-        this.archiMark(el, flagged);
-        this.loadingMark(el, loading.has(node.id));
-        // No readable label: no meta, chips or badges either.
-        if (!labelShown) el.querySelector('.hd')?.replaceChildren();
-      }
-    }
-    for (const [id, el] of this.elements) {
-      if (seen.has(id)) continue;
-      el.remove();
-      this.elements.delete(id);
-    }
-  }
-
-  /** Selection dimming of the nodes; it never touches `data-faded` (the focus layer's). */
-  private syncNodeEmphasis(
-    nodes: VisibleNode[],
-    impact: ImpactMarks | null,
-    selection: Selection | null,
-  ): void {
-    const keep = new Set<string>(impact ? [...impact.reached, ...impact.scope] : []);
-    const states = nodeEmphasis(
-      nodes.map((n) => n.id),
-      this.map.edgeLines().map((l) => l.edge),
-      selection,
-      (id) => this.map.visibleOf(id),
-      keep,
-      (id, box) => this.map.within(id, box),
-    );
-    for (const [id, state] of states) {
-      const el = this.elements.get(id);
-      if (!el) continue;
-      if (state === 'dim') el.dataset['emph'] = 'dim';
-      else delete el.dataset['emph'];
-    }
-  }
-
-  /** Selection classes on the edge groups: out / in / picked / dim. */
-  private syncEdgeEmphasis(lines: EdgeLine[], selection: Selection | null): void {
-    const states = edgeEmphasis(
-      lines.map((l) => l.edge),
-      selection,
-      (id) => this.map.visibleOf(id),
-      (id, box) => this.map.within(id, box),
-    );
-    for (const { edge } of lines) {
-      const group = this.edgeElements.get(`${edge.from}>${edge.to}`);
-      const state = states.get(edgeKey(edge.from, edge.to)) ?? 'normal';
-      for (const cls of ['out', 'in', 'picked', 'dim']) group?.classList.toggle(cls, cls === state);
-    }
-  }
-
-  /** The logical coupling edges: dashed lines of their own colour, not clickable. */
-  private syncCoChange(lines: CoChangeLine[]): void {
-    const svg = this.edgesLayer().nativeElement;
-    const seen = new Set<string>();
-    for (const { edge, shape } of lines) {
-      const key = `${edge.from}>${edge.to}`;
-      seen.add(key);
-      let group = this.coChangeElements.get(key);
-      if (!group) {
-        group = svgEl('g', 'co-change-edge');
-        group.setAttribute('data-testid', 'co-change-edge');
-        group.append(svgEl('path', 'line'));
-        svg.appendChild(group);
-        this.coChangeElements.set(key, group);
-      }
-      const line = group.firstElementChild;
-      line?.setAttribute('d', shape.d);
-      line?.setAttribute('stroke-width', String(edgeThickness(edge.count)));
-    }
-    for (const [key, group] of this.coChangeElements) {
-      if (seen.has(key)) continue;
-      group.remove();
-      this.coChangeElements.delete(key);
-    }
-  }
-
-  private syncEdges(lines: EdgeLine[], lang: string, impact: ImpactMarks | null): void {
-    const svg = this.edgesLayer().nativeElement;
-    const seen = new Set<string>();
-    for (const {
-      edge,
-      shape,
-      selected,
-      status,
-      violations,
-      added,
-      removed,
-      moved,
-      review,
-    } of lines) {
-      const key = `${edge.from}>${edge.to}`;
-      seen.add(key);
-      let group = this.edgeElements.get(key);
-      const tip = edgeTooltip(
-        edge,
-        (id) => this.map.label(id),
-        (count) =>
-          this.language.t(count === 1 ? 'map.edges.links_one' : 'map.edges.links', { count }),
-      );
-      if (!group) {
-        group = svgEl('g', 'edge');
-        group.append(
-          svgEl('path', 'hit'),
-          svgEl('path', 'line'),
-          svgEl('path', 'arrow'),
-          svgEl('g', 'tag'),
-        );
-        const tag = group.lastElementChild as SVGGElement;
-        tag.setAttribute('data-testid', 'map-edge');
-        svg.appendChild(group);
-        this.edgeElements.set(key, group);
-      }
-      const [hit, line, arrow, tag] = Array.from(group.children) as SVGElement[];
-      group.setAttribute(
-        'class',
-        `edge st-${status}${selected ? ' sel' : ''}${edge.changed ? ' changed' : ''}${onImpactPath(impact, edge.from, edge.to) ? ' imp-path' : ''}${violations.introduced > 0 ? ' viol-new' : violations.existing > 0 ? ' viol-old' : ''}`,
-      );
-      tag?.setAttribute('data-status', status);
-      for (const el of [hit, tag]) {
-        el?.setAttribute('data-from', edge.from);
-        el?.setAttribute('data-to', edge.to);
-      }
-      tag?.setAttribute('data-count', String(edge.count));
-      tag?.classList.toggle('covered', shape.covered);
-      hit?.setAttribute('d', shape.d);
-      line?.setAttribute('d', shape.d);
-      line?.setAttribute('stroke-width', String(edgeThickness(edge.count)));
-      arrow?.setAttribute('d', shape.arrow);
-      const classInput = { count: edge.count, added, removed, moved, violations, review };
-      const cls = edgeLabelClass(classInput) as EdgeLabelClass;
-      const hl = onImpactPath(impact, edge.from, edge.to);
-      const label = edgeLabel(
-        { count: edge.count, added, removed, moved, cls, review },
-        { new: this.language.t('map.edges.new'), moved: this.language.t('map.edges.moved') },
-      );
-      let text = tag?.querySelector('text');
-      if (tag && edgeLabelVisible(label, shape.length)) {
-        if (!text) {
-          text = svgEl('text', '');
-          tag.appendChild(text);
-        }
-        text.setAttribute('class', `el ${edgeLabelClass({ ...classInput, highlighted: hl })}`);
-        text.textContent = label;
-        text.setAttribute('x', String(shape.mx));
-        text.setAttribute('y', String(shape.my));
-      } else {
-        text?.remove();
-      }
-      if (group.dataset['tip'] !== `${tip}|${lang}`) {
-        group.dataset['tip'] = `${tip}|${lang}`;
-        for (const el of [hit, tag]) {
-          el?.querySelector('title')?.remove();
-          const title = svgEl('title', '');
-          title.textContent = tip;
-          el?.prepend(title);
-        }
-      }
-    }
-    for (const [key, group] of this.edgeElements) {
-      if (seen.has(key)) continue;
-      group.remove();
-      this.edgeElements.delete(key);
-    }
-  }
-
-  /** Diff attributes and classes of a node; the former place of a moved node is its own thing. */
-  private mark(el: HTMLElement, node: VisibleNode): void {
-    const mark = node.mark;
-    el.setAttribute('data-testid', mark?.oldLocation ? 'old-location' : 'map-node');
-    if (!mark) {
-      delete el.dataset['diffStatus'];
-      delete el.dataset['diffBadges'];
-      return;
-    }
-    el.dataset['diffStatus'] = mark.status;
-    el.dataset['diffBadges'] = mark.badges.join(' ');
-    if (mark.oldLocation) el.classList.add('old-location');
-    else if (mark.status !== 'unchanged') el.classList.add('st', `st-${mark.status}`);
-    el.classList.add(`int-${mark.intensity}`);
-  }
-
-  /** Impact radius: reached nodes outlined, the rest dimmed, closed boxes count what they hold. */
-  private impactMark(el: HTMLElement, state: ImpactState, count: number): void {
-    if (state) el.classList.add(`imp-${state}`);
-    if (state === 'box' && count > 0 && el.classList.contains('box')) {
-      el.querySelector('.hd')?.appendChild(
-        span('bdg imp-count', this.language.t('review.impact.boxCount', { count })),
-      );
-    }
-  }
-
-  /** A box whose content is on its way says so. */
-  private loadingMark(el: HTMLElement, loading: boolean): void {
-    if (!loading) return;
-    const mark = span('bdg loading', this.language.t('map.loading'));
-    mark.setAttribute('data-testid', 'node-loading');
-    (el.querySelector('.hd') ?? el).appendChild(mark);
-  }
-
-  /** The "archi" badge of a box that holds or touches a violating edge. */
-  private archiMark(el: HTMLElement, flagged: boolean): void {
-    if (!flagged) return;
-    el.dataset['archi'] = 'true';
-    el.querySelector('.hd')?.appendChild(span('bdg archi', this.language.t('rules.badge')));
-  }
-
-  /** Seen nodes are dimmed; a container tells how many of its entries are seen. */
-  private readingMark(el: HTMLElement, state: ReadingNodeState | null): void {
-    if (!state) return;
-    el.dataset['seen'] = String(state.seen);
-    if (state.seen) el.classList.add('seen');
-    if (state.count && el.classList.contains('box')) {
-      el.querySelector('.hd')?.appendChild(
-        span('bdg seen-count', this.language.t('review.reading.counts', { ...state.count })),
-      );
-    }
-  }
-
-  private fill(
-    el: HTMLElement,
-    node: VisibleNode,
-    size: ReturnType<typeof sizeClass>,
-    open: HeaderLayout | null,
-    labelShown: boolean,
-  ): void {
-    el.replaceChildren();
-    el.removeAttribute('title');
-    const info = this.map.info(node.id);
-    const content = info ? nodeContent(info, node.mode, size) : null;
-    if (!content) return;
-    const head = document.createElement('div');
-    head.className = 'hd';
-    const style = open ? headerStyle(open) : null;
-    if (style) {
-      head.style.height = style.height;
-      head.style.fontSize = style.fontSize;
-      head.style.lineHeight = style.lineHeight;
-      head.style.marginTop = style.marginTop;
-    }
-    if (!labelShown) {
-      if (open?.label === 'tab' && content.label) {
-        const tab = span('tab', content.label);
-        tab.title = content.label;
-        el.append(head, tab);
-        return;
-      }
-      if (content.label) el.title = content.label;
-      el.appendChild(head);
-      return;
-    }
-    if (content.icon) head.appendChild(span(`ic pi ${content.icon}`, ''));
-    if (content.label) head.appendChild(span('lb', content.label));
-    if (content.sub) head.appendChild(span('sub', content.sub));
-    for (const badge of node.mark?.badges ?? []) {
-      head.appendChild(span(`bdg ${badge}`, this.language.t(`review.badges.${badge}`)));
-    }
-    if (content.counts.length > 0) {
-      const chips = span('chips', '');
-      for (const { unit, value } of content.counts) {
-        const key = value === 1 ? `map.counts.${unit}_one` : `map.counts.${unit}`;
-        chips.appendChild(span('', this.language.t(key, { count: value })));
-      }
-      head.appendChild(chips);
-    }
-    if (style) {
-      for (const child of Array.from(head.children) as HTMLElement[]) {
-        if (!child.classList.contains('lb')) child.style.fontSize = style.subFontSize;
-      }
-    }
-    el.appendChild(head);
-  }
 }
 
-function span(className: string, text: string): HTMLElement {
-  const el = document.createElement('span');
-  if (className) el.className = className;
-  if (text) el.textContent = text;
-  return el;
-}
+/** Glyphs of the icon font for the icon classes of the symbols (`openng-icons.css`). */
+const ICON_GLYPHS: Record<string, string> = {
+  'pi-objects-column': '\uea12',
+  'pi-code': '\ue9e7',
+  'pi-link': '\ue9c1',
+  'pi-box': '\ue9d9',
+  'pi-wrench': '\ue9ff',
+  'pi-tag': '\ue95e',
+  'pi-lock': '\ue95f',
+  'pi-directions': '\ue9a6',
+  'pi-table': '\ue969',
+  'pi-clock': '\ue940',
+  'pi-circle-fill': '\ue9dd',
+};
 
-function svgEl<K extends keyof SVGElementTagNameMap>(
-  tag: K,
-  className: string,
-): SVGElementTagNameMap[K] {
-  const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
-  if (className) el.setAttribute('class', className);
-  return el;
+let measureCtx: CanvasRenderingContext2D | null = null;
+
+/** Width in pixels of a text in a CSS font, by Canvas 2D. */
+function measureLabel(text: string, font: string): number {
+  measureCtx ??= document.createElement('canvas').getContext('2d');
+  if (!measureCtx) return text.length * 7;
+  measureCtx.font = font;
+  return measureCtx.measureText(text).width;
 }

@@ -3,7 +3,11 @@ import { Router } from '@angular/router';
 
 import type { DiffResponse, GraphSnapshot } from '../../../core/models/contract';
 import { ReliefApiService } from '../../../core/services/relief-api.service';
+import { MapBusiness } from '../../map/business/map.business';
+import { DISPLAY_BUDGET, RepoBusiness } from '../../map/business/repo.business';
+import { headRef } from '../../map/helpers/repo.logic';
 import { exploreView } from '../../explore/helpers/explore.logic';
+import { baseContainers, reviewGraph } from '../helpers/review-graph.logic';
 import { prStats } from '../helpers/diff-layer.logic';
 import { hasStructuralChange } from '../helpers/diff-panel.logic';
 
@@ -15,6 +19,8 @@ export class DiffBusiness {
   private readonly api = inject(ReliefApiService);
   private readonly router = inject(Router);
   private readonly pending = inject(PendingTasks);
+  private readonly repo = inject(RepoBusiness, { optional: true });
+  private readonly map = inject(MapBusiness, { optional: true });
 
   private readonly _status = signal<DiffLoadStatus>('loading');
   private readonly _error = signal<string | null>(null);
@@ -69,6 +75,21 @@ export class DiffBusiness {
       replaceUrl: true,
     });
     await this.fetch(range);
+    await this.followHead(range);
+  }
+
+  /** The map draws the head of the new range, keeping its view. */
+  private async followHead(range: string): Promise<void> {
+    if (!this.repo || !this.map || this._range() !== range) return;
+    try {
+      await this.repo.refreshSnapshot(headRef(range));
+      const snapshot = this.repo.snapshot();
+      if (snapshot && this._range() === range) {
+        this.map.show(this.graphWithBase(snapshot.graph), true);
+      }
+    } catch {
+      // The map stays as it was.
+    }
   }
 
   /** Reads the diff of the current range again. */
@@ -92,7 +113,9 @@ export class DiffBusiness {
   graphWithBase(head: GraphSnapshot): GraphSnapshot {
     const diff = this._diff();
     const base = this._base();
-    return exploreView(this._reviewMode() ? 'review' : 'explore', head, base, diff).graph;
+    const subgraph = diff?.graph;
+    const shown = this._reviewMode() && subgraph ? reviewGraph(subgraph, head) : head;
+    return exploreView(this._reviewMode() ? 'review' : 'explore', shown, base, diff).graph;
   }
 
   private async fetch(range: string | null, quiet = false): Promise<void> {
@@ -113,11 +136,11 @@ export class DiffBusiness {
     }
     this._range.set(range);
     try {
-      const diff = await this.api.diff(range);
-      const [base, head] = await Promise.all([
-        this.loadSnapshot(diff.diff.base),
-        this.loadSnapshot(diff.diff.head),
-      ]);
+      const diff = await this.api.diff(range, DISPLAY_BUDGET);
+      // With the subgraph of the response the head is not read; the base only for what it holds of the changes.
+      const [base, head] = diff.graph
+        ? [await this.loadBase(diff), diff.graph]
+        : await Promise.all([this.loadSnapshot(diff.diff.base), this.loadSnapshot(diff.diff.head)]);
       if (token !== this.token) return;
       this._base.set(base);
       this._head.set(head);
@@ -133,6 +156,17 @@ export class DiffBusiness {
       this._head.set(null);
       this._error.set(error instanceof Error ? error.message : String(error));
       this._status.set('error');
+    }
+  }
+
+  /** The base graph budgeted, opened down to what the diff removed, moved or modified; none when it only adds. */
+  private async loadBase(diff: DiffResponse): Promise<GraphSnapshot | null> {
+    const expand = baseContainers(diff);
+    if (expand.length === 0) return null;
+    try {
+      return (await this.api.snapshot(diff.diff.base, DISPLAY_BUDGET, expand)).graph;
+    } catch {
+      return null;
     }
   }
 

@@ -2,6 +2,8 @@ import { computed, inject, Injectable, PendingTasks, signal } from '@angular/cor
 
 import type { DiffResponse, GraphSnapshot, ReadingItem } from '../../../core/models/contract';
 import { ReliefApiService } from '../../../core/services/relief-api.service';
+import { DISPLAY_BUDGET } from '../../map/business/repo.business';
+import { baseContainers } from '../helpers/review-graph.logic';
 import {
   type ChangedSymbols,
   containerProgress,
@@ -172,13 +174,22 @@ export class ReadingOrderBusiness {
   });
 
   private async loadView(range: string, token: number): Promise<void> {
-    const diff = await this.attempt(() => this.api.diff(range));
+    const diff = await this.attempt(() => this.api.diff(range, DISPLAY_BUDGET));
     if (!diff) return;
-    const [base, head] = await Promise.all([
-      this.attempt(async () => (await this.api.snapshot(diff.diff.base)).graph),
-      this.attempt(async () => (await this.api.snapshot(diff.diff.head)).graph),
-    ]);
+    const [base, head] = diff.graph
+      ? [await this.attempt(() => this.baseOf(diff)), diff.graph]
+      : await Promise.all([
+          this.attempt(async () => (await this.api.snapshot(diff.diff.base)).graph),
+          this.attempt(async () => (await this.api.snapshot(diff.diff.head)).graph),
+        ]);
     if (token === this.viewToken) this._commitView.set({ range, diff, base, head });
+  }
+
+  /** The base graph, opened down to what the diff touches; none when it only adds. */
+  private async baseOf(diff: DiffResponse): Promise<GraphSnapshot | null> {
+    const expand = baseContainers(diff);
+    if (expand.length === 0) return null;
+    return (await this.api.snapshot(diff.diff.base, DISPLAY_BUDGET, expand)).graph;
   }
 
   /** The result of an API call, or null when it fails. */

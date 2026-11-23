@@ -2,7 +2,7 @@ import type { AggregatedEdge } from './edges.logic';
 
 export type Selection = { kind: 'node'; id: string } | { kind: 'edge'; from: string; to: string };
 
-export type EdgeEmphasis = 'out' | 'in' | 'picked' | 'dim' | 'normal';
+export type EdgeEmphasis = 'out' | 'in' | 'picked' | 'dim' | 'hidden' | 'normal';
 export type NodeEmphasis = 'sharp' | 'dim';
 
 /** Whether `id` is the box `box` or lies inside it (a fine edge end under a visible box). */
@@ -13,7 +13,8 @@ export function edgeKey(from: string, to: string): string {
   return `${from}\u0000${to}`;
 }
 
-/** Which edges stand out for the selection: outgoing, incoming, picked; the rest dims. */
+/** Which edges stand out for the selection: outgoing, incoming, picked; the rest dims,
+ * and those internal to the selected node are hidden. */
 export function edgeEmphasis(
   edges: readonly AggregatedEdge[],
   selection: Selection | null,
@@ -25,8 +26,10 @@ export function edgeEmphasis(
   for (const { from, to } of edges) {
     let state: EdgeEmphasis = 'normal';
     if (selection?.kind === 'node') {
-      state =
-        at !== null && within(from, at) ? 'out' : at !== null && within(to, at) ? 'in' : 'dim';
+      if (at !== null && within(from, at) && within(to, at)) state = 'hidden';
+      else if (at !== null && within(from, at)) state = 'out';
+      else if (at !== null && within(to, at)) state = 'in';
+      else state = 'dim';
     } else if (selection?.kind === 'edge') {
       state = from === selection.from && to === selection.to ? 'picked' : 'dim';
     }
