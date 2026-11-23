@@ -230,6 +230,18 @@ The DOM + SVG rendering of the map is gone (ADR 0009): the sections above that m
 - All three budgets are held on both repositories, fit and zoomed. A Canvas frame costs 1 to 10 ms p95 (`syncCanvas`).
 - Wheel zoom: the threshold frames are edge computation (`allEdges`, `edgeStates`, `edgeLines`: 25 to 35 ms in the worst frames), not drawing; 60 fps at zoom is S21. On `dense`, a subgraph loaded during the zoom still makes one frame of ~730 ms (`buildLayouts` ~675 ms): S09.
 
+### After S09 (layout in a Web Worker)
+
+`computeLayouts` (both layouts, optimised and raw) runs in a Web Worker; the map keeps the old layout until the new one arrives, and actions made during the first layout are replayed when it lands. `work` p50 / p95 (max) in ms, fit / zoomed, Xvfb:
+
+| Scenario   | dense                  | excalidraw             | Budget (p95) |
+| ---------- | ---------------------- | ---------------------- | ------------ |
+| Pan        | 3/3 (5), 2/2 (11)      | 2/2 (9), 1/2 (6)       | 16           |
+| Wheel zoom | 2/19 (36), 2/29 (54)   | 2/22 (50), 3/23 (26)   | 33           |
+| Selection  | 29/33 (33), 22/33 (33) | 17/56 (56), 16/39 (39) | 100          |
+
+- The ~730 ms frame of a subgraph loaded during the zoom of `dense` is gone: no step does layout work on the main thread any more. The worst zoom frames (36 to 54 ms) are edge computation (`allEdges`, `edgeStates`, `edgeLines`): S21.
+
 ## Shallow clones
 
 The clones are shallow (`--depth 400`). `repo_id` (the name of the data folder when it falls back to the user cache, and a cache key) is the SHA of the oldest stored commit, so it is not the same as in a full clone of the same repository, nor between clones of different depths. Churn and co-change ignore the commit at the shallow boundary (no parent to compare it with). The measures above (indexing, `analyse`, budgeted snapshot) do not depend on either, so they were not run again.

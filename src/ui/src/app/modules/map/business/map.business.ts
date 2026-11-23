@@ -1,6 +1,7 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 
 import { measured } from '../../../core/helpers/perf';
+
 import type {
   DiffResponse,
   Edge,
@@ -41,14 +42,15 @@ import {
 } from '../../review/helpers/diff-layer.logic';
 import { breadcrumbTrail, type Crumb } from '../helpers/breadcrumb.logic';
 import { layoutCrossings } from '../helpers/crossings.logic';
-import { alphabeticalOrder, optimizeOrder } from '../helpers/layout-optimize.logic';
+import { computeLayouts, type Layouts } from '../helpers/layout-compute.logic';
+import { LAYOUT_EXECUTOR, onThreadExecutor } from './layout-executor';
 import {
   DEFAULT_LAYOUT_MODE,
   type LayoutMode,
   readLayoutMode,
   writeLayoutMode,
 } from '../helpers/layout-mode.logic';
-import { interpolateLayout, layoutGraph, type MapLayout, type Rect } from '../helpers/layout.logic';
+import { interpolateLayout, type MapLayout, type Rect } from '../helpers/layout.logic';
 import { createBoxGrid } from '../helpers/box-grid.logic';
 import { edgeState, type EdgeState } from '../helpers/edge-state.logic';
 import {
@@ -142,11 +144,6 @@ export interface CoChangeLine {
   shape: EdgeShape;
 }
 
-interface Layouts {
-  optimized: MapLayout;
-  raw: MapLayout;
-}
-
 function storage(): Storage | null {
   try {
     return localStorage;
@@ -233,6 +230,10 @@ export class MapBusiness {
   private readonly _diveTarget = signal<string | null>(null);
   /** What to do once the next graph is laid out (the content of a container just arrived). */
   private afterShow: (() => void)[] = [];
+  private showRequest = 0;
+  /** A first layout is on its way: the actions of the user wait for it, as they would for the map. */
+  private layingOut = false;
+  private readonly executeLayout = inject(LAYOUT_EXECUTOR);
 
   private readonly _history = signal<History<NavStep>>(emptyHistory());
   /** Where the running camera flight ends; meaningful while `animation` is set. */
@@ -683,6 +684,7 @@ export class MapBusiness {
 
   /** Selects a node without moving the camera (a click on its box). */
   selectNode(id: string): void {
+    if (this.deferUntilLaidOut(() => this.selectNode(id))) return;
     this.clearEdgeSelection();
     this._selectedNodeId.set(id);
     this.record();
@@ -690,11 +692,13 @@ export class MapBusiness {
 
   /** Clears the node selection (a click on empty map). */
   deselectNode(): void {
+    if (this.deferUntilLaidOut(() => this.deselectNode())) return;
     this._selectedNodeId.set(null);
   }
 
   /** Selects a node and frames it (the file, for a symbol). */
   selectResult(id: string): void {
+    if (this.deferUntilLaidOut(() => this.selectResult(id))) return;
     this.clearEdgeSelection();
     this.focusNode(id);
     this.record();
@@ -702,11 +706,13 @@ export class MapBusiness {
 
   /** Back to the previous step of the navigation: selection and camera. */
   goBack(): void {
+    if (this.deferUntilLaidOut(() => this.goBack())) return;
     this.restore(goBack(this._history()));
   }
 
   /** Forward to the next step of the navigation. */
   goForward(): void {
+    if (this.deferUntilLaidOut(() => this.goForward())) return;
     this.restore(goForward(this._history()));
   }
 
@@ -753,6 +759,7 @@ export class MapBusiness {
   }
 
   selectCrumb(crumb: Crumb): void {
+    if (this.deferUntilLaidOut(() => this.selectCrumb(crumb))) return;
     if (crumb.kind === 'node') this.selectResult(crumb.id);
     else if (crumb.kind === 'root') {
       this._selectedNodeId.set(null);
@@ -762,6 +769,7 @@ export class MapBusiness {
 
   /** Closes the help, else deselects, else goes up a level, else shows everything. */
   escape(): void {
+    if (this.deferUntilLaidOut(() => this.escape())) return;
     switch (
       escapeStep({
         helpOpen: this._helpOpen(),
@@ -814,7 +822,7 @@ export class MapBusiness {
       const meta = await this.api.meta();
       this._repoName.set(meta.repo);
       const snapshot = await this.api.snapshot(headRef(meta.range));
-      this.show(snapshot.graph);
+      await this.show(snapshot.graph);
     } catch {
       this._status.set('error');
     }
@@ -825,14 +833,41 @@ export class MapBusiness {
    * stay where they are (the same repository seen with another diff): a camera flight to a level
    * goes on and lands on it.
    */
-  show(received: GraphSnapshot, keepView = false): void {
+  show(received: GraphSnapshot, keepView = false): Promise<void> {
     this.sourceGraph = received;
     const graph = hideExternalDeps(received, this._hideExternal());
+    const request = ++this.showRequest;
+    if (!keepView) this.layingOut = true;
+    if (this.executeLayout === onThreadExecutor) {
+      this.applyShow(graph, computeLayouts(graph), keepView);
+      return Promise.resolve();
+    }
+    return this.executeLayout(graph)
+      .then((layouts) => {
+        // The graph was replaced while the layouts were computed: the map keeps the newer one.
+        if (request === this.showRequest) this.applyShow(graph, layouts, keepView);
+      })
+      .catch(() => {
+        if (request === this.showRequest) this._status.set('error');
+      });
+  }
+
+  /**
+   * While the first layout is on its way, the actions of the user wait for it (as they would for
+   * the map): `replay` is queued for the arrival and this returns true.
+   */
+  private deferUntilLaidOut(replay: () => void): boolean {
+    if (!this.layingOut) return false;
+    this.afterShow.push(replay);
+    return true;
+  }
+
+  private applyShow(graph: GraphSnapshot, layouts: Layouts, keepView: boolean): void {
+    this.layingOut = false;
     if (!keepView) {
       this.stopAnimation();
       this.pendingSettle = null;
     }
-    const layouts = measured('buildLayouts', () => this.buildLayouts(graph));
     this._layouts.set(layouts);
     const layout = layouts[layoutKey(this._layoutMode())];
     const before = this._targetLayout().bounds;
@@ -873,11 +908,12 @@ export class MapBusiness {
     this._hideExternal.set(hide);
     const source = storage();
     if (source) writeHideExternal(source, hide);
-    if (this.sourceGraph.nodes.length > 0) this.show(this.sourceGraph, true);
+    if (this.sourceGraph.nodes.length > 0) void this.show(this.sourceGraph, true);
   }
 
   /** Switches the layout, animated; the choice is remembered. */
   setLayoutMode(mode: LayoutMode): void {
+    if (this.deferUntilLaidOut(() => this.setLayoutMode(mode))) return;
     const previous = this._layoutMode();
     this._layoutMode.set(mode);
     const source = storage();
@@ -919,19 +955,8 @@ export class MapBusiness {
     this.animation = requestAnimationFrame(step);
   }
 
-  /**
-   * "Fewer crossings" is the best of the searched order and the order of the snapshot, so it is
-   * never worse than the natural one (and keeps it when nothing crosses).
-   */
-  private buildLayouts(graph: GraphSnapshot): Layouts {
-    const searched = layoutGraph(graph, optimizeOrder(graph).order);
-    const natural = layoutGraph(graph);
-    const optimized =
-      layoutCrossings(searched, graph) < layoutCrossings(natural, graph) ? searched : natural;
-    return { optimized, raw: layoutGraph(graph, alphabeticalOrder(graph)) };
-  }
-
   setLevel(level: number): void {
+    if (this.deferUntilLaidOut(() => this.setLevel(level))) return;
     this.interrupt();
     this._zoomPoint.set(null);
     this._diveTarget.set(null);
@@ -954,6 +979,7 @@ export class MapBusiness {
   }
 
   zoomAt(factor: number, px: number, py: number): void {
+    if (this.deferUntilLaidOut(() => this.zoomAt(factor, px, py))) return;
     this.interrupt();
     this._forcedLevel.set(null);
     this._cap.set(null);
@@ -962,6 +988,7 @@ export class MapBusiness {
   }
 
   pan(dx: number, dy: number): void {
+    if (this.deferUntilLaidOut(() => this.pan(dx, dy))) return;
     this.interrupt();
     this._zoomPoint.set(null);
     this._diveTarget.set(null);
@@ -974,6 +1001,7 @@ export class MapBusiness {
 
   /** Frames a node, opening it if it can be opened. */
   dive(id: string, maxScale = 1.4): void {
+    if (this.deferUntilLaidOut(() => this.dive(id, maxScale))) return;
     const node = this._layout().nodes.get(id);
     if (!node) return;
     this.interrupt();
@@ -988,6 +1016,7 @@ export class MapBusiness {
 
   /** Frames the union of some nodes (the files of a replayed commit); `null` goes back to where the view was. */
   frameNodes(ids: readonly string[] | null): void {
+    if (this.deferUntilLaidOut(() => this.frameNodes(ids))) return;
     if (ids === null) {
       const saved = this.beforeFrame;
       this.beforeFrame = null;

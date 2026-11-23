@@ -1,13 +1,6 @@
 import { $, browser, expect } from '@wdio/globals';
 import { openRelief } from '../helpers/open-relief';
-import {
-  sceneEdge,
-  sceneEdges,
-  sceneNode,
-  sceneNodes,
-  waitForNode,
-  waitForScene,
-} from '../helpers/map-scene';
+import { sceneEdge, sceneEdges, sceneNodes, waitForNode, waitForScene } from '../helpers/map-scene';
 import { tid } from '../helpers/ui';
 
 // Contract with the UI (data attributes, no i18n dependency), on main...feat/promo-codes:
@@ -92,10 +85,13 @@ it('switching off "Relire la PR" shows the map without the diff', async () => {
 
   await tid('review-toggle').click();
   await expect(tid('review-toggle')).toHaveAttribute('aria-pressed', 'false');
-  await waitForScene((s) => s.nodes.find((n) => n.id === DISCOUNT)?.status === null);
-  // no node that only exists in the base: neither the removed file nor the old place of format.ts
-  expect(await sceneNode(LEGACY)).toBeUndefined();
-  expect((await sceneNodes()).filter((n) => n.oldLocation)).toHaveLength(0);
+  // no node that only exists in the base: neither the removed file nor the old place of format.ts.
+  // The new layout comes from the worker after the statuses: the old one stays on screen until then.
+  await waitForScene(
+    (s) =>
+      s.nodes.find((n) => n.id === DISCOUNT)?.status === null &&
+      !s.nodes.some((n) => n.id === LEGACY || n.oldLocation),
+  );
 
   await tid('review-toggle').click();
   await waitForScene((s) => s.nodes.find((n) => n.id === DISCOUNT)?.status === 'added');
