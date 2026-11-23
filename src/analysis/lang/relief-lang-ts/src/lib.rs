@@ -326,6 +326,47 @@ impl LanguageAdapter for TsAdapter {
         (extraction, serialised)
     }
 
+    /// What resolution reads: `tsconfig*.json`, `jsconfig*.json`, `package.json` and the
+    /// files their relative `extends` lead to. A change of an `extends` is a change of the
+    /// tsconfig itself, so the chains of the new tree are enough.
+    fn link_input(
+        &self,
+        path: &str,
+        paths: &[&str],
+        read: &dyn Fn(&str) -> Option<Vec<u8>>,
+    ) -> bool {
+        resolve::is_link_config(path) || resolve::is_extended_by_config(path, paths, read)
+    }
+
+    fn link_affected(
+        &self,
+        _path: &str,
+        index: Option<&str>,
+        ctx: &LinkContext<'_>,
+        added: &std::collections::HashSet<String>,
+        routes_changed: bool,
+    ) -> bool {
+        if added.is_empty() && !routes_changed {
+            return false;
+        }
+        let Some(index) = index.and_then(|j| serde_json::from_str::<FileIndex>(j).ok()) else {
+            return true;
+        };
+        if routes_changed && !index.http_calls.is_empty() {
+            return true;
+        }
+        if added.is_empty() {
+            return false;
+        }
+        let memo = JsonMemo::default();
+        index
+            .imports
+            .iter()
+            .map(|i| &i.specifier)
+            .chain(index.bindings.iter().map(|b| &b.specifier))
+            .any(|s| matches!(resolve(s, ctx, &memo), Resolution::File(p) if added.contains(&p)))
+    }
+
     fn link(&self, file: &Node, bytes: &[u8], ctx: &LinkContext<'_>) -> Extraction {
         self.link_indexed(file, bytes, None, ctx)
     }

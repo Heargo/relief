@@ -41,6 +41,31 @@ pub trait LanguageAdapter: Send + Sync {
     fn link(&self, _file: &Node, _bytes: &[u8], _ctx: &LinkContext<'_>) -> Extraction {
         Extraction::default()
     }
+    /// Whether a change of `path`, a file this adapter does not extract (configuration, a
+    /// manifest...), can alter how other files link. The index then rebuilds from scratch.
+    /// `paths` and `read` describe the new tree. Conservative default: any such change does.
+    fn link_input(
+        &self,
+        _path: &str,
+        _paths: &[&str],
+        _read: &dyn Fn(&str) -> Option<Vec<u8>>,
+    ) -> bool {
+        true
+    }
+    /// Whether the links of the unchanged file `path` may differ now that the paths `added`
+    /// exist, or the routes changed. Asked for every unchanged file whose links do not point
+    /// into a changed file, on each incremental build. `index` is what `extract_indexed` returned for it;
+    /// `ctx` describes the new tree. Conservative default: yes.
+    fn link_affected(
+        &self,
+        _path: &str,
+        _index: Option<&str>,
+        _ctx: &LinkContext<'_>,
+        _added: &HashSet<String>,
+        _routes_changed: bool,
+    ) -> bool {
+        true
+    }
     /// `(symbol name, normalised signature text)` of the symbols of one file
     /// of this language, identified by its repository path; empty when the
     /// adapter does not handle that path.

@@ -155,7 +155,7 @@ Brainstorm du 2026-11-20 : la carte rame sur un gros écran et les budgets de S0
 | ✓ | 51e | **S08** Arêtes : hors de la vue et niveau de détail | Toutes les arêtes du niveau sont dans le DOM. | S06 |
 | ✓ | 51f | **S09** Disposition et croisements hors du thread principal | Seulement si S05 trouve une longue tâche au chargement. | S05 |
 | ✓ | 51g | **S10** Indexation parallèle | Indexation mono-thread : n8n 54 s à froid. | S04 |
-| ☐ | 51h | **S11** Analyse incrémentale d'une plage | Diff d'une PR : 3,1 s et 65 s pour un budget de 1 s. | S04 |
+| ✓ | 51h | **S11** Analyse incrémentale d'une plage | Diff d'une PR : 3,1 s et 65 s pour un budget de 1 s. | S04 |
 | ☐ | 51i | **S12** Afficher la carte avant la fin de l'indexation | Seulement si un gros dépôt reste lent à froid après S10 et S11. | S10, S11 |
 | ☐ | 51j | **S13** Sélection sous le budget | Mesure après S07 : ~160 ms pour 100, surtout hors marques (panneau, style). | S07 |
 | ✓ | 51k | **S14** Refondre le rendu de la carte : canvas, WebGL ou autre | Après S08, le zoom (41 à 204 ms) et la sélection (~160 ms) restent hors budget : limite du DOM + SVG ; spike et ADR d'abord. | S08 |
@@ -167,6 +167,7 @@ Brainstorm du 2026-11-20 : la carte rame sur un gros écran et les budgets de S0
 | ✓ | 51q | **S20** Canvas seul rendu de la carte | Retrait du DOM de la carte ; budgets mesurés. | S19 |
 | ✓ | 51r | **S21** Arêtes au franchissement de seuil sous une frame | 25 à 35 ms de calcul d'arêtes au seuil : 60 fps au zoom. | S20 |
 | ☐ | 51s | **S22** Étiquettes d'arête sous une frame | Reste de S21 : ~20 ms p95 au zoom de `dense`, placement des étiquettes. | S21 |
+| ☐ | 51t | **S23** `analyse` d'un très gros dépôt sous le budget | Reste de S11 : n8n 5,7 s pour 1 s ; base reconstruite, détecteur, `diff_graphs`. | S11 |
 
 ## Phase 11 : second langage et paquets
 
@@ -175,6 +176,7 @@ Brainstorm du 2026-11-20 : la carte rame sur un gros écran et les budgets de S0
 | ✓ | 52 | **L01** Adapter Python | Valide l'abstraction multi-langage. | T03, E02, I02 |
 | ✓ | 53a | **D04** Fichiers hors système en dossiers, fixtures ignorées | `relief .` sur relief : une fixture `pyproject.toml` devient le système et tout le reste est à plat. | D03, L01 |
 | ✓ | 53 | **P01** Paquets `.deb` et AppImage | Installer relief sans compiler (`tauri build`). **Jalon H : relief v1.** | L01 |
+| ☐ | 53c | **P02** Construire et installer en une commande, sans admin | `./install.sh` : build Docker de la branche courante, installation dans le dossier de l'utilisateur, OS détecté. | P01 |
 | ☐ | 53b | **N10** Icône cassée dans le gestionnaire de tâches | Icône générique sous KDE/Wayland (`app_id` ≠ `relief.desktop` ?). | aucun |
 
 ## Phase 12 : multirepo (nouvelles fonctionnalités)

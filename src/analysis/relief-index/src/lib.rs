@@ -1,12 +1,12 @@
 //! Index: assembles a `GraphSnapshot` for a commit from detectors and adapters.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::{Path, PathBuf};
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 use rayon::prelude::*;
 use relief_adapter_api::{Detector, Extraction, LanguageAdapter, LinkContext};
-use relief_git::{CommitId, GitError, GitSource};
+use relief_git::{BlobId, CommitId, GitError, GitSource};
 use relief_model::{GraphSnapshot, Node, NodeId, NodeKind, ValidationError};
 
 mod cache;
@@ -24,6 +24,40 @@ struct Extracted {
     fresh: Option<Payload>,
     /// Payload found in memory or in the cache.
     hit: Option<Payload>,
+    /// Taken from the base snapshot: nothing was read or parsed.
+    reused: bool,
+}
+
+/// What one file contributed to a snapshot, kept to build a later snapshot from it.
+#[derive(Debug)]
+struct Part {
+    file: Node,
+    blob: BlobId,
+    extraction: Arc<Extraction>,
+    index: Option<String>,
+    link: Arc<Extraction>,
+}
+
+/// The pieces of a snapshot that `Indexer::snapshot_from` reuses.
+#[derive(Debug)]
+struct Parts {
+    detector: String,
+    package_dirs: BTreeMap<String, String>,
+    adapters: Vec<(String, u32)>,
+    blobs: HashMap<String, BlobId>,
+    routes: HashMap<NodeId, String>,
+    files: HashMap<(usize, String), Arc<Part>>,
+}
+
+/// What a build takes from its base snapshot.
+struct Reuse<'a> {
+    base: &'a IndexedSnapshot,
+    parts: &'a Parts,
+    /// Base file nodes of the files whose bytes changed or that are gone.
+    changed_ids: HashSet<NodeId>,
+    /// Paths that did not exist in the base.
+    added: HashSet<String>,
+    routes_changed: bool,
 }
 
 /// Errors raised while indexing a commit.
@@ -40,11 +74,21 @@ pub enum IndexError {
 pub use relief_model::SnapshotMeta;
 
 /// A graph and the description of the run that produced it.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 pub struct IndexedSnapshot {
     pub graph: GraphSnapshot,
     pub meta: SnapshotMeta,
+    /// What `Indexer::snapshot_from` reuses; not part of the value.
+    parts: Option<Arc<Parts>>,
 }
+
+impl PartialEq for IndexedSnapshot {
+    fn eq(&self, other: &Self) -> bool {
+        self.graph == other.graph && self.meta == other.meta
+    }
+}
+
+impl Eq for IndexedSnapshot {}
 
 /// Registry of detectors and adapters for one repository.
 pub struct Indexer {
@@ -166,6 +210,113 @@ impl Indexer {
         commit: &CommitId,
         exclude: Option<&dyn Fn(&str) -> bool>,
     ) -> Result<IndexedSnapshot, IndexError> {
+        self.build(source, commit, exclude, None)
+    }
+
+    /// Builds the snapshot of `commit` from `base`, the snapshot of `base_commit`: only the
+    /// files whose bytes differ are extracted again, and only those and the files whose links
+    /// may change are linked again. A change the index cannot follow (a manifest, a
+    /// configuration read by linking, other workspace packages) indexes in full instead.
+    pub fn snapshot_from(
+        &self,
+        source: &GitSource,
+        base_commit: &CommitId,
+        base: &IndexedSnapshot,
+        commit: &CommitId,
+    ) -> Result<IndexedSnapshot, IndexError> {
+        self.snapshot_from_excluding(source, base_commit, base, commit, None)
+    }
+
+    /// Like `snapshot_from`, leaving out the paths `exclude` accepts.
+    pub fn snapshot_from_excluding(
+        &self,
+        source: &GitSource,
+        base_commit: &CommitId,
+        base: &IndexedSnapshot,
+        commit: &CommitId,
+        exclude: Option<&dyn Fn(&str) -> bool>,
+    ) -> Result<IndexedSnapshot, IndexError> {
+        let known = base.meta.commit == base_commit.to_string();
+        self.build(source, commit, exclude, known.then_some(base))
+    }
+
+    /// What can be reused from `base` for a tree of `entries` and this `detection`.
+    #[allow(clippy::too_many_arguments)]
+    fn reuse_from<'a>(
+        &self,
+        base: &'a IndexedSnapshot,
+        entries: &[relief_git::TreeEntry],
+        by_path: &HashMap<&str, usize>,
+        detection: &relief_adapter_api::Detection,
+        job_paths: &HashSet<&str>,
+        paths: &[&str],
+        read: &dyn Fn(&str) -> Option<Vec<u8>>,
+    ) -> Option<Reuse<'a>> {
+        let parts = base.parts.as_deref()?;
+        let signature: Vec<(String, u32)> = self
+            .adapters
+            .iter()
+            .map(|a| (a.name().to_owned(), a.version()))
+            .collect();
+        if parts.detector != detection.detector
+            || parts.package_dirs != detection.package_dirs
+            || parts.adapters != signature
+        {
+            return None;
+        }
+        let mut changed: HashSet<&str> = HashSet::new();
+        let mut added: HashSet<String> = HashSet::new();
+        for entry in entries {
+            match parts.blobs.get(&entry.path) {
+                Some(blob) if *blob == entry.blob => {}
+                Some(_) => {
+                    changed.insert(&entry.path);
+                }
+                None => {
+                    changed.insert(&entry.path);
+                    added.insert(entry.path.clone());
+                }
+            }
+        }
+        for path in parts.blobs.keys() {
+            if !by_path.contains_key(path.as_str()) {
+                changed.insert(path);
+            }
+        }
+        let base_jobs: HashSet<&str> = parts.files.keys().map(|(_, p)| p.as_str()).collect();
+        for path in &changed {
+            let source_file = job_paths.contains(path) || base_jobs.contains(path);
+            if !source_file
+                && self
+                    .adapters
+                    .iter()
+                    .any(|a| a.link_input(path, paths, read))
+            {
+                return None;
+            }
+        }
+        let changed_ids = parts
+            .files
+            .iter()
+            .filter(|((_, p), _)| changed.contains(p.as_str()))
+            .map(|(_, part)| part.file.id.clone())
+            .collect();
+        Some(Reuse {
+            base,
+            parts,
+            changed_ids,
+            added,
+            routes_changed: false,
+        })
+    }
+
+    fn build(
+        &self,
+        source: &GitSource,
+        commit: &CommitId,
+        exclude: Option<&dyn Fn(&str) -> bool>,
+        base: Option<&IndexedSnapshot>,
+    ) -> Result<IndexedSnapshot, IndexError> {
         let mut entries = source.list_tree(commit)?;
         if let Some(exclude) = exclude {
             entries.retain(|e| !exclude(&e.path));
@@ -221,14 +372,37 @@ impl Indexer {
         }
         let blobs = source.blob_reader();
         let blob_of = |path: &str| by_path.get(path).map(|&i| &entries[i].blob);
+        let job_set: HashSet<&str> = jobs.iter().map(|&(_, _, p)| p.as_str()).collect();
+        let mut reuse = base.and_then(|b| {
+            self.reuse_from(b, &entries, &by_path, &detection, &job_set, &paths, &read)
+        });
+        // The part of the base each job can keep: same adapter, same bytes, same file node.
+        let reused_of: Vec<Option<Arc<Part>>> = jobs
+            .iter()
+            .map(|&(ai, file, path)| {
+                let part = reuse.as_ref()?.parts.files.get(&(ai, path.clone()))?;
+                (part.file == *file && blob_of(path) == Some(&part.blob)).then(|| part.clone())
+            })
+            .collect();
 
         // Read, parse and extract in parallel; the results keep the order of `jobs`.
         let extracted: Vec<Option<Extracted>> = self.run(|| {
             jobs.par_iter()
+                .enumerate()
                 .map_init(
                     || blobs.local(),
-                    |local, &(ai, file, path)| {
+                    |local, (ji, &(ai, file, path))| {
                         let adapter = &self.adapters[ai];
+                        if let Some(part) = &reused_of[ji] {
+                            return Some(Extracted {
+                                extraction: (*part.extraction).clone(),
+                                index: part.index.clone(),
+                                key: None,
+                                fresh: None,
+                                hit: None,
+                                reused: true,
+                            });
+                        }
                         let bytes = local.read_blob(blob_of(path)?).ok()?;
                         let key = blob_of(path)
                             .map(|b| (b.to_string(), adapter.name().to_owned(), adapter.version()));
@@ -249,6 +423,7 @@ impl Indexer {
                                 key,
                                 fresh: None,
                                 hit: Some(hit),
+                                reused: false,
                             }
                         } else {
                             let (extraction, index) = adapter.extract_indexed(file, &bytes);
@@ -261,6 +436,7 @@ impl Indexer {
                                 key,
                                 fresh,
                                 hit: None,
+                                reused: false,
                             }
                         })
                     },
@@ -270,11 +446,14 @@ impl Indexer {
 
         // Sequential assembly: the only writer of the caches.
         let mut seen: HashSet<(String, String, u32)> = HashSet::new();
-        for (&(ai, _, path), outcome) in jobs.iter().zip(extracted) {
+        let mut extractions: Vec<Option<Arc<Extraction>>> = vec![None; jobs.len()];
+        for (ji, (&(ai, _, path), outcome)) in jobs.iter().zip(extracted).enumerate() {
             let Some(done) = outcome else { continue };
             let adapter = &self.adapters[ai];
             let duplicate = done.key.as_ref().is_some_and(|k| !seen.insert(k.clone()));
-            if let Some(hit) = done.hit {
+            if done.reused {
+                cached_files += 1;
+            } else if let Some(hit) = done.hit {
                 cached_files += 1;
                 if let Some(k) = &done.key
                     && let Ok(mut memory) = self.memory.lock()
@@ -300,9 +479,13 @@ impl Indexer {
             if let Some(index) = done.index {
                 indexes.insert((ai, path.clone()), index);
             }
-            nodes.extend(done.extraction.nodes);
-            edges.extend(done.extraction.edges);
-            warnings.extend(done.extraction.warnings);
+            nodes.extend(done.extraction.nodes.iter().cloned());
+            edges.extend(done.extraction.edges.iter().cloned());
+            warnings.extend(done.extraction.warnings.iter().cloned());
+            extractions[ji] = Some(match &reused_of[ji] {
+                Some(part) => part.extraction.clone(),
+                None => Arc::new(done.extraction),
+            });
             if !used.iter().any(|n: &String| n == adapter.name()) {
                 used.push(adapter.name().to_owned());
             }
@@ -317,21 +500,25 @@ impl Indexer {
             .iter()
             .filter_map(|n| Some((n.id.clone(), n.route.clone()?)))
             .collect();
+        if let Some(reuse) = reuse.as_mut() {
+            reuse.routes_changed = reuse.parts.routes != routes;
+        }
         let mut flagged = detection.entries.clone();
         let mut adapter_indexes: Vec<HashMap<String, String>> =
             vec![HashMap::new(); self.adapters.len()];
         for ((ai, path), index) in &indexes {
             adapter_indexes[*ai].insert(path.clone(), index.clone());
         }
-        // Link every file in parallel, against the nodes extracted above.
-        let linked: Vec<Option<Extraction>> = self.run(|| {
+        // Link in parallel, against the nodes extracted above; a file of the base keeps its
+        // links unless they point into a changed file or its resolution may have changed.
+        let linked: Vec<Option<Arc<Extraction>>> = self.run(|| {
             jobs.par_iter()
+                .enumerate()
                 .map_init(
                     || blobs.local(),
-                    |local, &(ai, file, path)| {
+                    |local, (ji, &(ai, file, path))| {
                         let read = |p: &str| local.read_blob(blob_of(p)?).ok();
-                        let bytes = read(path)?;
-                        let ctx = LinkContext {
+                        let ctx = |path| LinkContext {
                             indexes: &adapter_indexes[ai],
                             path,
                             paths: &paths,
@@ -342,26 +529,64 @@ impl Indexer {
                             routes: &routes,
                             repo: &repo,
                         };
-                        Some(self.adapters[ai].link_indexed(
+                        if let (Some(part), Some(reuse)) = (&reused_of[ji], &reuse) {
+                            let points_into_change = part.link.edges.iter().any(|e| {
+                                reuse.base.graph.node(&e.to).is_some_and(|n| {
+                                    let id = match n.kind {
+                                        NodeKind::File => &n.id,
+                                        _ => n.parent.as_ref().unwrap_or(&n.id),
+                                    };
+                                    reuse.changed_ids.contains(id)
+                                })
+                            });
+                            let affected = points_into_change
+                                || self.adapters[ai].link_affected(
+                                    path,
+                                    part.index.as_deref(),
+                                    &ctx(path),
+                                    &reuse.added,
+                                    reuse.routes_changed,
+                                );
+                            if !affected {
+                                return Some(part.link.clone());
+                            }
+                        }
+                        let bytes = read(path)?;
+                        Some(Arc::new(self.adapters[ai].link_indexed(
                             file,
                             &bytes,
                             indexes.get(&(ai, path.clone())).map(String::as_str),
-                            &ctx,
-                        ))
+                            &ctx(path),
+                        )))
                     },
                 )
                 .collect()
         });
         let mut known = known;
-        for extraction in linked.into_iter().flatten() {
-            for node in extraction.nodes {
+        let mut files_kept: HashMap<(usize, String), Arc<Part>> = HashMap::new();
+        for (ji, link) in linked.into_iter().enumerate() {
+            let Some(link) = link else { continue };
+            for node in &link.nodes {
                 if known.insert(node.id.clone()) {
-                    nodes.push(node);
+                    nodes.push(node.clone());
                 }
             }
-            edges.extend(extraction.edges);
-            warnings.extend(extraction.warnings);
-            flagged.extend(extraction.entries);
+            edges.extend(link.edges.iter().cloned());
+            warnings.extend(link.warnings.iter().cloned());
+            flagged.extend(link.entries.iter().cloned());
+            let (ai, file, path) = jobs[ji];
+            if let (Some(extraction), Some(blob)) = (&extractions[ji], blob_of(path)) {
+                files_kept.insert(
+                    (ai, path.clone()),
+                    Arc::new(Part {
+                        file: file.clone(),
+                        blob: blob.clone(),
+                        extraction: extraction.clone(),
+                        index: indexes.get(&(ai, path.clone())).cloned(),
+                        link,
+                    }),
+                );
+            }
         }
         let position: HashMap<NodeId, usize> = nodes
             .iter()
@@ -390,7 +615,26 @@ impl Indexer {
             cached_files,
             warnings,
         };
-        Ok(IndexedSnapshot { graph, meta })
+        let parts = Parts {
+            detector: detection.detector.clone(),
+            package_dirs: detection.package_dirs.clone(),
+            adapters: self
+                .adapters
+                .iter()
+                .map(|a| (a.name().to_owned(), a.version()))
+                .collect(),
+            blobs: entries
+                .iter()
+                .map(|e| (e.path.clone(), e.blob.clone()))
+                .collect(),
+            routes,
+            files: files_kept,
+        };
+        Ok(IndexedSnapshot {
+            graph,
+            meta,
+            parts: Some(Arc::new(parts)),
+        })
     }
 }
 

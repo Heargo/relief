@@ -102,6 +102,62 @@ fn resolve_file(base: &str, ctx: &LinkContext<'_>) -> Option<String> {
     None
 }
 
+/// `tsconfig*.json`, `jsconfig*.json` or `package.json`.
+pub(crate) fn is_link_config(path: &str) -> bool {
+    let name = path.rsplit_once('/').map_or(path, |(_, n)| n);
+    name == "package.json"
+        || (name.ends_with(".json")
+            && (name.starts_with("tsconfig") || name.starts_with("jsconfig")))
+}
+
+/// Whether `target` is in the chain of relative `extends` of a tsconfig of the tree.
+pub(crate) fn is_extended_by_config(
+    target: &str,
+    paths: &[&str],
+    read: &dyn Fn(&str) -> Option<Vec<u8>>,
+) -> bool {
+    if !target.ends_with(".json") {
+        return false;
+    }
+    let tree: std::collections::HashSet<&str> = paths.iter().copied().collect();
+    let mut seen = std::collections::HashSet::new();
+    let mut todo: Vec<(String, usize)> = paths
+        .iter()
+        .filter(|p| p.ends_with(".json") && is_link_config(p) && !p.ends_with("package.json"))
+        .map(|p| ((*p).to_owned(), 0))
+        .collect();
+    while let Some((config, depth)) = todo.pop() {
+        if depth >= 8 || !seen.insert(config.clone()) {
+            continue;
+        }
+        let Some(json) = read(&config)
+            .and_then(|b| String::from_utf8(b).ok())
+            .and_then(|t| serde_json::from_str::<Value>(&strip_jsonc(&t)).ok())
+        else {
+            continue;
+        };
+        let Some(extends) = json
+            .get("extends")
+            .and_then(Value::as_str)
+            .filter(|e| e.starts_with('.'))
+        else {
+            continue;
+        };
+        let mut next = join(parent(&config), extends);
+        if next == target {
+            return true;
+        }
+        if !tree.contains(next.as_str()) {
+            next.push_str(".json");
+        }
+        if next == target {
+            return true;
+        }
+        todo.push((next, depth + 1));
+    }
+    false
+}
+
 fn read_json(path: &str, ctx: &LinkContext<'_>, memo: &JsonMemo) -> Option<Rc<Value>> {
     if let Some(hit) = memo.0.borrow().get(path) {
         return hit.clone();

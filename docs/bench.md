@@ -87,6 +87,23 @@ Reading the blobs, parsing, extraction and the resolution of the links of each f
 
 n8n cold is 9.6 times faster than S02 (54,108 ms). The linking of a file now sees the nodes extracted by all the files, not the ones of the files linked before it.
 
+## After S11 (incremental analyse)
+
+`Indexer::snapshot_from` builds the head from the base snapshot, which keeps per file what it contributed (extraction, serialised index, links). Only the files whose blob differs are extracted again; an unchanged file keeps its links unless one of them points into a changed file, or the adapter says its resolution may differ (a new path an import now resolves to, changed routes for client calls). A changed manifest or configuration read by linking (`tsconfig*.json`, `jsconfig*.json`, `package.json` and the files their relative `extends` lead to), other workspace packages or another detector fall back to the full indexing. `Session` uses it for `analyse` (head, and the commits of the range, from the base) and for the working tree (from HEAD), exclusions of `relief.config.yaml` included. Same machine, release build, one run each:
+
+| Repository, measure | Before (S10) | After (S11) |
+| ------------------- | ------------ | ----------- |
+| excalidraw analyse  | 365 ms       | 351 ms      |
+| n8n analyse         | 6,198 ms     | 5,664 ms    |
+
+The excalidraw budget (< 1 s) holds; the n8n one (1 s) does not. Per-phase timers on n8n (`analyse`, about 5.7 s):
+
+- Base side, 2.35 s: a full warm index, because the bench opens a new process and no snapshot is in memory. Of it, 0.77 s is the detector (it reads and hashes all 35,000 blobs to build the file nodes), 0.3 s the extraction from the cache, 0.15 s the assembly, 0.3 s the links, 0.35 s the final graph (validation, indexes, parts).
+- Head side, 1.6 s although only 54 files are re-extracted and a few hundred re-linked: the same fixed costs remain (detector 0.77 s, assembly and clone of 157,000 nodes and their edges, validation). The saving is about 0.15 to 0.2 s per side, the parse and the link are no longer the cost.
+- Diff, signatures and log: 1.2 s (`diff_graphs` on two 157,000-node graphs, and the signatures of the changed files).
+
+Next steps to approach 1 s: have the detector reuse the content hashes of the base instead of reading every blob; persist the snapshot of a commit on disk so the base side is not rebuilt in a new process; share the node and edge vectors between snapshots instead of cloning them.
+
 ## Map render (S05)
 
 `just bench-ui` (harness `tests/e2e/wdio.bench.conf.ts` and `tests/e2e/bench/`, same driver and config as `just e2e` but never part of it): WebdriverIO on the release app, window 1600x900, one run on `dense` (10 packages x 150 files, 3 imports per file, 30 files modified in the working tree; opened without range) and on the excalidraw clone of S02 (range of the table above). The numbers are written to `target/bench-ui/<repo>.json`. It needs the clone of `just bench`.
