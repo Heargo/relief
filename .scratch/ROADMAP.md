@@ -176,7 +176,7 @@ Brainstorm du 2026-11-20 : la carte rame sur un gros écran et les budgets de S0
 | ✓ | 52 | **L01** Adapter Python | Valide l'abstraction multi-langage. | T03, E02, I02 |
 | ✓ | 53a | **D04** Fichiers hors système en dossiers, fixtures ignorées | `relief .` sur relief : une fixture `pyproject.toml` devient le système et tout le reste est à plat. | D03, L01 |
 | ✓ | 53 | **P01** Paquets `.deb` et AppImage | Installer relief sans compiler (`tauri build`). **Jalon H : relief v1.** | L01 |
-| ☐ | 53c | **P02** Construire et installer en une commande, sans admin | `./install.sh` : build Docker de la branche courante, installation dans le dossier de l'utilisateur, OS détecté. | P01 |
+| ✓ | 53c | **P02** Construire et installer en une commande, sans admin | `./install.sh` : build Docker de la branche courante, installation dans le dossier de l'utilisateur, OS détecté. | P01 |
 | ☐ | 53b | **N10** Icône cassée dans le gestionnaire de tâches | Icône générique sous KDE/Wayland (`app_id` ≠ `relief.desktop` ?). | aucun |
 
 ## Phase 12 : multirepo (nouvelles fonctionnalités)

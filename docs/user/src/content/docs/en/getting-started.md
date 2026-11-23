@@ -7,7 +7,25 @@ relief is a desktop app that shows a zoomable map of your git repository, locall
 
 ## Install
 
-relief ships in three formats for Linux. `just package` builds the `.deb` and the AppImage in `target/release/bundle/`; the Arch package is then built from the `.deb`.
+### In one command, without admin rights
+
+From a clone of the repository, one command builds relief from the current branch (uncommitted changes included) and installs it in your user folder, without `sudo`. It detects the OS and only needs Docker on Linux and Windows.
+
+```sh
+./install.sh
+```
+
+On Windows, from PowerShell: `.\install.ps1`.
+
+- **Linux**: built in a Docker container (Ubuntu 22.04, so it runs on any distribution with glibc 2.35 or later), then installed in `~/.local/share/relief/`, with the `~/.local/bin/relief` command, a menu entry and its icon. The first build takes several minutes; the next ones reuse the cargo and npm caches (Docker volumes `relief-build-cache` and `relief-build-work`).
+- **Windows**: cross-built in Docker Desktop, then installed silently for the current user only, in `%LOCALAPPDATA%`. The build downloads the MSVC CRT and the Windows SDK under the Microsoft license: the script shows it and asks for your consent (or `--accept-msvc-license`).
+- **macOS**: Docker cannot build a macOS app; the script builds on the machine (it needs `cargo`, `node` and the Command Line Tools, and says which are missing), then installs `relief.app` in `~/Applications/` with the `~/.local/bin/relief` command.
+
+`./install.sh --dry-run` prints what will be done without building anything; `./install.sh --uninstall` removes everything the installation put in place. If `~/.local/bin` is not in your `PATH`, the script says so and gives the line to add.
+
+### Packages
+
+relief also ships in three formats for Linux. `just package` builds the `.deb` and the AppImage in `target/release/bundle/`; the Arch package is then built from the `.deb`.
 
 - **Debian, Ubuntu**: the `.deb` package, which declares its dependency on `libwebkit2gtk-4.1-0`.
 

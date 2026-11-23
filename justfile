@@ -165,6 +165,10 @@ bench:
 package-check:
     scripts/check-packages.sh
 
+# Tests install.sh: dry-run on the 3 OS, --help, no docker (fast). RELIEF_INSTALL_CHECK_FULL=1: real Docker install in a temp HOME. RELIEF_INSTALL_CHECK_WINDOWS=1: Windows cross-build
+install-check:
+    scripts/test-install.sh
+
 # Linux packages (.deb and AppImage) in target/release/bundle/: UI, embedded docs, then the Tauri bundler
 package: docs-build
     #!/usr/bin/env bash

@@ -7,7 +7,25 @@ relief est une application de bureau qui affiche une carte zoomable de votre dé
 
 ## Installer
 
-relief se distribue en trois formats pour Linux. `just package` construit le `.deb` et l'AppImage dans `target/release/bundle/` ; le paquet Arch se construit ensuite à partir du `.deb`.
+### En une commande, sans droits admin
+
+Depuis un clone du dépôt, une seule commande construit relief à partir de la branche courante (modifications non commitées comprises) et l'installe dans votre dossier utilisateur, sans `sudo`. Elle détecte l'OS et n'a besoin que de Docker sous Linux et Windows.
+
+```sh
+./install.sh
+```
+
+Sous Windows, depuis PowerShell : `.\install.ps1`.
+
+- **Linux** : build dans un conteneur Docker (Ubuntu 22.04, donc compatible avec toute distribution dont la glibc est au moins 2.35), puis installation dans `~/.local/share/relief/`, avec la commande `~/.local/bin/relief`, une entrée de menu et son icône. Le premier build prend plusieurs minutes ; les suivants réutilisent les caches cargo et npm (volumes Docker `relief-build-cache` et `relief-build-work`).
+- **Windows** : build croisé dans Docker Desktop, puis installation silencieuse pour l'utilisateur seul dans `%LOCALAPPDATA%`. Le build télécharge le CRT MSVC et le SDK Windows sous licence Microsoft : le script la présente et demande votre accord (ou `--accept-msvc-license`).
+- **macOS** : Docker ne sait pas construire d'app macOS ; le script construit sur la machine (il faut `cargo`, `node` et les Command Line Tools, et il dit lesquels manquent), puis installe `relief.app` dans `~/Applications/` avec la commande `~/.local/bin/relief`.
+
+`./install.sh --dry-run` affiche ce qui sera fait sans rien construire ; `./install.sh --uninstall` retire tout ce que l'installation a posé. Si `~/.local/bin` n'est pas dans votre `PATH`, le script le signale et donne la ligne à ajouter.
+
+### Paquets
+
+relief se distribue aussi en trois formats pour Linux. `just package` construit le `.deb` et l'AppImage dans `target/release/bundle/` ; le paquet Arch se construit ensuite à partir du `.deb`.
 
 - **Debian, Ubuntu** : le paquet `.deb`, qui déclare sa dépendance à `libwebkit2gtk-4.1-0`.
 
