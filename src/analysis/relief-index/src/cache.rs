@@ -24,6 +24,10 @@ pub(crate) struct Payload {
 }
 
 impl Payload {
+    pub(crate) fn parse(json: &str) -> Option<Self> {
+        serde_json::from_str(json).ok()
+    }
+
     pub(crate) fn new(file: &NodeId, extraction: &Extraction, index: Option<String>) -> Self {
         Self {
             file: file.clone(),
@@ -142,8 +146,9 @@ impl Cache {
         Ok(Self { conn })
     }
 
-    pub(crate) fn get(&self, blob: &str, adapter: &str, version: u32) -> Option<Payload> {
-        let payload: String = self
+    /// The stored JSON of an extraction, to be parsed with [`Payload::parse`] outside any lock.
+    pub(crate) fn get(&self, blob: &str, adapter: &str, version: u32) -> Option<String> {
+        self
             .conn
             .query_row(
                 "SELECT payload FROM file_index WHERE blob = ?1 AND adapter = ?2 AND adapter_version = ?3",
@@ -151,8 +156,7 @@ impl Cache {
                 |r| r.get(0),
             )
             .optional()
-            .ok()??;
-        serde_json::from_str(&payload).ok()
+            .ok()?
     }
 
     pub(crate) fn put(&self, blob: &str, adapter: &str, version: u32, payload: &Payload) {

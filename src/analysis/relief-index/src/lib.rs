@@ -4,7 +4,8 @@ use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
-use relief_adapter_api::{Detector, LanguageAdapter, LinkContext};
+use rayon::prelude::*;
+use relief_adapter_api::{Detector, Extraction, LanguageAdapter, LinkContext};
 use relief_git::{CommitId, GitError, GitSource};
 use relief_model::{GraphSnapshot, Node, NodeId, NodeKind, ValidationError};
 
@@ -13,6 +14,17 @@ use cache::{Cache, Payload};
 
 /// Extractions kept in memory by (blob, adapter name, adapter version).
 type Memory = Mutex<HashMap<(String, String, u32), Payload>>;
+
+/// What one file yielded in the parallel extraction step.
+struct Extracted {
+    extraction: Extraction,
+    index: Option<String>,
+    key: Option<(String, String, u32)>,
+    /// Payload to store: the file was just parsed.
+    fresh: Option<Payload>,
+    /// Payload found in memory or in the cache.
+    hit: Option<Payload>,
+}
 
 /// Errors raised while indexing a commit.
 #[derive(Debug, thiserror::Error)]
@@ -43,6 +55,8 @@ pub struct Indexer {
     /// Blobs already extracted by this indexer: a snapshot of a nearby commit reparses only
     /// the blobs that changed.
     memory: Memory,
+    /// Pool of the per-file work; the default rayon pool when absent.
+    pool: Option<rayon::ThreadPool>,
 }
 
 impl Indexer {
@@ -54,6 +68,25 @@ impl Indexer {
             adapters: Vec::new(),
             cache_dir: None,
             memory: Mutex::new(HashMap::new()),
+            pool: None,
+        }
+    }
+
+    /// Runs the per-file work (parse, extraction, linking) in a pool of `threads` threads.
+    pub fn with_threads(mut self, threads: usize) -> Self {
+        #[allow(clippy::expect_used)]
+        let pool = rayon::ThreadPoolBuilder::new()
+            .num_threads(threads.max(1))
+            .build()
+            .expect("cannot start the indexing thread pool");
+        self.pool = Some(pool);
+        self
+    }
+
+    fn run<R: Send>(&self, work: impl FnOnce() -> R + Send) -> R {
+        match &self.pool {
+            Some(pool) => pool.install(work),
+            None => work(),
         }
     }
 
@@ -163,6 +196,7 @@ impl Indexer {
             warnings.extend(warning);
             cache
         });
+        let cache_reader = cache.map(Mutex::new);
         let (mut parsed_files, mut cached_files) = (0, 0);
         let mut indexes: HashMap<(usize, String), String> = HashMap::new();
         let files: Vec<Node> = nodes
@@ -176,64 +210,109 @@ impl Indexer {
                 file_paths.push((file, path.to_owned()));
             }
         }
+        // Per-file jobs, in the order the graph is assembled: adapter, then file.
+        let mut jobs: Vec<(usize, &Node, &String)> = Vec::new();
         for (ai, adapter) in self.adapters.iter().enumerate() {
             for (file, path) in &file_paths {
-                if !file.lang.as_deref().is_some_and(|l| adapter.handles(l)) {
-                    continue;
-                }
-                let Some(bytes) = read(path) else { continue };
-                let blob = by_path
-                    .get(path.as_str())
-                    .map(|&i| entries[i].blob.to_string());
-                let key = blob
-                    .as_ref()
-                    .map(|b| (b.clone(), adapter.name().to_owned(), adapter.version()));
-                let remembered = key
-                    .as_ref()
-                    .and_then(|k| self.memory.lock().ok()?.get(k).cloned());
-                let hit = remembered.or_else(|| {
-                    let (b, name, version) = key.as_ref()?;
-                    cache.as_ref()?.get(b, name, *version)
-                });
-                let (extraction, index) = if let Some(hit) = hit {
-                    cached_files += 1;
-                    if let Some(k) = &key
-                        && let Ok(mut memory) = self.memory.lock()
-                    {
-                        memory.entry(k.clone()).or_insert_with(|| hit.clone());
-                    }
-                    hit.into_parts(&file.id)
-                } else {
-                    let (extraction, index) = adapter.extract_indexed(file, &bytes);
-                    parsed_files += 1;
-                    if let Some(k) = &key {
-                        let payload = Payload::new(&file.id, &extraction, index.clone());
-                        if let Some(c) = &cache {
-                            c.put(&k.0, &k.1, k.2, &payload);
-                        }
-                        if let Ok(mut memory) = self.memory.lock() {
-                            memory.insert(k.clone(), payload);
-                        }
-                    }
-                    (extraction, index)
-                };
-                if let Some(index) = index {
-                    indexes.insert((ai, path.clone()), index);
-                }
-                nodes.extend(extraction.nodes);
-                edges.extend(extraction.edges);
-                warnings.extend(extraction.warnings);
-                if !used.iter().any(|n: &String| n == adapter.name()) {
-                    used.push(adapter.name().to_owned());
+                if file.lang.as_deref().is_some_and(|l| adapter.handles(l)) {
+                    jobs.push((ai, file, path));
                 }
             }
         }
-        let by_path: HashMap<String, NodeId> = file_paths
+        let blobs = source.blob_reader();
+        let blob_of = |path: &str| by_path.get(path).map(|&i| &entries[i].blob);
+
+        // Read, parse and extract in parallel; the results keep the order of `jobs`.
+        let extracted: Vec<Option<Extracted>> = self.run(|| {
+            jobs.par_iter()
+                .map_init(
+                    || blobs.local(),
+                    |local, &(ai, file, path)| {
+                        let adapter = &self.adapters[ai];
+                        let bytes = local.read_blob(blob_of(path)?).ok()?;
+                        let key = blob_of(path)
+                            .map(|b| (b.to_string(), adapter.name().to_owned(), adapter.version()));
+                        let remembered = key
+                            .as_ref()
+                            .and_then(|k| self.memory.lock().ok()?.get(k).cloned());
+                        let hit = remembered.or_else(|| {
+                            let (b, name, version) = key.as_ref()?;
+                            let json =
+                                cache_reader.as_ref()?.lock().ok()?.get(b, name, *version)?;
+                            Payload::parse(&json)
+                        });
+                        Some(if let Some(hit) = hit {
+                            let (extraction, index) = hit.clone().into_parts(&file.id);
+                            Extracted {
+                                extraction,
+                                index,
+                                key,
+                                fresh: None,
+                                hit: Some(hit),
+                            }
+                        } else {
+                            let (extraction, index) = adapter.extract_indexed(file, &bytes);
+                            let fresh = key
+                                .is_some()
+                                .then(|| Payload::new(&file.id, &extraction, index.clone()));
+                            Extracted {
+                                extraction,
+                                index,
+                                key,
+                                fresh,
+                                hit: None,
+                            }
+                        })
+                    },
+                )
+                .collect()
+        });
+
+        // Sequential assembly: the only writer of the caches.
+        let mut seen: HashSet<(String, String, u32)> = HashSet::new();
+        for (&(ai, _, path), outcome) in jobs.iter().zip(extracted) {
+            let Some(done) = outcome else { continue };
+            let adapter = &self.adapters[ai];
+            let duplicate = done.key.as_ref().is_some_and(|k| !seen.insert(k.clone()));
+            if let Some(hit) = done.hit {
+                cached_files += 1;
+                if let Some(k) = &done.key
+                    && let Ok(mut memory) = self.memory.lock()
+                {
+                    memory.entry(k.clone()).or_insert(hit);
+                }
+            } else if duplicate {
+                // Same blob as an earlier file of this run: the sequential indexer found it in memory.
+                cached_files += 1;
+            } else {
+                parsed_files += 1;
+            }
+            if let (Some(k), Some(payload)) = (&done.key, done.fresh) {
+                if let Some(c) = &cache_reader
+                    && let Ok(c) = c.lock()
+                {
+                    c.put(&k.0, &k.1, k.2, &payload);
+                }
+                if let Ok(mut memory) = self.memory.lock() {
+                    memory.insert(k.clone(), payload);
+                }
+            }
+            if let Some(index) = done.index {
+                indexes.insert((ai, path.clone()), index);
+            }
+            nodes.extend(done.extraction.nodes);
+            edges.extend(done.extraction.edges);
+            warnings.extend(done.extraction.warnings);
+            if !used.iter().any(|n: &String| n == adapter.name()) {
+                used.push(adapter.name().to_owned());
+            }
+        }
+        let by_file: HashMap<String, NodeId> = file_paths
             .iter()
             .map(|(file, path)| (path.clone(), file.id.clone()))
             .collect();
         let repo = NodeId::package(&self.repo_name);
-        let mut known: HashSet<NodeId> = nodes.iter().map(|n| n.id.clone()).collect();
+        let known: HashSet<NodeId> = nodes.iter().map(|n| n.id.clone()).collect();
         let routes: HashMap<NodeId, String> = nodes
             .iter()
             .filter_map(|n| Some((n.id.clone(), n.route.clone()?)))
@@ -244,38 +323,45 @@ impl Indexer {
         for ((ai, path), index) in &indexes {
             adapter_indexes[*ai].insert(path.clone(), index.clone());
         }
-        for (ai, adapter) in self.adapters.iter().enumerate() {
-            for (file, path) in &file_paths {
-                if !file.lang.as_deref().is_some_and(|l| adapter.handles(l)) {
-                    continue;
+        // Link every file in parallel, against the nodes extracted above.
+        let linked: Vec<Option<Extraction>> = self.run(|| {
+            jobs.par_iter()
+                .map_init(
+                    || blobs.local(),
+                    |local, &(ai, file, path)| {
+                        let read = |p: &str| local.read_blob(blob_of(p)?).ok();
+                        let bytes = read(path)?;
+                        let ctx = LinkContext {
+                            indexes: &adapter_indexes[ai],
+                            path,
+                            paths: &paths,
+                            read: &read,
+                            package_dirs: &detection.package_dirs,
+                            files: &by_file,
+                            nodes: &known,
+                            routes: &routes,
+                            repo: &repo,
+                        };
+                        Some(self.adapters[ai].link_indexed(
+                            file,
+                            &bytes,
+                            indexes.get(&(ai, path.clone())).map(String::as_str),
+                            &ctx,
+                        ))
+                    },
+                )
+                .collect()
+        });
+        let mut known = known;
+        for extraction in linked.into_iter().flatten() {
+            for node in extraction.nodes {
+                if known.insert(node.id.clone()) {
+                    nodes.push(node);
                 }
-                let Some(bytes) = read(path) else { continue };
-                let ctx = LinkContext {
-                    indexes: &adapter_indexes[ai],
-                    path,
-                    paths: &paths,
-                    read: &read,
-                    package_dirs: &detection.package_dirs,
-                    files: &by_path,
-                    nodes: &known,
-                    routes: &routes,
-                    repo: &repo,
-                };
-                let extraction = adapter.link_indexed(
-                    file,
-                    &bytes,
-                    indexes.get(&(ai, path.clone())).map(String::as_str),
-                    &ctx,
-                );
-                for node in extraction.nodes {
-                    if known.insert(node.id.clone()) {
-                        nodes.push(node);
-                    }
-                }
-                edges.extend(extraction.edges);
-                warnings.extend(extraction.warnings);
-                flagged.extend(extraction.entries);
             }
+            edges.extend(extraction.edges);
+            warnings.extend(extraction.warnings);
+            flagged.extend(extraction.entries);
         }
         let position: HashMap<NodeId, usize> = nodes
             .iter()
@@ -289,7 +375,7 @@ impl Indexer {
             }
         }
 
-        if let Some(cache) = &cache {
+        if let Some(Ok(cache)) = cache_reader.map(Mutex::into_inner) {
             cache.commit();
         }
         let graph = GraphSnapshot::new(commit.to_string(), nodes, edges);

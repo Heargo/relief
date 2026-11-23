@@ -154,7 +154,7 @@ Brainstorm du 2026-11-20 : la carte rame sur un gros écran et les budgets de S0
 | ✓ | 51d | **S07** Ne recalculer à chaque frame que ce qui suit la caméra | Modes, état des arêtes, emphase et étiquettes recalculés à chaque frame. | S05 |
 | ✓ | 51e | **S08** Arêtes : hors de la vue et niveau de détail | Toutes les arêtes du niveau sont dans le DOM. | S06 |
 | ✓ | 51f | **S09** Disposition et croisements hors du thread principal | Seulement si S05 trouve une longue tâche au chargement. | S05 |
-| ☐ | 51g | **S10** Indexation parallèle | Indexation mono-thread : n8n 54 s à froid. | S04 |
+| ✓ | 51g | **S10** Indexation parallèle | Indexation mono-thread : n8n 54 s à froid. | S04 |
 | ☐ | 51h | **S11** Analyse incrémentale d'une plage | Diff d'une PR : 3,1 s et 65 s pour un budget de 1 s. | S04 |
 | ☐ | 51i | **S12** Afficher la carte avant la fin de l'indexation | Seulement si un gros dépôt reste lent à froid après S10 et S11. | S10, S11 |
 | ☐ | 51j | **S13** Sélection sous le budget | Mesure après S07 : ~160 ms pour 100, surtout hors marques (panneau, style). | S07 |

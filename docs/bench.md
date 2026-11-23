@@ -70,6 +70,23 @@ Left:
 - The warm n8n snapshot (5.0 s) is the sum of reading the 25,000 blobs, deserialising their indexes and the link resolution; it is under the pro rata budget (10.3 s).
 - The cold run is still the cost of one tree-sitter parse per file (about 1.2 ms), now paid once instead of twice.
 
+## After S10 (parallel indexing)
+
+Reading the blobs, parsing, extraction and the resolution of the links of each file run in a `rayon` pool (16 threads here); the assembly of the graph (nodes, edges, warnings, entry flags) and the writes to the cache stay sequential, in the order of the single-threaded indexer, so two runs give the same graph byte for byte. Same machine, release build, one run each:
+
+| Repository, measure        | Before (S04) | After (S10) |
+| -------------------------- | ------------ | ----------- |
+| excalidraw cold            | 1,266 ms     | 295 ms      |
+| excalidraw warm            | 134 ms       | 71 ms       |
+| excalidraw analyse         | 1,021 ms     | 365 ms      |
+| excalidraw snapshot_budget | 16 ms        | 16 ms       |
+| n8n cold                   | 29,589 ms    | 5,644 ms    |
+| n8n warm                   | 4,991 ms     | 2,116 ms    |
+| n8n analyse                | 13,352 ms    | 6,198 ms    |
+| n8n snapshot_budget        | 377 ms       | 347 ms      |
+
+n8n cold is 9.6 times faster than S02 (54,108 ms). The linking of a file now sees the nodes extracted by all the files, not the ones of the files linked before it.
+
 ## Map render (S05)
 
 `just bench-ui` (harness `tests/e2e/wdio.bench.conf.ts` and `tests/e2e/bench/`, same driver and config as `just e2e` but never part of it): WebdriverIO on the release app, window 1600x900, one run on `dense` (10 packages x 150 files, 3 imports per file, 30 files modified in the working tree; opened without range) and on the excalidraw clone of S02 (range of the table above). The numbers are written to `target/bench-ui/<repo>.json`. It needs the clone of `just bench`.
