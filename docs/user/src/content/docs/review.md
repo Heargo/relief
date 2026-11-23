@@ -92,6 +92,7 @@ Sans sélection, le panneau de droite liste ce que la PR change, calculé depuis
 - **Violations de règles introduites** : à venir. Le groupe n'apparaît pas tant que les règles d'architecture ne sont pas vérifiées dans la relecture.
 - **Fichiers ajoutés, supprimés, déplacés** : un fichier par ligne, avec son statut (ajouté, supprimé, déplacé, format seul). Un fichier déplacé montre son ancien et son nouveau chemin.
 - **Hors du diff, appelle une signature cassante** : les symboles que la PR ne touche pas mais qui appellent directement une signature cassante, avec le badge **testé** ou **sans test**. Sur acme-shop, `requireAuth` (testé) et `renewSubscriptions` (sans test) appellent `SessionStore.refresh`.
+- **Changements répétitifs** : trois fichiers ou plus qui font le même changement (mêmes imports ajoutés ou retirés, mêmes symboles ajoutés ou retirés) forment une seule ligne, par exemple « 4 fichiers : ajoute imports → src/util/helpers.ts ». Le bouton ▸ déplie la liste des fichiers du groupe ; un clic sur un fichier le sélectionne.
 
 Un clic sur une ligne sélectionne son nœud et le cadre sur la carte.
 
@@ -149,6 +150,8 @@ Sur acme-shop, `SessionStore.refresh` a 8 appelants transitifs via HTTP, 6 sans.
 
 ![La section Rayon d'impact du panneau, pour SessionStore.refresh](../../assets/screens/fr/review-impact.png)
 
+Sur la carte, le premier fichier du groupe (le représentant) reste normal et porte « ×4 identiques » ; les autres membres sont atténués et leurs arêtes modifiées sont repliées dans celles du représentant, avec un compteur. Sélectionner un membre le déplie : ses arêtes et son badge reviennent.
+
 ## Ordre de lecture
 
 La section **Ordre de lecture** liste les changements dans l'ordre où les lire : un fichier vient après ceux dont il dépend, pour qu'on ne lise jamais un appel avant ce qu'il appelle. À égalité, l'ordre suit le chemin. Les fichiers qui ne changent que par leur mise en forme et les anciens emplacements des fichiers déplacés n'y figurent pas.
@@ -160,6 +163,8 @@ Trois modes :
 - **Commit** : les commits de la plage, du plus ancien au plus récent (voir plus bas).
 
 Chaque ligne est numérotée et dit pourquoi la lire : signature cassante ou modifiée, nouveau, supprimé, déplacé, et le nombre de lignes ajoutées et supprimées. Sur acme-shop, la PR compte 14 fichiers, ou 22 symboles.
+
+Un groupe de changements répétitifs n'est qu'une seule entrée dans l'ordre de lecture, en mode Fichier : la ligne du représentant porte « ×4 ». Quand tu marques le représentant comme vu, la section propose de marquer tout le groupe.
 
 ![La section Ordre de lecture, en mode Fichier](../../assets/screens/fr/review-reading-order.png)
 

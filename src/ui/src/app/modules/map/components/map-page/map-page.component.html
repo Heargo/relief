@@ -251,6 +251,7 @@
             [seenIds]="seenIds()"
             [progress]="reading.progress()"
             [persisted]="reading.persisted()"
+            [repeated]="repeated()"
             [commits]="reading.commitRows()"
             [selectedCommit]="reading.selectedCommit()"
             (commitSelect)="reading.selectCommit($event)"
@@ -258,6 +259,7 @@
             (modeChange)="reading.setMode($event)"
             (nodeSelect)="map.selectResult($event)"
             (toggle)="reading.toggle($event)"
+            (groupMark)="reading.markGroup($event)"
             (markNext)="markSeenAndNext()"
           />
         }
@@ -368,6 +370,7 @@
               [archi]="archiIds()"
               [risk]="riskLevels()"
               [loading]="repo.loading()"
+              [repeated]="repeated()"
             />
           }
         }

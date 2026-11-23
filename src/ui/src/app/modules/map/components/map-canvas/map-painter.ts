@@ -319,6 +319,8 @@ export function createMapPainter(
       ]);
     if (n.reading?.count && n.mode === 'box')
       badges.push(['seen-count', t('review.reading.counts', { ...n.reading.count })]);
+    if (n.repeated)
+      badges.push(['repeated', t('review.repeated.identical', { count: n.repeated.count })]);
     if (n.flagged) badges.push(['archi', t('rules.badge')]);
     if (n.loading) badges.push(['loading', t('map.loading')]);
     // Chips sit on the right; the rest flows from the left while there is room.

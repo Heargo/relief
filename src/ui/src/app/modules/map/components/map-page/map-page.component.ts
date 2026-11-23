@@ -291,8 +291,14 @@ export class MapPageComponent implements OnInit {
   });
 
   /** The ids of the entries of the list that are seen, for the boxes. */
-  protected readonly seenIds = computed(
-    () => new Set(this.reading.ids().filter((id) => this.reading.isSeen(id))),
+  protected readonly seenIds = computed(() => {
+    const ids = this.reading.ids().flatMap((id) => [id, ...(this.reading.groupOf(id) ?? [])]);
+    return new Set(ids.filter((id) => this.reading.isSeen(id)));
+  });
+
+  /** Files that make the same change; only in review mode, where the diff is read. */
+  protected readonly repeated = computed(() =>
+    this.review.reviewMode() ? (this.overview.summary()?.repeated ?? []) : [],
   );
 
   /** What the map paints of the reading progress; none outside the review mode. */
@@ -400,6 +406,11 @@ export class MapPageComponent implements OnInit {
   }
 
   private readonly pending = inject(PendingTasks);
+
+  private readonly groupsToReading = effect(() => {
+    const groups = this.repeated();
+    untracked(() => this.reading.setRepeated(groups));
+  });
 
   ngOnInit(): void {
     void this.repo.load().then(() => {

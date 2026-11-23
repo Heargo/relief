@@ -243,7 +243,21 @@
       "returnChanged": "Return type changed",
       "unspecified": "Signature changed"
     },
+    "repeated": {
+      "identical": "×{{count}} identical",
+      "prompt": "The other files of the group are not seen.",
+      "markGroup": "Mark the group seen",
+      "items": {
+        "edge_added": "adds {{kind}} → {{target}}",
+        "edge_removed": "removes {{kind}} → {{target}}",
+        "symbol_added": "adds {{name}}",
+        "symbol_removed": "removes {{name}}"
+      }
+    },
     "overview": {
+      "repeated": "Repeated changes",
+      "repeatedRow": "{{count}} files: {{summary}}",
+      "repeatedMembers": "Show the files of the group",
       "title": "Structural changes",
       "signatures": "Modified signatures",
       "violations": "Rule violations introduced",

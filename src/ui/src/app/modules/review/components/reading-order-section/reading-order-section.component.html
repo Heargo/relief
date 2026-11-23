@@ -94,6 +94,7 @@
         data-testid="reading-row"
         [attr.data-node-id]="item.id"
         [attr.data-seen]="seenIds().has(item.id)"
+        [attr.data-group-size]="groupSize(item.id)"
         [class.selected]="selected() === item.id"
         (click)="nodeSelect.emit(item.id)"
       >
@@ -105,6 +106,11 @@
         />
         <span class="body">
           <code>{{ label(item.id) }}</code>
+          @if (groupSize(item.id); as size) {
+            <span class="tag" data-testid="reading-group-size">
+              {{ 'review.repeated.identical' | translate: { count: size } }}
+            </span>
+          }
           @for (reason of item.reasons; track $index) {
             @if (lines(reason); as l) {
               <span class="tag">+{{ l.added }} −{{ l.removed }}</span>
@@ -117,6 +123,23 @@
             }
           }
         </span>
+        @if (proposes(item.id)) {
+          <span
+            class="group-prompt"
+            data-testid="reading-group-prompt"
+            (click)="$event.stopPropagation()"
+          >
+            {{ 'review.repeated.prompt' | translate }}
+            <button
+              type="button"
+              class="iconbtn"
+              data-testid="reading-group-mark"
+              (click)="groupMark.emit(item.id)"
+            >
+              {{ 'review.repeated.markGroup' | translate }}
+            </button>
+          </span>
+        }
       </li>
     }
   </ng-template>

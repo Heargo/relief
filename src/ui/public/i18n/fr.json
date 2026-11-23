@@ -243,7 +243,21 @@
       "returnChanged": "Type de retour modifié",
       "unspecified": "Signature modifiée"
     },
+    "repeated": {
+      "identical": "×{{count}} identiques",
+      "prompt": "Les autres fichiers du groupe ne sont pas vus.",
+      "markGroup": "Marquer le groupe comme vu",
+      "items": {
+        "edge_added": "ajoute {{kind}} → {{target}}",
+        "edge_removed": "retire {{kind}} → {{target}}",
+        "symbol_added": "ajoute {{name}}",
+        "symbol_removed": "retire {{name}}"
+      }
+    },
     "overview": {
+      "repeated": "Changements répétitifs",
+      "repeatedRow": "{{count}} fichiers : {{summary}}",
+      "repeatedMembers": "Afficher les fichiers du groupe",
       "title": "Changements structurels",
       "signatures": "Signatures modifiées",
       "violations": "Violations de règles introduites",

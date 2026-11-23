@@ -92,6 +92,7 @@ With nothing selected, the right panel lists what the PR changes, computed from 
 - **Rule violations introduced**: coming soon. The group does not show until architecture rules are checked during review.
 - **Files added, removed, moved**: one file per row, with its status (added, removed, moved, format only). A moved file shows its old and new path.
 - **Out of the diff, calls a breaking signature**: symbols the PR does not touch but which directly call a breaking signature, with a **tested** or **no test** badge. On acme-shop, `requireAuth` (tested) and `renewSubscriptions` (untested) call `SessionStore.refresh`.
+- **Repeated changes**: three or more files that make the same change (same imports added or removed, same symbols added or removed) form a single row, for example "4 files: adds imports → src/util/helpers.ts". The ▸ button unfolds the list of the files of the group; clicking a file selects it.
 
 Clicking a row selects its node and frames it on the map.
 
@@ -149,6 +150,8 @@ On acme-shop, `SessionStore.refresh` has 8 transitive callers via HTTP, 6 withou
 
 ![The Impact radius section of the panel, for SessionStore.refresh](../../../assets/screens/en/review-impact.png)
 
+On the map, the first file of the group (the representative) stays normal and carries "×4 identical"; the other members are faded and their changed edges are folded into those of the representative, with a counter. Selecting a member unfolds it: its edges and badge come back.
+
 ## Reading order
 
 The **Reading order** section lists the changes in the order to read them: a file comes after the files it depends on, so you never read a call before what it calls. Ties follow the path. Files that only change by their formatting and the old locations of moved files are left out.
@@ -160,6 +163,8 @@ Three modes:
 - **Commit**: the commits of the range, oldest first (see below).
 
 Each row is numbered and says why to read it: breaking or changed signature, new, removed, moved, and the number of lines added and removed. On acme-shop, the PR has 14 files, or 22 symbols.
+
+A group of repeated changes is a single entry in the reading order, in File mode: the row of the representative carries "×4". When you mark the representative as seen, the section offers to mark the whole group.
 
 ![The Reading order section, in File mode](../../../assets/screens/en/review-reading-order.png)
 

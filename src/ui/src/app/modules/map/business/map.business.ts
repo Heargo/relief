@@ -7,6 +7,7 @@ import type {
   Edge,
   GraphDiff,
   GraphSnapshot,
+  RepeatedChange,
   Violation,
   ViolationEdge,
 } from '../../../core/models/contract';
@@ -63,6 +64,7 @@ import {
   type EdgeDetail,
 } from '../helpers/edge-culling.logic';
 import { onImpactPath, type ImpactMarks } from '../../review/helpers/impact.logic';
+import { foldRepeatedEdges } from '../../review/helpers/repeated-changes.logic';
 import { foldTestEdges, testNodeIds } from '../helpers/test-edges.logic';
 import { buildNodeInfos, type NodeInfo } from '../helpers/node-info.logic';
 import { headRef } from '../helpers/repo.logic';
@@ -213,6 +215,7 @@ export class MapBusiness {
   );
   /** Targets whose test edges were unfolded by a click on their badge. */
   private readonly _unfoldedTests = signal<ReadonlySet<string>>(new Set());
+  private readonly _repeated = signal<RepeatedChange[] | undefined>(undefined);
   /** The nodes the core flags as tests, and the nodes under them. */
   private readonly _testIds = signal<ReadonlySet<string>>(new Set());
   private readonly _hoveredEdge = signal<{ from: string; to: string } | null>(null);
@@ -464,7 +467,14 @@ export class MapBusiness {
   });
   /** Aggregated edges drawn: after the "Tests" layer, then the "unchanged edges" layer. */
   readonly edges = computed(() => {
-    const all = this.testFold().edges;
+    const tested = this.testFold().edges;
+    const selected = this._selectedNodeId();
+    // The changed edges of the faded members of a repeated change count on their representative.
+    const all = foldRepeatedEdges(
+      tested,
+      this._repeated(),
+      selected === null ? null : (this.visibleOf(selected) ?? selected),
+    );
     // In review without a diff nothing is "changed": the layer has nothing to hide.
     if (this._showUnchangedEdges() || (this._reviewMode() && !this._diff())) return all;
     // The unchanged edges of the selected node stay, to keep the context of what is read. A
@@ -673,6 +683,10 @@ export class MapBusiness {
 
   /** The unchanged edges drawn in one common path once many are on screen. */
   readonly mergedEdgeLines = computed<EdgeLine[]>(() => this.partitionedEdges().merged);
+
+  setRepeated(repeated: RepeatedChange[] | undefined): void {
+    this._repeated.set(repeated);
+  }
 
   setImpact(impact: ImpactMarks | null): void {
     this._impact.set(impact);

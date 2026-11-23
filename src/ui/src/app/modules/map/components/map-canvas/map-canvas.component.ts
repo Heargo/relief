@@ -18,9 +18,15 @@ import { TranslatePipe } from '@ngx-translate/core';
 
 import { ThemeBusiness } from '../../../../core/business/theme.business';
 import { LanguageBusiness } from '../../../../core/business/language.business';
-import type { DiffResponse, GraphSnapshot, Violation } from '../../../../core/models/contract';
+import type {
+  DiffResponse,
+  GraphSnapshot,
+  RepeatedChange,
+  Violation,
+} from '../../../../core/models/contract';
 import { MapBusiness } from '../../business/map.business';
 import type { Crumb } from '../../helpers/breadcrumb.logic';
+import { repeatedNodes } from '../../../review/helpers/repeated-changes.logic';
 import type { ImpactMarks } from '../../../review/helpers/impact.logic';
 import type { ReadingNodeState } from '../../../review/business/reading-order.business';
 import { isClick } from '../../helpers/pointer.logic';
@@ -68,6 +74,9 @@ export class MapCanvasComponent {
   /** Reading progress painted on the map: seen nodes dimmed, containers count what is seen. */
   readonly reading = input<((id: string) => ReadingNodeState | null) | null>(null);
 
+  /** Groups of files that make the same change: the representative counts, the others are faded. */
+  readonly repeated = input<RepeatedChange[] | undefined>(undefined);
+
   protected readonly map = inject(MapBusiness);
   private readonly language = inject(LanguageBusiness);
   private readonly theme = inject(ThemeBusiness);
@@ -112,6 +121,10 @@ export class MapCanvasComponent {
       untracked(() => this.map.setRepoName(name));
     });
     effect(() => {
+      const repeated = this.repeated();
+      untracked(() => this.map.setRepeated(repeated));
+    });
+    effect(() => {
       const impact = this.impact();
       untracked(() => this.map.setImpact(impact));
     });
@@ -134,6 +147,8 @@ export class MapCanvasComponent {
       this.theme.dark();
       this.impact();
       this.reading();
+      this.repeated();
+      this.map.selectedNodeId();
       this.focus();
       this.archi();
       this.risk();
@@ -372,6 +387,10 @@ export class MapCanvasComponent {
       archi: this.archi(),
       risk: this.risk(),
       loading: this.loading(),
+      repeated: repeatedNodes(
+        this.repeated(),
+        ((id) => (id === null ? null : (this.map.visibleOf(id) ?? id)))(this.map.selectedNodeId()),
+      ),
       tests: { isTest: (id) => this.map.isTest(id), badges: this.map.testBadges() },
       measureLabel,
     });

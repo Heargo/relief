@@ -40,6 +40,8 @@ export interface SceneNode extends ClientRect {
   emphasis: 'sharp' | 'dim' | null;
   /** R17: "tested by N" badge on the target of folded test edges, null without. */
   testedBy: { count: number; added: number } | null;
+  /** R18: "×N identical" on the representative of a group of repeated changes, null without. */
+  repeated: { count: number } | null;
 }
 
 export interface SceneEdge {

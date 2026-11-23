@@ -47,6 +47,8 @@ export interface SceneNode {
   test?: boolean;
   /** "Tested by N (of which M new)" on the target of folded test edges, null without. */
   testedBy?: TestedBy | null;
+  /** "×N identical" on the representative of a group of repeated changes, null without. */
+  repeated?: { count: number } | null;
   emphasis: NodeEmphasis | null;
   rect: SceneRect;
   /** Height in pixels of the header of an open container, 0 for the others. */
@@ -104,6 +106,8 @@ export interface MapSceneInput {
   loading: ReadonlySet<string>;
   /** Tells the test boxes (dimmed) and the "tested by" badge of the targets of folded edges. */
   tests?: { isTest: (id: string) => boolean; badges: ReadonlyMap<string, TestedBy> };
+  /** Repeated changes: the group size by representative, and the other members (faded). */
+  repeated?: { counts: ReadonlyMap<string, number>; faded: ReadonlySet<string> };
   /** Width in pixels of a text in a CSS font; the component measures with a canvas. */
   measureLabel?: (text: string, font: string) => number;
 }
@@ -189,6 +193,7 @@ function sceneNode(node: VisibleNode, input: MapSceneInput, selecting: boolean):
   const kept = !!impact && (impact.reached.has(node.id) || impact.scope.has(node.id));
   const emphasis = selecting ? (input.emphasis.nodes.get(node.id) ?? null) : null;
   const mark = node.mark;
+  const repeatedCount = input.repeated?.counts.get(node.id);
   return {
     id: node.id,
     kind: node.kind,
@@ -208,7 +213,8 @@ function sceneNode(node: VisibleNode, input: MapSceneInput, selecting: boolean):
     flagged: !!input.archi?.has(node.id),
     loading: input.loading.has(node.id),
     risk: input.risk ? (input.risk.get(node.id) ?? 0) : null,
-    faded: !!input.focus && !input.focus.has(node.id),
+    faded: (!!input.focus && !input.focus.has(node.id)) || !!input.repeated?.faded.has(node.id),
+    repeated: repeatedCount === undefined ? null : { count: repeatedCount },
     test: input.tests?.isTest(node.id) ?? false,
     testedBy: input.tests?.badges.get(node.id) ?? null,
     emphasis: emphasis === 'dim' && kept ? null : emphasis,
