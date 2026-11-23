@@ -15,6 +15,10 @@ export interface AggregatedEdge {
 
 export interface AggregateOptions {
   changed?: (edge: Edge) => boolean;
+  /** Tells a symbol node: a visible symbol end folds up to its file unless the edge is unfolded. */
+  isSymbol?: (id: string) => boolean;
+  /** Nodes whose edges (those with an end at or under them) keep their symbol ends. */
+  unfolded?: ReadonlySet<string>;
 }
 
 /** First ancestor (the node itself included) that is visible, or null. */
@@ -44,6 +48,50 @@ export function isAncestor(
   return false;
 }
 
+/** `visibleAncestor` without allocation: a cycle in the parents is cut by a step budget. */
+export function firstVisible(
+  id: string,
+  parents: Map<string, string | null>,
+  visible: Set<string>,
+  budget: number,
+): string | null {
+  let cur: string | null | undefined = id;
+  for (let n = 0; cur && n <= budget; n++, cur = parents.get(cur)) {
+    if (visible.has(cur)) return cur;
+  }
+  return null;
+}
+
+/** An edge with an end at or under an unfolded node keeps its symbol ends. */
+export function isUnfoldedEdge(
+  edge: Edge,
+  parents: Map<string, string | null>,
+  unfolded: ReadonlySet<string> | undefined,
+  budget: number,
+): boolean {
+  if (!unfolded || unfolded.size === 0) return false;
+  for (const end of [edge.from, edge.to]) {
+    let cur: string | null | undefined = end;
+    for (let n = 0; cur && n <= budget; n++, cur = parents.get(cur)) {
+      if (unfolded.has(cur)) return true;
+    }
+  }
+  return false;
+}
+
+/** A visible symbol end rises to its (visible) file; any other end stays. */
+export function foldSymbolEnd(
+  id: string | null,
+  parents: Map<string, string | null>,
+  visible: Set<string>,
+  isSymbol: (id: string) => boolean,
+  budget: number,
+): string | null {
+  if (id === null || !isSymbol(id)) return id;
+  const parent = parents.get(id);
+  return parent ? firstVisible(parent, parents, visible, budget) : id;
+}
+
 /**
  * Attaches each fine edge to the first visible ancestor of its ends, drops the edges internal to
  * a box or between a box and one of its descendants, and merges the rest per ordered pair.
@@ -55,9 +103,16 @@ export function aggregateEdges(
   opts: AggregateOptions = {},
 ): AggregatedEdge[] {
   const pairs = new Map<string, AggregatedEdge>();
+  const isSymbol = opts.isSymbol;
+  const unfolded = opts.unfolded;
+  const budget = parents.size + 1;
   for (const edge of edges) {
-    const from = visibleAncestor(edge.from, parents, visible);
-    const to = visibleAncestor(edge.to, parents, visible);
+    let from = visibleAncestor(edge.from, parents, visible);
+    let to = visibleAncestor(edge.to, parents, visible);
+    if (isSymbol && !isUnfoldedEdge(edge, parents, unfolded, budget)) {
+      from = foldSymbolEnd(from, parents, visible, isSymbol, budget);
+      to = foldSymbolEnd(to, parents, visible, isSymbol, budget);
+    }
     if (!from || !to || from === to) continue;
     if (isAncestor(from, to, parents) || isAncestor(to, from, parents)) continue;
     const key = `${from}\u0000${to}`;

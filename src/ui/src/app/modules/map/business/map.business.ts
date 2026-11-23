@@ -385,13 +385,35 @@ export class MapBusiness {
   /** Kept from one visibility to the next: a mode change rebuilds only the pairs it touches. */
   private readonly edgeAggregator = computed(() => {
     const diff = this._diff()?.diff;
+    const infos = this._infos();
     return createEdgeAggregator(this._edges(), this._parents(), {
+      isSymbol: (id) => infos.get(id)?.kind === 'symbol',
       changed: (edge) => diff !== undefined && edgeStatus(edge, diff) !== 'unchanged',
     });
   });
 
+  /** The selected node: its edges go down to the symbols, the others stop at the files. */
+  private readonly unfoldedNodes = computed(
+    () => {
+      const infos = this._infos();
+      const unfolded = new Set<string>();
+      const add = (id: string | null | undefined): void => {
+        const kind = id ? infos.get(id)?.kind : undefined;
+        if (id && (kind === 'file' || kind === 'symbol')) unfolded.add(id);
+      };
+      add(this._selectedNodeId());
+      // A selected edge between symbols stays unfolded, so it keeps existing.
+      const key = this._selectedEdgeKey();
+      if (key !== null) {
+        for (const end of key.split('\u0000')) if (infos.get(end)?.kind === 'symbol') add(end);
+      }
+      return unfolded;
+    },
+    { equal: (a, b) => a.size === b.size && [...a].every((id) => b.has(id)) },
+  );
+
   private readonly allEdges = computed(() =>
-    measured('allEdges', () => this.edgeAggregator().update(this.boxIds())),
+    measured('allEdges', () => this.edgeAggregator().update(this.boxIds(), this.unfoldedNodes())),
   );
 
   /** The logical coupling edges, aggregated for the current visibility and placed on screen. */
