@@ -181,4 +181,18 @@ pub trait Detector: Send + Sync {
         paths: &[&str],
         read_blob: &dyn Fn(&str) -> Option<Vec<u8>>,
     ) -> Option<Detection>;
+
+    /// Like `detect`, with the content hashes already known for some paths (`known(path)`):
+    /// a file whose hash is known is not read to be hashed. A detector that does not use
+    /// them ignores them.
+    fn detect_with(
+        &self,
+        repo_name: &str,
+        paths: &[&str],
+        read_blob: &dyn Fn(&str) -> Option<Vec<u8>>,
+        known: &dyn Fn(&str) -> Option<String>,
+    ) -> Option<Detection> {
+        let _ = known;
+        self.detect(repo_name, paths, read_blob)
+    }
 }

@@ -167,7 +167,7 @@ Brainstorm du 2026-11-20 : la carte rame sur un gros écran et les budgets de S0
 | ✓ | 51q | **S20** Canvas seul rendu de la carte | Retrait du DOM de la carte ; budgets mesurés. | S19 |
 | ✓ | 51r | **S21** Arêtes au franchissement de seuil sous une frame | 25 à 35 ms de calcul d'arêtes au seuil : 60 fps au zoom. | S20 |
 | ✓ | 51s | **S22** Étiquettes d'arête sous une frame | Reste de S21 : ~20 ms p95 au zoom de `dense`, placement des étiquettes. | S21 |
-| ☐ | 51t | **S23** `analyse` d'un très gros dépôt sous le budget | Reste de S11 : n8n 5,7 s pour 1 s ; base reconstruite, détecteur, `diff_graphs`. | S11 |
+| ✓ | 51t | **S23** `analyse` d'un très gros dépôt sous le budget | Reste de S11 : n8n 5,7 s pour 1 s ; base reconstruite, détecteur, `diff_graphs`. | S11 |
 
 ## Phase 11 : second langage et paquets
 

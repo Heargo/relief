@@ -123,6 +123,28 @@ impl Detector for PyprojectDetector {
         paths: &[&str],
         read_blob: &dyn Fn(&str) -> Option<Vec<u8>>,
     ) -> Option<Detection> {
+        self.detect_known(repo_name, paths, read_blob, &|_| None)
+    }
+
+    fn detect_with(
+        &self,
+        repo_name: &str,
+        paths: &[&str],
+        read_blob: &dyn Fn(&str) -> Option<Vec<u8>>,
+        known: &dyn Fn(&str) -> Option<String>,
+    ) -> Option<Detection> {
+        self.detect_known(repo_name, paths, read_blob, known)
+    }
+}
+
+impl PyprojectDetector {
+    fn detect_known(
+        &self,
+        repo_name: &str,
+        paths: &[&str],
+        read_blob: &dyn Fn(&str) -> Option<Vec<u8>>,
+        known: &dyn Fn(&str) -> Option<String>,
+    ) -> Option<Detection> {
         let mut manifests: Vec<&str> = paths
             .iter()
             .copied()
@@ -166,12 +188,15 @@ impl Detector for PyprojectDetector {
             });
         }
         if projects.is_empty() {
-            let mut detection = GenericDetector::new().detect(repo_name, paths, read_blob)?;
+            let mut detection =
+                GenericDetector::new().detect_known(repo_name, paths, read_blob, known)?;
             "pyproject".clone_into(&mut detection.detector);
             detection.warnings = warnings;
             return Some(detection);
         }
-        Some(build(repo_name, paths, read_blob, &projects, warnings))
+        Some(build(
+            repo_name, paths, read_blob, known, &projects, warnings,
+        ))
     }
 }
 
@@ -179,6 +204,7 @@ fn build(
     repo_name: &str,
     paths: &[&str],
     read_blob: &dyn Fn(&str) -> Option<Vec<u8>>,
+    known: &dyn Fn(&str) -> Option<String>,
     projects: &BTreeMap<String, Project>,
     warnings: Vec<String>,
 ) -> Detection {
@@ -260,13 +286,19 @@ fn build(
         if is_excluded_path(path) {
             continue;
         }
-        let blob = read_blob(path);
-        if blob
-            .as_ref()
-            .is_some_and(|b| b.iter().take(8000).any(|x| *x == 0))
-        {
-            continue;
-        }
+        let hash = match known(path) {
+            Some(hash) => hash,
+            None => {
+                let blob = read_blob(path);
+                if blob
+                    .as_ref()
+                    .is_some_and(|b| b.iter().take(8000).any(|x| *x == 0))
+                {
+                    continue;
+                }
+                content_hash(&blob.unwrap_or_default())
+            }
+        };
         let owner = projects
             .values()
             .filter(|p| p.dir.is_empty() || path.starts_with(&format!("{}/", p.dir)))
@@ -274,7 +306,7 @@ fn build(
         by_owner
             .entry(owner.map(|p| p.name.as_str()))
             .or_default()
-            .push((path, content_hash(&blob.unwrap_or_default())));
+            .push((path, hash));
     }
     if let Some(outside) = by_owner.remove(&None) {
         let outside: BTreeMap<&str, String> = outside.into_iter().collect();

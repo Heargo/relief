@@ -2,6 +2,7 @@
 
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
 use rayon::prelude::*;
@@ -101,6 +102,8 @@ pub struct Indexer {
     memory: Memory,
     /// Pool of the per-file work; the default rayon pool when absent.
     pool: Option<rayon::ThreadPool>,
+    /// Blobs handed to the detectors so far.
+    detector_reads: AtomicUsize,
 }
 
 impl Indexer {
@@ -113,6 +116,7 @@ impl Indexer {
             cache_dir: None,
             memory: Mutex::new(HashMap::new()),
             pool: None,
+            detector_reads: AtomicUsize::new(0),
         }
     }
 
@@ -163,6 +167,11 @@ impl Indexer {
         self
     }
 
+    /// Number of blobs read by the detectors so far (cumulative).
+    pub fn detector_reads(&self) -> usize {
+        self.detector_reads.load(Ordering::Relaxed)
+    }
+
     /// The registered language adapters.
     pub fn adapters(&self) -> &[Box<dyn LanguageAdapter>] {
         &self.adapters
@@ -183,6 +192,7 @@ impl Indexer {
             .collect();
         let read = |path: &str| {
             let entry = &entries[*by_path.get(path)?];
+            self.detector_reads.fetch_add(1, Ordering::Relaxed);
             source.read_blob(&entry.blob).ok()
         };
         Ok(self
@@ -331,10 +341,35 @@ impl Indexer {
             let entry = &entries[*by_path.get(path)?];
             source.read_blob(&entry.blob).ok()
         };
+        let counted_read = |path: &str| {
+            self.detector_reads.fetch_add(1, Ordering::Relaxed);
+            read(path)
+        };
+        // Content hashes of the base for the files whose blob did not change.
+        let base_hashes: HashMap<String, &str> = base
+            .and_then(|b| {
+                let parts = b.parts.as_deref()?;
+                Some(
+                    b.graph
+                        .nodes()
+                        .iter()
+                        .filter(|n| n.kind == NodeKind::File)
+                        .filter_map(|n| {
+                            let path = n.id.file_path()?;
+                            let same = parts.blobs.get(path).is_some_and(|old| {
+                                by_path.get(path).is_some_and(|&i| entries[i].blob == *old)
+                            });
+                            same.then(|| (path.to_owned(), n.content_hash.as_str()))
+                        })
+                        .collect(),
+                )
+            })
+            .unwrap_or_default();
+        let known = |path: &str| base_hashes.get(path).map(|h| (*h).to_owned());
         let detection = self
             .detectors
             .iter()
-            .find_map(|d| d.detect(&self.repo_name, &paths, &read))
+            .find_map(|d| d.detect_with(&self.repo_name, &paths, &counted_read, &known))
             .ok_or(IndexError::NoDetector)?;
         let mut nodes = detection.nodes.clone();
         let kept = nodes.iter().filter(|n| n.kind == NodeKind::File).count();

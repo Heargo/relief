@@ -30,7 +30,17 @@ impl Detector for WorkspacesDetector {
         paths: &[&str],
         read_blob: &dyn Fn(&str) -> Option<Vec<u8>>,
     ) -> Option<Detection> {
-        detect_workspaces(repo_name, paths, read_blob, &mut Vec::new())
+        detect_workspaces(repo_name, paths, read_blob, &|_| None, &mut Vec::new())
+    }
+
+    fn detect_with(
+        &self,
+        repo_name: &str,
+        paths: &[&str],
+        read_blob: &dyn Fn(&str) -> Option<Vec<u8>>,
+        known: &dyn Fn(&str) -> Option<String>,
+    ) -> Option<Detection> {
+        detect_workspaces(repo_name, paths, read_blob, known, &mut Vec::new())
     }
 }
 
@@ -205,6 +215,7 @@ fn detect_workspaces(
     repo_name: &str,
     paths: &[&str],
     read_blob: &dyn Fn(&str) -> Option<Vec<u8>>,
+    known: &dyn Fn(&str) -> Option<String>,
     warnings: &mut Vec<String>,
 ) -> Option<Detection> {
     let root = if paths.contains(&"package.json") {
@@ -329,6 +340,10 @@ fn detect_workspaces(
     let mut files: BTreeMap<&str, String> = BTreeMap::new();
     for path in paths {
         if is_excluded_path(path) {
+            continue;
+        }
+        if let Some(hash) = known(path) {
+            files.insert(path, hash);
             continue;
         }
         let blob = read_blob(path);

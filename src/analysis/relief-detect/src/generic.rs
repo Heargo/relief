@@ -213,6 +213,28 @@ impl Detector for GenericDetector {
         paths: &[&str],
         read_blob: &dyn Fn(&str) -> Option<Vec<u8>>,
     ) -> Option<Detection> {
+        self.detect_known(repo_name, paths, read_blob, &|_| None)
+    }
+
+    fn detect_with(
+        &self,
+        repo_name: &str,
+        paths: &[&str],
+        read_blob: &dyn Fn(&str) -> Option<Vec<u8>>,
+        known: &dyn Fn(&str) -> Option<String>,
+    ) -> Option<Detection> {
+        self.detect_known(repo_name, paths, read_blob, known)
+    }
+}
+
+impl GenericDetector {
+    pub(crate) fn detect_known(
+        &self,
+        repo_name: &str,
+        paths: &[&str],
+        read_blob: &dyn Fn(&str) -> Option<Vec<u8>>,
+        known: &dyn Fn(&str) -> Option<String>,
+    ) -> Option<Detection> {
         // The workspaces detector declined: an unreadable root manifest is
         // the one thing worth reporting.
         let mut warnings = Vec::new();
@@ -221,7 +243,7 @@ impl Detector for GenericDetector {
         }
         Some(Detection {
             detector: "generic".to_owned(),
-            nodes: self.nodes(repo_name, paths, read_blob),
+            nodes: self.nodes(repo_name, paths, read_blob, known),
             edges: Vec::new(),
             warnings,
             package_dirs: BTreeMap::new(),
@@ -236,11 +258,16 @@ impl GenericDetector {
         repo_name: &str,
         paths: &[&str],
         read_blob: &dyn Fn(&str) -> Option<Vec<u8>>,
+        known: &dyn Fn(&str) -> Option<String>,
     ) -> Vec<Node> {
         // Kept files with their content hash, sorted by path.
         let mut files: BTreeMap<&str, String> = BTreeMap::new();
         for path in paths {
             if is_excluded_path(path) {
+                continue;
+            }
+            if let Some(hash) = known(path) {
+                files.insert(path, hash);
                 continue;
             }
             let blob = read_blob(path);

@@ -104,6 +104,26 @@ The excalidraw budget (< 1 s) holds; the n8n one (1 s) does not. Per-phase timer
 
 Next steps to approach 1 s: have the detector reuse the content hashes of the base instead of reading every blob; persist the snapshot of a commit on disk so the base side is not rebuilt in a new process; share the node and edge vectors between snapshots instead of cloning them.
 
+## After S23 (detector hashes, cheaper diff)
+
+Two changes, measured one after the other with `just bench` (same machine, release build, one run each):
+
+1. The detector reuses the content hashes of the base (`Detector::detect_with`, `known(path)`): `snapshot_from` gives it the `content_hash` of the base file nodes whose blob is unchanged, and only the changed or added blobs are read (`Indexer::detector_reads`). n8n `analyse` 5.7 s -> 5.15 s.
+2. `diff_graphs` compares edges by reference (no `NodeId` clone per edge) and sorts the changed edges with one pass over the node lists instead of a linear search per endpoint. Diff 1.09 s -> 0.45 s, attribution of edges to commits 150 -> 40 ms. n8n `analyse` 5.15 s -> 4.3 s.
+
+| Repository, measure | Before (S11) | After S23 |
+| ------------------- | ------------ | --------- |
+| excalidraw analyse  | 351 ms       | 308 ms    |
+| n8n analyse         | 5,664 ms     | 4,341 ms  |
+
+The 1 s budget on n8n is not reached. Where the 4.3 s go (per-phase timers, since removed):
+
+- Base side, 2.35 s: a full index in a new process (detector 0.78 s reads and hashes 35,000 blobs, extraction, links, graph). Only persisting the snapshot of a commit on disk removes it; with a persisted base, `analyse` would be about 4.3 - 2.35 + the load of the snapshot (157,000 nodes, 245,000 edges), roughly 2.2 s with a load of about 0.25 s assumed, not measured, so not 1 s either.
+- Head side, 1.15 s: detector 0.2 s (it no longer reads blobs; the rest is the `Folders` and the 35,000 file nodes), links 0.35 s (the "does this file point into a change" test of 35,000 files), merge of the nodes and edges (clones) 0.17 s, validation 0.12 s, the rest below 0.1 s each. Sharing nodes between snapshots would take the clones out (about 0.2 s) but changes `GraphSnapshot`: not done.
+- Diff 0.45 s (`diff_graphs` nodes 0.16 s, edges 0.26 s on 245,000 + 245,000 edges), signatures 0.08 s, log and attribution 0.15 s.
+
+Limiting `diff_graphs` to the changed files and their neighbours was not tried: the rest is under 0.5 s and the exactness of moves and edge order is not worth it for that.
+
 ## Map render (S05)
 
 `just bench-ui` (harness `tests/e2e/wdio.bench.conf.ts` and `tests/e2e/bench/`, same driver and config as `just e2e` but never part of it): WebdriverIO on the release app, window 1600x900, one run on `dense` (10 packages x 150 files, 3 imports per file, 30 files modified in the working tree; opened without range) and on the excalidraw clone of S02 (range of the table above). The numbers are written to `target/bench-ui/<repo>.json`. It needs the clone of `just bench`.

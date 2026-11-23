@@ -327,36 +327,38 @@ fn line_diff(old: &str, new: &str) -> (u32, u32) {
     (count(b.len() - common), count(a.len() - common))
 }
 
-type EdgeKey = (NodeId, NodeId, EdgeKind);
+type EdgeKey<'a> = (&'a NodeId, &'a NodeId, EdgeKind);
 
-fn edge_keys(g: &GraphSnapshot) -> HashSet<EdgeKey> {
-    g.edges()
-        .iter()
-        .map(|e| (e.from.clone(), e.to.clone(), e.kind))
-        .collect()
+fn edge_keys(g: &GraphSnapshot) -> HashSet<EdgeKey<'_>> {
+    g.edges().iter().map(|e| (&e.from, &e.to, e.kind)).collect()
 }
 
 fn diff_edges(base: &GraphSnapshot, head: &GraphSnapshot, moves: &Moves) -> Vec<EdgeChange> {
     let (before, after) = (edge_keys(base), edge_keys(head));
     let to_head: HashMap<&NodeId, &NodeId> = moves.iter().map(|(h, (b, _))| (b, h)).collect();
-    let arrive = |id: &NodeId| to_head.get(id).map_or_else(|| id.clone(), |h| (*h).clone());
+    fn arrive<'a>(to_head: &HashMap<&'a NodeId, &'a NodeId>, id: &'a NodeId) -> &'a NodeId {
+        to_head.get(id).copied().unwrap_or(id)
+    }
     // Removed base edges rewritten onto head ids that head really has.
-    let moved: HashSet<EdgeKey> = base
+    let moved: HashSet<EdgeKey<'_>> = base
         .edges()
         .iter()
-        .filter(|e| !after.contains(&(e.from.clone(), e.to.clone(), e.kind)))
-        .map(|e| (arrive(&e.from), arrive(&e.to), e.kind))
+        .filter(|e| !after.contains(&(&e.from, &e.to, e.kind)))
+        .map(|e| (arrive(&to_head, &e.from), arrive(&to_head, &e.to), e.kind))
         .filter(|k| after.contains(k) && !before.contains(k))
         .collect();
     let mut seen = HashSet::new();
     let mut out = Vec::new();
-    let mut push = |g: &GraphSnapshot, other: &HashSet<EdgeKey>, status| {
+    for (g, other, status) in [
+        (head, &before, EdgeStatus::Added),
+        (base, &after, EdgeStatus::Removed),
+    ] {
         for e in g.edges() {
-            let key = (e.from.clone(), e.to.clone(), e.kind);
+            let key = (&e.from, &e.to, e.kind);
             let rewritten = if status == EdgeStatus::Added {
                 moved.contains(&key)
             } else {
-                moved.contains(&(arrive(&e.from), arrive(&e.to), e.kind))
+                moved.contains(&(arrive(&to_head, &e.from), arrive(&to_head, &e.to), e.kind))
             };
             if !other.contains(&key)
                 && !rewritten
@@ -371,16 +373,14 @@ fn diff_edges(base: &GraphSnapshot, head: &GraphSnapshot, moves: &Moves) -> Vec<
                 });
             }
         }
-    };
-    push(head, &before, EdgeStatus::Added);
-    push(base, &after, EdgeStatus::Removed);
+    }
     let mut done = HashSet::new();
     for e in base.edges() {
-        let key = (arrive(&e.from), arrive(&e.to), e.kind);
-        if moved.contains(&key) && done.insert(key.clone()) {
+        let key = (arrive(&to_head, &e.from), arrive(&to_head, &e.to), e.kind);
+        if moved.contains(&key) && done.insert(key) {
             out.push(EdgeChange {
-                from: key.0,
-                to: key.1,
+                from: key.0.clone(),
+                to: key.1.clone(),
                 kind: e.kind,
                 status: EdgeStatus::Moved,
                 commit: None,
@@ -388,19 +388,41 @@ fn diff_edges(base: &GraphSnapshot, head: &GraphSnapshot, moves: &Moves) -> Vec<
         }
     }
     // Stable order: by position of the endpoints in their snapshot's node list.
-    let pos = |g: &GraphSnapshot, id: &NodeId| g.nodes().iter().position(|n| &n.id == id);
-    out.sort_by_key(|e| {
-        let g = if e.status == EdgeStatus::Removed {
-            base
-        } else {
-            head
-        };
-        (
-            e.status == EdgeStatus::Removed,
-            pos(g, &e.from),
-            pos(g, &e.to),
-        )
-    });
+    // One pass over each node list, for the endpoints of the changed edges only.
+    let positions = |g: &GraphSnapshot, removed: bool| {
+        let wanted: HashSet<&NodeId> = out
+            .iter()
+            .filter(|e| (e.status == EdgeStatus::Removed) == removed)
+            .flat_map(|e| [&e.from, &e.to])
+            .collect();
+        let mut found: HashMap<&NodeId, usize> = HashMap::new();
+        for (i, n) in g.nodes().iter().enumerate() {
+            if let Some(id) = wanted.get(&n.id) {
+                found.entry(id).or_insert(i);
+            }
+        }
+        found
+    };
+    let (in_base, in_head) = (positions(base, true), positions(head, false));
+    let keys: Vec<(bool, Option<usize>, Option<usize>)> = out
+        .iter()
+        .map(|e| {
+            let found = if e.status == EdgeStatus::Removed {
+                &in_base
+            } else {
+                &in_head
+            };
+            (
+                e.status == EdgeStatus::Removed,
+                found.get(&e.from).copied(),
+                found.get(&e.to).copied(),
+            )
+        })
+        .collect();
+    let mut order: Vec<usize> = (0..out.len()).collect();
+    order.sort_by_key(|&i| keys[i]);
+    let mut slots: Vec<Option<EdgeChange>> = out.into_iter().map(Some).collect();
+    let out: Vec<EdgeChange> = order.into_iter().filter_map(|i| slots[i].take()).collect();
     out
 }
 
@@ -412,7 +434,7 @@ pub fn attribute_edge_commits(diff: &mut GraphDiff, commits: &[GraphSnapshot]) {
         if e.status != EdgeStatus::Added {
             continue;
         }
-        let key = (e.from.clone(), e.to.clone(), e.kind);
+        let key = (&e.from, &e.to, e.kind);
         e.commit = keys
             .iter()
             .position(|k| k.contains(&key))
