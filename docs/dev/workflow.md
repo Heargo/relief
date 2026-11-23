@@ -25,7 +25,7 @@ Terminé quand : tu sais dire chaque comportement du ticket en une ligne, s'il a
 ## 2. Baseline
 
 1. `git status --short` est vide. Sinon, arrête-toi et demande. Exception : le ticket F01 crée le dépôt, il n'y a pas encore de baseline.
-2. Travaille sur `develop` (ou une branche `feat/<slug>` que l'utilisateur a demandée). Jamais sur `main`.
+2. Travaille sur `develop`, et seulement sur `develop` : ni branche `feat/*`, ni worktree, jamais `main`. `git branch --show-current` doit répondre `develop` ; sinon, arrête-toi et demande.
 3. Lance `just test-summary`. Note le résultat dans le ticket sous `## Baseline`.
 
 Terminé quand : `## Baseline` est dans le ticket. Une baseline rouge est acceptable : elle est notée, et les étapes suivantes s'y comparent.
