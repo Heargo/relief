@@ -28,6 +28,8 @@ import {
 import {
   type AggregatedEdge,
   aggregateEdges,
+  edgeGeometry,
+  type EdgeGeometry,
   edgeShape,
   type EdgeShape,
   filterEdges,
@@ -52,7 +54,9 @@ import {
 } from '../helpers/layout-mode.logic';
 import { interpolateLayout, type MapLayout, type Rect } from '../helpers/layout.logic';
 import { createBoxGrid } from '../helpers/box-grid.logic';
-import { edgeState, type EdgeState } from '../helpers/edge-state.logic';
+import { type EdgeState } from '../helpers/edge-state.logic';
+import { createEdgeAggregator } from '../helpers/edge-aggregator.logic';
+import { createEdgeStateCache } from '../helpers/edge-state-cache.logic';
 import {
   edgeBounds,
   edgeInView,
@@ -369,13 +373,16 @@ export class MapBusiness {
     { equal: (a, b) => a.size === b.size && [...a].every((id) => b.has(id)) },
   );
 
+  /** Kept from one visibility to the next: a mode change rebuilds only the pairs it touches. */
+  private readonly edgeAggregator = computed(() => {
+    const diff = this._diff()?.diff;
+    return createEdgeAggregator(this._edges(), this._parents(), {
+      changed: (edge) => diff !== undefined && edgeStatus(edge, diff) !== 'unchanged',
+    });
+  });
+
   private readonly allEdges = computed(() =>
-    measured('allEdges', () => {
-      const diff = this._diff()?.diff;
-      return aggregateEdges(this._edges(), this._parents(), this.boxIds(), {
-        changed: (edge) => diff !== undefined && edgeStatus(edge, diff) !== 'unchanged',
-      });
-    }),
+    measured('allEdges', () => this.edgeAggregator().update(this.boxIds())),
   );
 
   /** The logical coupling edges, aggregated for the current visibility and placed on screen. */
@@ -476,20 +483,22 @@ export class MapBusiness {
       unit: (count: number) =>
         translate(count === 1 ? 'map.edges.links_one' : 'map.edges.links', { count }),
     };
-    this.edges();
-    const cache = new Map<string, EdgeState>();
+    const cache = createEdgeStateCache(context);
     // Makes the missing states of `wanted` (one measure per batch) and returns them by edge.
     return (wanted: readonly AggregatedEdge[]): ((edge: AggregatedEdge) => EdgeState) => {
-      const missing = wanted.filter((edge) => !cache.has(pairKey(edge.from, edge.to)));
-      if (missing.length > 0) {
+      if (wanted.some((edge) => !cache.has(edge))) {
         measured('edgeStates', () => {
-          for (const edge of missing)
-            cache.set(pairKey(edge.from, edge.to), edgeState(edge, context));
+          for (const edge of wanted) cache.get(edge);
         });
       }
-      return (edge) => cache.get(pairKey(edge.from, edge.to)) as EdgeState;
+      return (edge) => cache.get(edge);
     };
   });
+
+  private readonly geometries = new WeakMap<
+    AggregatedEdge,
+    { a: Rect; b: Rect; scale: number; geometry: EdgeGeometry }
+  >();
 
   /** The shape of an edge, made on demand: follows the layout, the last rest scale and the boxes. */
   private readonly edgeShapes = computed(() => {
@@ -497,13 +506,19 @@ export class MapBusiness {
     const scale = this.modesScale();
     const boxes = this.boxGrid();
     this.edges();
-    const cache = new Map<string, EdgeShape>();
+    const cache = new Map<AggregatedEdge, EdgeShape>();
+    const geometries = this.geometries;
     return (edge: AggregatedEdge, a: Rect, b: Rect): EdgeShape => {
-      const key = pairKey(edge.from, edge.to);
-      let shape = cache.get(key);
+      let shape = cache.get(edge);
       if (!shape) {
-        shape = edgeShape(a, b, boxes, scale);
-        cache.set(key, shape);
+        // The curve does not depend on the boxes to avoid: kept while the rects and the scale stay.
+        let kept = geometries.get(edge);
+        if (!kept || kept.a !== a || kept.b !== b || kept.scale !== scale) {
+          kept = { a, b, scale, geometry: edgeGeometry(a, b, scale) };
+          geometries.set(edge, kept);
+        }
+        shape = edgeShape(a, b, boxes, scale, kept.geometry);
+        cache.set(edge, shape);
       }
       return shape;
     };
@@ -541,15 +556,16 @@ export class MapBusiness {
         const state = stateOf(edge);
         const isSelected =
           selected !== null && selected.from === edge.from && selected.to === edge.to;
+        // An edge the selection singles out (linked, picked, folded) keeps its full rendering,
+        // so that the common path only holds edges the selection dims.
+        const onPath = onImpactPath(impact, edge.from, edge.to) || singledOut(edge, emphasis);
         lines.push({
           edge,
           shape,
           selected: isSelected,
           ...state,
           changed: edge.changed || state.status !== 'unchanged',
-          // An edge the selection singles out (linked, picked, folded) keeps its full rendering,
-          // so that the common path only holds edges the selection dims.
-          onImpactPath: onImpactPath(impact, edge.from, edge.to) || singledOut(edge, emphasis),
+          onImpactPath: onPath,
         });
       }
       return lines;
@@ -874,6 +890,8 @@ export class MapBusiness {
     this._layout.set(layout);
     this._targetLayout.set(layout);
     this._graph.set(graph);
+    // `_infos`, `_edges` and `_parents` are set together: the edge aggregator and the edge states
+    // built on them are made again as one when they change.
     this._infos.set(buildNodeInfos(graph));
     this._edges.set(graph.edges);
     this._parents.set(new Map(graph.nodes.map((n) => [n.id, n.parent ?? null])));

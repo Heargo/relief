@@ -242,6 +242,18 @@ The DOM + SVG rendering of the map is gone (ADR 0009): the sections above that m
 
 - The ~730 ms frame of a subgraph loaded during the zoom of `dense` is gone: no step does layout work on the main thread any more. The worst zoom frames (36 to 54 ms) are edge computation (`allEdges`, `edgeStates`, `edgeLines`): S21.
 
+### After S21 (incremental edge aggregation)
+
+Edges are aggregated incrementally (only the edges under a box whose visibility changes are attached again), their states are cached per pair across box sets, and the curve of an edge is kept while its two boxes and the scale are the same. A/B in the same conditions (loaded machine), wheel zoom `work` p95 in ms, fit / zoomed:
+
+| Repository | Before S21 | After S21 | Budget |
+| ---------- | ---------- | --------- | ------ |
+| dense      | 21 / 24    | 20 / 15   | 16     |
+| excalidraw | 21 / 23    | 16 / 19   | 16     |
+
+- Worst threshold frames: `allEdges` 5-12 → 2-8 ms, `edgeStates` 2-14 → 1-3 ms. What is left on `dense` fit is `edgeLines` (8 to 12 ms, label placement for ~4000 edges in view) and unmarked frames (GC): S22.
+- Selection is unchanged (alternate runs with and without S21). Under load its p95 on excalidraw reaches 60 to 100 ms in both cases, on 6 to 11 steps.
+
 ## Shallow clones
 
 The clones are shallow (`--depth 400`). `repo_id` (the name of the data folder when it falls back to the user cache, and a cache key) is the SHA of the oldest stored commit, so it is not the same as in a full clone of the same repository, nor between clones of different depths. Churn and co-change ignore the commit at the shallow boundary (no parent to compare it with). The measures above (indexing, `analyse`, budgeted snapshot) do not depend on either, so they were not run again.

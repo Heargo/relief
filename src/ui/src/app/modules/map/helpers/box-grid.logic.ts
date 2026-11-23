@@ -9,9 +9,11 @@ export interface BoxGrid {
 const DEFAULT_CELL = 200;
 /** A box spread over more cells than this is kept apart and tested directly. */
 const MAX_CELLS = 64;
+/** Numeric key of a cell (cheaper than a string): injective for fewer than 2^19 cells each way. */
+const CELL_KEY = 1 << 20;
 
 export function createBoxGrid(rects: readonly Rect[], cell: number = DEFAULT_CELL): BoxGrid {
-  const cells = new Map<string, Rect[]>();
+  const cells = new Map<number, Rect[]>();
   const large: Rect[] = [];
   for (const r of rects) {
     const x0 = Math.floor(r.x / cell);
@@ -24,7 +26,7 @@ export function createBoxGrid(rects: readonly Rect[], cell: number = DEFAULT_CEL
     }
     for (let cx = x0; cx <= x1; cx++) {
       for (let cy = y0; cy <= y1; cy++) {
-        const key = `${cx},${cy}`;
+        const key = cx * CELL_KEY + cy;
         const list = cells.get(key);
         if (list) list.push(r);
         else cells.set(key, [r]);
@@ -42,7 +44,7 @@ export function createBoxGrid(rects: readonly Rect[], cell: number = DEFAULT_CEL
       const y1 = Math.floor((y + hh) / cell);
       for (let cx = x0; cx <= x1; cx++) {
         for (let cy = y0; cy <= y1; cy++) {
-          const list = cells.get(`${cx},${cy}`);
+          const list = cells.get(cx * CELL_KEY + cy);
           if (list) for (const r of list) if (overlaps(r, x, y, hw, hh)) return true;
         }
       }
