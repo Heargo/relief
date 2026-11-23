@@ -1,6 +1,6 @@
 # K01 Cadrer le multirepo
 
-Status: needs-triage
+Status: resolved
 Type: grilling
 Blocked by: aucun
 UI: non
@@ -28,3 +28,7 @@ Trancher les questions de la spec avec l'utilisateur, consigner les décisions (
 
 
 
+
+## Answer
+
+Décisions consignées dans `../spec.md` (« Décisions ») à partir de la note ci-dessus ; points tranchés par l'orchestrateur, faute de précision dans la note : ids préfixés par `repo:<nom>/` en multidépôt seulement (monodépôt inchangé) ; `relief` sans chemin ouvre l'accueil (aujourd'hui il ouvre `.`) ; source et destination par défaut d'un monodépôt dans `.relief/settings.json`. Découpage : K02 à K13 dans `.scratch/ROADMAP.md` (phase 12).

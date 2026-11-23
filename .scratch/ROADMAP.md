@@ -183,7 +183,19 @@ Brainstorm du 2026-11-20 : la carte rame sur un gros écran et les budgets de S0
 
 | ✓ | # | Ticket | Pourquoi maintenant | Bloqué par |
 | - | - | --- | --- | --- |
-| ☐ | 54 | **K01** Cadrer le multirepo | Un changement full stack sur plusieurs dépôts ; un niveau « dépôt » au-dessus du système. Spec `.scratch/multi-repo/spec.md`. | aucun |
+| ✓ | 54 | **K01** Cadrer le multirepo | Un changement full stack sur plusieurs dépôts ; un niveau « dépôt » au-dessus du système. Spec `.scratch/multi-repo/spec.md`. | aucun |
+| ☐ | 54a | **K03** Barre du haut en barre de menus | Espace de travail, Paramètres, Aide ; remplace le bouton de U15. | aucun |
+| ☐ | 54b | **K04** Panneau gauche : espace, mode, comparaison | Infos du dépôt en tête, comparaison sous le mode en relecture. | K03 |
+| ☐ | 54c | **K05** Comparaison façon PR : source → destination | Défaut working tree → `main`, configurable. | K04 |
+| ☐ | 54d | **K06** Écran d'accueil sans chemin | `relief` sans argument : ouvrir un dépôt, un espace, récents. | K03 |
+| ☐ | 54e | **K02** ADR : espace de travail et ids de dépôt | Préfixe `repo:<nom>/` en multidépôt seulement. | K01 |
+| ☐ | 54f | **K07** Fichier d'espace et session multidépôt | `<nom>.relief.json` + `.relief/` de l'espace. | K02 |
+| ☐ | 54g | **K08** Snapshot d'un espace : niveau dépôt | Union des dépôts, une plage par dépôt, niveau Dépôts. | K07 |
+| ☐ | 54h | **K09** Étiquettes de dépôt | front, back, ops, tools ; filtre. | K08 |
+| ☐ | 54i | **K10** Comparaison par dépôt | Menu du panneau gauche, une ligne par dépôt. | K05, K08 |
+| ☐ | 54j | **K11** Imports de paquets entre dépôts | Paquets publiés résolus vers le dépôt local, par les adapters. | K08 |
+| ☐ | 54k | **K12** Appels HTTP entre dépôts | T04 entre dépôts. | K08 |
+| ☐ | 54l | **K13** Parcours multidépôt de bout en bout | e2e de l'accueil à l'arête entre dépôts ; doc. | K09, K10, K11, K12 |
 
 ## Phase 13 : confort de relecture (nouvelles fonctionnalités)
 
