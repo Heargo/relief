@@ -255,12 +255,14 @@ export class MapCanvasComponent {
   private hover(event: PointerEvent): void {
     const hit = this.hitAt(event.clientX, event.clientY);
     this.surface().nativeElement.style.cursor = hit ? 'pointer' : '';
-    this.map.setHoveredEdge(hit && hit.kind !== 'node' ? { from: hit.from, to: hit.to } : null);
+    this.map.setHoveredEdge(
+      hit && (hit.kind === 'edge' || hit.kind === 'label') ? { from: hit.from, to: hit.to } : null,
+    );
     let text = '';
     if (hit?.kind === 'node') {
       const node = this.nodeById().get(hit.id);
       if (node?.labelClipped) text = node.label;
-    } else if (hit) {
+    } else if (hit?.kind === 'edge' || hit?.kind === 'label') {
       text = this.edgeByKey().get(`${hit.from}\0${hit.to}`)?.tooltip ?? '';
     }
     if (!text) {
@@ -387,6 +389,8 @@ export class MapCanvasComponent {
       archi: this.archi(),
       risk: this.risk(),
       loading: this.loading(),
+      bundles: this.map.bundles(),
+      selectedBundle: this.map.selectedBundle()?.id ?? null,
       repeated: repeatedNodes(
         this.repeated(),
         ((id) => (id === null ? null : (this.map.visibleOf(id) ?? id)))(this.map.selectedNodeId()),
@@ -422,6 +426,10 @@ export class MapCanvasComponent {
           mid: { x: px(mid.x), y: py(mid.y) },
           labelRect: labelRect ? client(labelRect) : null,
         })),
+        bundles: scene.bundles.map(({ mid, trunk, branches, ...bundle }) => ({
+          ...bundle,
+          mid: { x: px(mid.x), y: py(mid.y) },
+        })),
       };
     };
     this.destroyRef.onDestroy(() => delete w.__reliefScene);
@@ -449,6 +457,7 @@ export class MapCanvasComponent {
     // The strokes of the common path are thin, and nodes may lie under them: pick by proximity.
     const hit = this.hitAt(at.x, at.y);
     if (hit?.kind === 'node') this.map.selectNode(hit.id);
+    else if (hit?.kind === 'bundle') this.map.selectBundle(hit.id);
     else if (hit) this.map.selectEdge(hit.from, hit.to);
     else this.map.deselectNode();
   }

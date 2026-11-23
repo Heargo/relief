@@ -394,6 +394,27 @@
       @if (inspectorKind() === 'none' && !review.reviewMode()) {
         <p class="hint inspector-hint">{{ 'map.inspector.hint' | translate }}</p>
       }
+      @if (map.selectedBundle(); as bundle) {
+        <section class="edge-panel bundle-panel" data-testid="bundle-panel">
+          <h3>{{ bundleTitle(bundle) }}</h3>
+          @if (bundle.added > 0) {
+            <p class="hint">{{ 'map.bundle.added' | translate: { count: bundle.added } }}</p>
+          }
+          <ul>
+            @for (branch of bundle.branches; track branch.from + branch.to) {
+              <li>
+                <button
+                  type="button"
+                  data-testid="bundle-edge"
+                  (click)="map.selectEdge(branch.from, branch.to)"
+                >
+                  {{ map.label(branch.from) }} → {{ map.label(branch.to) }}
+                </button>
+              </li>
+            }
+          </ul>
+        </section>
+      }
       @if (map.selectedEdge(); as edge) {
         <section class="edge-panel" data-testid="edge-panel">
           <app-edge-head
@@ -433,7 +454,9 @@
           />
         </section>
       }
-      @if (!map.selectedNodeId() && !map.selectedEdge() && review.reviewMode()) {
+      @if (
+        !map.selectedNodeId() && !map.selectedEdge() && !map.selectedBundle() && review.reviewMode()
+      ) {
         @if (overview.summary(); as summary) {
           <app-structural-overview [summary]="summary" (nodeSelect)="map.selectResult($event)" />
         }

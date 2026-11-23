@@ -38,6 +38,11 @@
     "external": {
       "hide": "Hide external dependencies"
     },
+    "bundle": {
+      "titleIn": "{{count}} edges into {{box}}",
+      "titleOut": "{{count}} edges out of {{box}}",
+      "added": "{{count}} new"
+    },
     "edges": {
       "links": "{{count}} links",
       "links_one": "{{count}} link",
@@ -114,6 +119,7 @@
       "none": "Overview",
       "node": "Node",
       "edge": "Edge",
+      "bundle": "Bundle",
       "dependsOn": "Depends on",
       "usedBy": "Used by",
       "resolved": "resolved",

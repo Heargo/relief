@@ -38,6 +38,11 @@
     "external": {
       "hide": "Masquer les dépendances externes"
     },
+    "bundle": {
+      "titleIn": "{{count}} arêtes vers {{box}}",
+      "titleOut": "{{count}} arêtes depuis {{box}}",
+      "added": "{{count}} nouvelles"
+    },
     "edges": {
       "links": "{{count}} liens",
       "links_one": "{{count}} lien",
@@ -114,6 +119,7 @@
       "none": "Vue d'ensemble",
       "node": "Nœud",
       "edge": "Arête",
+      "bundle": "Faisceau",
       "dependsOn": "Dépend de",
       "usedBy": "Utilisé par",
       "resolved": "résolue",

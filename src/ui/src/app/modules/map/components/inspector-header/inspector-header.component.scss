@@ -28,7 +28,8 @@
     color: var(--relief-accent);
   }
 
-  &.edge {
+  &.edge,
+  &.bundle {
     color: var(--relief-impact);
   }
 }

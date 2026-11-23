@@ -64,6 +64,7 @@ import { RepoBusiness } from '../../business/repo.business';
 import { SubgraphBusiness } from '../../business/subgraph.business';
 import { repoMetaLine } from '../../helpers/repo-meta.logic';
 import { isPartial } from '../../../review/helpers/review-graph.logic';
+import type { EdgeBundle } from '../../helpers/edge-bundles.logic';
 import type { SearchResult } from '../../helpers/search.logic';
 import {
   actionForKey,
@@ -217,11 +218,14 @@ export class MapPageComponent implements OnInit {
   });
 
   /** What the right panel inspects, and the subtitle of its header. */
-  protected readonly inspectorKind = computed<'none' | 'node' | 'edge'>(() => {
+  protected readonly inspectorKind = computed<'none' | 'node' | 'edge' | 'bundle'>(() => {
+    if (this.map.selectedBundle()) return 'bundle';
     if (this.map.selectedEdge()) return 'edge';
     return this.map.selectedNodeId() ? 'node' : 'none';
   });
   protected readonly inspectorSubtitle = computed(() => {
+    const bundle = this.map.selectedBundle();
+    if (bundle) return this.map.label(bundle.box);
     const edge = this.map.selectedEdge();
     if (edge) return edge.kinds.join(', ');
     const id = this.map.selectedNodeId();
@@ -596,9 +600,17 @@ export class MapPageComponent implements OnInit {
   }
 
   protected clearSelection(): void {
+    this.map.clearBundleSelection();
     this.map.deselectNode();
     this.map.clearEdgeSelection();
     this.usageFocus.set(null);
+  }
+
+  protected bundleTitle(bundle: EdgeBundle): string {
+    return this.language.t(bundle.end === 'in' ? 'map.bundle.titleIn' : 'map.bundle.titleOut', {
+      count: bundle.count,
+      box: this.map.label(bundle.box),
+    });
   }
 
   protected edgeTitle(edge: AggregatedEdge): string {

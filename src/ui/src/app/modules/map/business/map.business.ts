@@ -52,6 +52,7 @@ import {
   readLayoutMode,
   writeLayoutMode,
 } from '../helpers/layout-mode.logic';
+import { bundleEdges, type BundleInput, type EdgeBundle } from '../helpers/edge-bundles.logic';
 import { interpolateLayout, type MapLayout, type Rect } from '../helpers/layout.logic';
 import { createBoxGrid } from '../helpers/box-grid.logic';
 import { type EdgeState } from '../helpers/edge-state.logic';
@@ -238,6 +239,7 @@ export class MapBusiness {
   private readonly _coChangeEdges = signal<Edge[]>([]);
   private readonly _parents = signal<Map<string, string | null>>(new Map());
   private readonly _selectedEdgeKey = signal<string | null>(null);
+  private readonly _selectedBundleId = signal<string | null>(null);
   private readonly _selectedNodeId = signal<string | null>(null);
   /** The edge chosen in the list of a node, when the map does not draw it at this zoom. */
   private readonly _listedEdge = signal<AggregatedEdge | null>(null);
@@ -676,6 +678,47 @@ export class MapBusiness {
     }),
   );
 
+  /**
+   * The bundles of the drawn edges, made at rest: they follow the layout and the edges, not the
+   * camera, so a pan does not recompute them.
+   */
+  readonly bundles = computed<EdgeBundle[]>(() =>
+    measured('bundles', () => {
+      const layout = this._layout();
+      const edges = this.edges();
+      const stateOf = this.edgeStates()(edges);
+      const emphasis = this.emphasis().edges;
+      const rects = new Map<string, Rect>();
+      const inputs: BundleInput[] = [];
+      for (const edge of edges) {
+        const a = layout.nodes.get(edge.from);
+        const b = layout.nodes.get(edge.to);
+        if (!a || !b || emphasis.get(edgeKey(edge.from, edge.to)) === 'hidden') continue;
+        rects.set(edge.from, a);
+        rects.set(edge.to, b);
+        inputs.push({ from: edge.from, to: edge.to, status: stateOf(edge).status });
+      }
+      return bundleEdges(inputs, rects);
+    }),
+  );
+
+  readonly selectedBundle = computed<EdgeBundle | null>(() => {
+    const id = this._selectedBundleId();
+    return id === null ? null : (this.bundles().find((b) => b.id === id) ?? null);
+  });
+
+  /** Selects a bundle (an unknown id selects nothing): nothing else stays selected. */
+  selectBundle(id: string): void {
+    if (!this.bundles().some((b) => b.id === id)) return;
+    this.clearEdgeSelection();
+    this._selectedNodeId.set(null);
+    this._selectedBundleId.set(id);
+  }
+
+  clearBundleSelection(): void {
+    this._selectedBundleId.set(null);
+  }
+
   private readonly partitionedEdges = computed(() => partitionEdges(this.viewEdges()));
 
   /** Edges in world units, in full rendering: they follow the camera through their layer. */
@@ -715,6 +758,7 @@ export class MapBusiness {
   }
 
   private applyEdge(from: string, to: string): void {
+    this._selectedBundleId.set(null);
     this._selectedNodeId.set(null);
     this._selectedFine.set(null);
     this._selectedEdgeKey.set(pairKey(from, to));
@@ -740,6 +784,7 @@ export class MapBusiness {
   }
 
   clearEdgeSelection(): void {
+    this._selectedBundleId.set(null);
     this._listedEdge.set(null);
     this._selectedFine.set(null);
     this._selectedEdgeKey.set(null);
@@ -834,6 +879,7 @@ export class MapBusiness {
   /** Clears the node selection (a click on empty map). */
   deselectNode(): void {
     if (this.deferUntilLaidOut(() => this.deselectNode())) return;
+    this._selectedBundleId.set(null);
     this._selectedNodeId.set(null);
   }
 
@@ -865,6 +911,7 @@ export class MapBusiness {
     this.interrupt();
     this._zoomPoint.set(null);
     this._diveTarget.set(null);
+    this._selectedBundleId.set(null);
     this._selectedNodeId.set(step.nodeId);
     this._selectedEdgeKey.set(step.edgeKey);
     this._listedEdge.set(step.listedEdge);
@@ -890,6 +937,7 @@ export class MapBusiness {
   }
 
   private focusNode(id: string): void {
+    this._selectedBundleId.set(null);
     this._selectedNodeId.set(id);
     const parent = this._parents().get(id);
     // Frame close enough for the node and its ancestors to open on screen.

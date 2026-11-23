@@ -384,7 +384,7 @@ export function createMapPainter(
 
   return {
     paint(
-      scene: Pick<MapScene, 'nodes' | 'edges'>,
+      scene: Pick<MapScene, 'nodes' | 'edges' | 'bundles'>,
       camera: Camera,
       viewport: Viewport,
       dpr: number,
@@ -419,10 +419,10 @@ export function createMapPainter(
       const selecting =
         scene.nodes.some((n) => n.emphasis !== null) ||
         scene.edges.some((e) => e.emphasis !== 'normal');
-      edgePainter.lines(scene.edges, camera, selecting);
+      edgePainter.lines(scene.edges, camera, selecting, scene.bundles);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.textBaseline = 'middle';
-      edgePainter.labels(scene.edges, camera);
+      edgePainter.labels(scene.edges, camera, scene.bundles);
       for (const n of shown) texts(n, camera);
     },
   };

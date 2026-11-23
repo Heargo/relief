@@ -8,6 +8,7 @@ import {
   edgeLabelVisible,
   type EdgeLabelContext,
 } from './edges.logic';
+import type { BundleBranch, EdgeBundle } from './edge-bundles.logic';
 import { edgeKey, type EdgeEmphasis, type NodeEmphasis } from './emphasis.logic';
 import { closedLabelVisible, headerLayout, type HeaderLabel } from './header.logic';
 import type { NodeInfo } from './node-info.logic';
@@ -74,14 +75,40 @@ export interface SceneEdge {
   label: { text: string; cls: string; visible: boolean };
   tooltip: string;
   labelRect: SceneRect | null;
+  /** Middle of the edge; on its branch when the edge is bundled. */
   mid: { x: number; y: number };
   /** The curve and arrow head (SVG path data, world units), and whether the label is covered. */
   shape: { d: string; arrow: string; covered: boolean };
+  /** Id of the bundle the edge belongs to, null when it is drawn alone. */
+  bundle?: string | null;
+  /** The pointer is on the edge. */
+  hovered?: boolean;
+}
+
+/** Edges that enter (or leave) a box by the same side, drawn as a shared trunk and branches. */
+export interface SceneBundle {
+  id: string;
+  box: string;
+  side: EdgeBundle['side'];
+  end: EdgeBundle['end'];
+  count: number;
+  added: number;
+  status: DiffStatus;
+  mixed: boolean;
+  selected: boolean;
+  /** Middle of the trunk, in world units. */
+  mid: { x: number; y: number };
+  trunk: { d: string };
+  branches: BundleBranch[];
+  edges: { from: string; to: string }[];
+  /** The count, and the new edges after it in review. */
+  label: { text: string };
 }
 
 export interface MapScene {
   nodes: SceneNode[];
   edges: SceneEdge[];
+  bundles?: SceneBundle[];
 }
 
 export interface MapSceneInput {
@@ -104,6 +131,10 @@ export interface MapSceneInput {
   archi: ReadonlySet<string> | null;
   risk: ReadonlyMap<string, number> | null;
   loading: ReadonlySet<string>;
+  /** The bundles of the edges (`bundleEdges`), computed at rest. */
+  bundles?: readonly EdgeBundle[];
+  /** Id of the selected bundle. */
+  selectedBundle?: string | null;
   /** Tells the test boxes (dimmed) and the "tested by" badge of the targets of folded edges. */
   tests?: { isTest: (id: string) => boolean; badges: ReadonlyMap<string, TestedBy> };
   /** Repeated changes: the group size by representative, and the other members (faded). */
@@ -155,17 +186,44 @@ const LABEL_W = 28;
 const LABEL_H = 16;
 
 /** What the map draws, in world units, whatever draws it. Pure. */
-export function buildMapScene(input: MapSceneInput): MapScene {
+export function buildMapScene(input: MapSceneInput): MapScene & { bundles: SceneBundle[] } {
   // Everything is "sharp" without a selection: that is no emphasis at all.
   const selecting = [...input.emphasis.nodes.values()].includes('dim');
+  const bundles = input.bundles ?? [];
+  const ofEdge = new Map<string, { bundle: string; d: string }>();
+  for (const b of bundles)
+    for (const br of b.branches) ofEdge.set(edgeKey(br.from, br.to), { bundle: b.id, d: br.d });
   return {
     nodes: input.nodes.map((node) => sceneNode(node, input, selecting)),
     edges: [
-      ...input.edgeLines.map((line) => sceneEdge(line, false, input)),
-      ...input.mergedEdgeLines.map((line) => sceneEdge(line, true, input)),
+      ...input.edgeLines.map((line) => sceneEdge(line, false, input, ofEdge)),
+      ...input.mergedEdgeLines.map((line) => sceneEdge(line, true, input, ofEdge)),
       ...input.coChangeLines.map((line) => sceneCoChange(line, input)),
     ],
+    bundles: bundles.map((b) => ({
+      id: b.id,
+      box: b.box,
+      side: b.side,
+      end: b.end,
+      count: b.count,
+      added: b.added,
+      status: b.status,
+      mixed: b.mixed,
+      selected: input.selectedBundle === b.id,
+      mid: b.mid,
+      trunk: { d: b.trunk.d },
+      branches: b.branches,
+      edges: b.branches.map(({ from, to }) => ({ from, to })),
+      label: { text: b.added > 0 ? `${b.count} +${b.added}` : String(b.count) },
+    })),
   };
+}
+
+/** The middle of a quadratic path `M x0,y0 Q cx,cy x1,y1`. */
+function quadMid(d: string): { x: number; y: number } | null {
+  const n = (d.match(/-?\d+(?:\.\d+)?(?:e-?\d+)?/gi) ?? []).map(Number);
+  if (n.length < 6) return null;
+  return { x: (n[0] + 2 * n[2] + n[4]) / 4, y: (n[1] + 2 * n[3] + n[5]) / 4 };
 }
 
 function sceneNode(node: VisibleNode, input: MapSceneInput, selecting: boolean): SceneNode {
@@ -247,8 +305,17 @@ function labelRect(
   return { x: mx - w / 2, y: my - h / 2, w, h };
 }
 
-function sceneEdge(line: EdgeLine, merged: boolean, input: MapSceneInput): SceneEdge {
+function sceneEdge(
+  line: EdgeLine,
+  merged: boolean,
+  input: MapSceneInput,
+  bundled: ReadonlyMap<string, { bundle: string; d: string }>,
+): SceneEdge {
   const { edge, shape, violations } = line;
+  const inBundle = bundled.get(edgeKey(edge.from, edge.to));
+  const hover = input.edgeLabels?.hovered;
+  const hovered = !!hover && hover.from === edge.from && hover.to === edge.to;
+  const mid = (inBundle && quadMid(inBundle.d)) || { x: shape.mx, y: shape.my };
   const violating = violations.introduced > 0 || violations.existing > 0;
   const labelVisible =
     edgeLabelVisible(line.label, shape.length) &&
@@ -271,9 +338,11 @@ function sceneEdge(line: EdgeLine, merged: boolean, input: MapSceneInput): Scene
     emphasis: input.emphasis.edges.get(edgeKey(edge.from, edge.to)) ?? 'normal',
     label: { text: line.label, cls: line.cls, visible: labelVisible },
     tooltip: line.tooltip,
-    labelRect: labelRect(line.label, labelVisible, shape.mx, shape.my, input.modesScale),
-    mid: { x: shape.mx, y: shape.my },
+    labelRect: labelRect(line.label, labelVisible, mid.x, mid.y, input.modesScale),
+    mid,
     shape: { d: shape.d, arrow: shape.arrow, covered: shape.covered },
+    bundle: inBundle?.bundle ?? null,
+    hovered,
   };
 }
 
@@ -295,5 +364,7 @@ function sceneCoChange({ edge, shape }: CoChangeLine, input: MapSceneInput): Sce
     labelRect: null,
     mid: { x: shape.mx, y: shape.my },
     shape: { d: shape.d, arrow: shape.arrow, covered: shape.covered },
+    bundle: null,
+    hovered: false,
   };
 }

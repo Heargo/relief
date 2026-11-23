@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import { TranslatePipe } from '@ngx-translate/core';
 
-export type InspectorKind = 'none' | 'node' | 'edge';
+export type InspectorKind = 'none' | 'node' | 'edge' | 'bundle';
 
 /** Sticky header of the right panel: what is inspected (badge), its type, and the cross. */
 @Component({
