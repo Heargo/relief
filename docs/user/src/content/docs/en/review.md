@@ -113,7 +113,7 @@ Clicking a signature or an ignored file selects it.
 The **Layers** section of the left sidebar groups the display switches, each with its shortcut:
 
 - **Diff layer**: shows or hides the colours, badges, counters and the added or removed edges. Removed nodes stay drawn, without a mark.
-- **Unchanged edges**: hides or shows the dependencies the diff does not touch.
+- **Unchanged edges**: hides or shows the dependencies the diff does not touch. In review they are hidden by default (those of the selected node stay visible); in exploration they are shown. Your choice is remembered for each mode.
 - **PR focus** (key `f`): only the changed symbols and their direct neighbours (what they call and what calls them) stay sharp, with the boxes that hold them; the rest is faded. On acme-shop, `CheckoutPage` stays sharp, `LoginPage` (two hops from the nearest change) is faded.
 - **Impact radius** (key `i`): see [Impact radius](#impact-radius).
 

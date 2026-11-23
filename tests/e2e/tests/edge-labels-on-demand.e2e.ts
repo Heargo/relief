@@ -30,7 +30,7 @@ const shown = async () =>
 
 describe('edge labels on demand', () => {
   beforeEach(async () => {
-    await openRelief({ size: { width: 3200, height: 2000 } });
+    await openRelief({ size: { width: 3200, height: 2000 }, unchangedEdges: true });
     await waitForScene(
       (s) =>
         [

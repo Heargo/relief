@@ -91,6 +91,8 @@ const api = {
 };
 
 async function render(lang: 'en' | 'fr' = 'en') {
+  // These specs read the unchanged edges: the review mode hides them by default.
+  localStorage.setItem('relief.unchangedEdges.review', 'true');
   TestBed.configureTestingModule({
     imports: [MapPageComponent],
     providers: [...TEST_PROVIDERS, { provide: ReliefApiService, useValue: api }],

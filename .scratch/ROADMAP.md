@@ -212,7 +212,7 @@ Retour du 2026-11-23 : sur une PR de migration, des centaines d'arêtes « new �
 | - | - | --- | --- | --- |
 | ✓ | 67 | **U29** Étiquettes d'arête à la demande | Des centaines de `new` peints sur la carte. | aucun |
 | ✓ | 68 | **U30** Arêtes agrégées au niveau affiché | Arêtes symbole → symbole au niveau Fichiers : ~10× trop de traits. | aucun |
-| ☐ | 69 | **R16** Arêtes inchangées masquées par défaut en relecture | Le gris se mêle au diff. | aucun |
+| ✓ | 69 | **R16** Arêtes inchangées masquées par défaut en relecture | Le gris se mêle au diff. | aucun |
 | ☐ | 70 | **R17** Les tests comme calque repliable | Le gros des arêtes d'une PR vient souvent des tests. | aucun |
 | ☐ | 71 | **E08** Changements répétitifs | Une migration = le même changement dans N fichiers. | aucun |
 | ☐ | 72 | **R18** Changements répétitifs dans la relecture | Un constat et un représentant au lieu de N. | E08 |

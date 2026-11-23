@@ -113,7 +113,7 @@ Un clic sur une signature ou un fichier ignoré le sélectionne.
 La section **Calques** de la barre de gauche regroupe les interrupteurs de l'affichage, chacun avec son raccourci :
 
 - **Calque de diff** : affiche ou masque les couleurs, les badges, les compteurs et les arêtes ajoutées ou retirées. Les nœuds supprimés restent dessinés, sans marque.
-- **Arêtes inchangées** : masque ou affiche les dépendances que le diff ne touche pas.
+- **Arêtes inchangées** : masque ou affiche les dépendances que le diff ne touche pas. En relecture, elles sont masquées par défaut (celles du nœud sélectionné restent visibles) ; en exploration, elles sont affichées. Votre choix est mémorisé pour chaque mode.
 - **Focus PR** (touche `f`) : seuls les symboles changés et leurs voisins directs (ce qu'ils appellent et ce qui les appelle) restent nets, avec les boîtes qui les contiennent ; le reste est estompé. Sur acme-shop, `CheckoutPage` reste net, `LoginPage` (à deux sauts du changement le plus proche) est estompé.
 - **Rayon d'impact** (touche `i`) : voir [Rayon d'impact](#rayon-dimpact).
 

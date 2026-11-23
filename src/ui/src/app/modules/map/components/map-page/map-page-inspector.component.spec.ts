@@ -116,6 +116,8 @@ const api = {
 };
 
 async function render(snapshot: SnapshotResponse, lang: 'en' | 'fr' = 'en') {
+  // These specs read the unchanged edges: the review mode hides them by default.
+  localStorage.setItem('relief.unchangedEdges.review', 'true');
   api.snapshot.mockResolvedValue(snapshot);
   TestBed.configureTestingModule({
     imports: [MapPageComponent],

@@ -8,14 +8,25 @@ export const DEFAULT_SIZE = { width: 1280, height: 720 };
  * Waits until the top bar shows the repository name. `query` is appended to `/` (e.g. `?range=…`).
  */
 export async function openRelief(
-  options: { lang?: string; query?: string; size?: { width: number; height: number } } = {},
+  options: {
+    lang?: string;
+    query?: string;
+    size?: { width: number; height: number };
+    /** Turns the "unchanged edges" layer on in review mode, where it is off by default (R16). */
+    unchangedEdges?: boolean;
+  } = {},
 ): Promise<void> {
-  const { lang = 'en', query = '', size = DEFAULT_SIZE } = options;
+  const { lang = 'en', query = '', size = DEFAULT_SIZE, unchangedEdges = false } = options;
   await setViewport(size.width, size.height);
-  await browser.execute((language: string) => {
-    localStorage.clear();
-    localStorage.setItem('lang', language);
-  }, lang);
+  await browser.execute(
+    (language: string, unchanged: boolean) => {
+      localStorage.clear();
+      localStorage.setItem('lang', language);
+      if (unchanged) localStorage.setItem('relief.unchangedEdges.review', 'true');
+    },
+    lang,
+    unchangedEdges,
+  );
   await browser.execute((target: string) => {
     window.location.assign(target);
   }, `/${query}`);

@@ -56,7 +56,7 @@ it('the edge apps/web -> packages/db is new', async () => {
 });
 
 it('hiding the unchanged edges keeps only the changed ones', async () => {
-  await openRelief();
+  await openRelief({ unchangedEdges: true });
   await waitForScene((s) => s.edges.length > 0);
   const before = (await sceneEdges()).length;
 

@@ -32,7 +32,6 @@ import {
   type EdgeGeometry,
   edgeShape,
   type EdgeShape,
-  filterEdges,
   isAncestor,
   visibleAncestor,
 } from '../helpers/edges.logic';
@@ -150,6 +149,10 @@ export interface CoChangeLine {
   shape: EdgeShape;
 }
 
+function unchangedKey(review: boolean): string {
+  return `relief.unchangedEdges.${review ? 'review' : 'explore'}`;
+}
+
 function storage(): Storage | null {
   try {
     return localStorage;
@@ -223,6 +226,7 @@ export class MapBusiness {
   /** The edge chosen in the list of a node, when the map does not draw it at this zoom. */
   private readonly _listedEdge = signal<AggregatedEdge | null>(null);
   private readonly _showUnchangedEdges = signal(true);
+  private readonly _reviewMode = signal(false);
   private readonly _diff = signal<DiffResponse | null>(null);
   /** The language of the edge texts: the translator changes with the language. */
   private readonly _translate = signal<{
@@ -434,7 +438,18 @@ export class MapBusiness {
 
   readonly showUnchangedEdges = this._showUnchangedEdges.asReadonly();
   /** Aggregated edges for the current visibility, after the "unchanged edges" layer. */
-  readonly edges = computed(() => filterEdges(this.allEdges(), this._showUnchangedEdges()));
+  readonly edges = computed(() => {
+    const all = this.allEdges();
+    // In review without a diff nothing is "changed": the layer has nothing to hide.
+    if (this._showUnchangedEdges() || (this._reviewMode() && !this._diff())) return all;
+    // The unchanged edges of the selected node stay, to keep the context of what is read. A
+    // selected symbol keeps those of the box that holds it, as the edges are drawn between boxes.
+    const id = this._selectedNodeId();
+    const holder = id === null ? null : (this.visibleOf(id) ?? id);
+    const touches = (end: string) =>
+      id !== null && holder !== null && (this.within(end, id) || this.within(end, holder));
+    return all.filter((e) => e.changed || touches(e.from) || touches(e.to));
+  });
   readonly selectedNodeId = this._selectedNodeId.asReadonly();
   /** What the map emphasises: the selected node, else the selected edge, else nothing. */
   readonly selection = computed<Selection | null>(() => {
@@ -491,7 +506,8 @@ export class MapBusiness {
       const around = edgesAround(this._edges(), this._parents(), this.boxIds(), id, (edge) => {
         return diff !== undefined && edgeStatus(edge, diff) !== 'unchanged';
       });
-      return nodeEdges(filterEdges(around, this._showUnchangedEdges()), id);
+      // The edges of the selected node all stay, whatever the layer.
+      return nodeEdges(around, id);
     }),
   );
 
@@ -686,6 +702,23 @@ export class MapBusiness {
 
   setShowUnchangedEdges(show: boolean): void {
     this._showUnchangedEdges.set(show);
+    try {
+      storage()?.setItem(unchangedKey(this._reviewMode()), String(show));
+    } catch {
+      // The choice is just not remembered.
+    }
+  }
+
+  /** Switches the mode: the layer takes the remembered choice of the mode, else its default. */
+  setReviewMode(review: boolean): void {
+    this._reviewMode.set(review);
+    let remembered: string | null = null;
+    try {
+      remembered = storage()?.getItem(unchangedKey(review)) ?? null;
+    } catch {
+      remembered = null;
+    }
+    this._showUnchangedEdges.set(remembered === null ? !review : remembered === 'true');
   }
 
   /** Applies a diff on the map, or none (the map alone). */

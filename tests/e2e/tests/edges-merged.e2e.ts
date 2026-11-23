@@ -10,7 +10,7 @@ import { tid } from '../helpers/ui';
 // (`edge-panel`) opens.
 describe('an edge merged in the common path', () => {
   it('is selected by a click on its stroke and opens the edge inspector', async () => {
-    await openRelief({ size: { width: 1600, height: 900 } });
+    await openRelief({ size: { width: 1600, height: 900 }, unchangedEdges: true });
     await tid('level-2').click();
     const found = await waitForScene((s) => s.edges.some((e) => e.merged), 20000);
     const merged = found.edges.find((e) => e.merged)!;

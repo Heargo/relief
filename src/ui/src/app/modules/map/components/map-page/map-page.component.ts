@@ -332,6 +332,11 @@ export class MapPageComponent implements OnInit {
   });
 
   constructor() {
+    // The unchanged edges layer has a default and a memory per mode.
+    effect(() => {
+      const review = this.review.reviewMode();
+      untracked(() => this.map.setReviewMode(review));
+    });
     // The usages follow the selected edge.
     effect(() => {
       const key = this.usagesKey();

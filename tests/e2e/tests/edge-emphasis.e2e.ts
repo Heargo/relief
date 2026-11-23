@@ -17,7 +17,7 @@ const emphasisOf = async (from: string, to: string) => (await sceneEdge(from, to
 
 describe('selected node edges', () => {
   beforeEach(async () => {
-    await openRelief({ size: { width: 3200, height: 2000 } });
+    await openRelief({ size: { width: 3200, height: 2000 }, unchangedEdges: true });
     await waitForScene(
       (s) =>
         [

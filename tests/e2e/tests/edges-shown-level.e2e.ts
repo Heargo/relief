@@ -25,7 +25,7 @@ const symbolEdges = (edges: SceneEdge[]) =>
 
 describe('edges at the shown level', () => {
   beforeEach(async () => {
-    await openRelief({ size: { width: 3200, height: 2000 } });
+    await openRelief({ size: { width: 3200, height: 2000 }, unchangedEdges: true });
     await tid('level-3').click();
     await expect(tid('current-level')).toHaveAttribute('data-level', '3');
     await settledNodeCount();

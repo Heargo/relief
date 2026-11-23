@@ -8,7 +8,6 @@ import {
   edgeThickness,
   edgeShape,
   edgeTooltip,
-  filterEdges,
   type AggregatedEdge,
 } from './edges.logic';
 
@@ -122,23 +121,6 @@ describe('aggregateEdges', () => {
     const edges = aggregateEdges(EDGES, PARENTS, SYSTEM_LEVEL, { changed });
     expect(pair(edges, WEB, DB)?.changed).toBe(true);
     expect(pair(edges, API, DB)?.changed).toBe(false);
-  });
-});
-
-describe('filterEdges', () => {
-  const edges = aggregateEdges(EDGES, PARENTS, SYSTEM_LEVEL, {
-    changed: (e) => e.from === WEB_SYM2,
-  });
-
-  it('keeps everything when the unchanged layer is shown', () => {
-    expect(filterEdges(edges, true)).toHaveLength(3);
-  });
-
-  it('keeps only the changed pairs when the unchanged layer is hidden', () => {
-    const kept = filterEdges(edges, false);
-    expect(kept).toHaveLength(1);
-    expect(kept[0]?.from).toBe(WEB);
-    expect(kept[0]?.to).toBe(DB);
   });
 });
 

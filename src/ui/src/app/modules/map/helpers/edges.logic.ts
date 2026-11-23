@@ -129,11 +129,6 @@ export function aggregateEdges(
   return [...pairs.values()];
 }
 
-/** The "unchanged edges" layer: hidden, only the pairs with a changed link remain. */
-export function filterEdges(edges: AggregatedEdge[], showUnchanged: boolean): AggregatedEdge[] {
-  return showUnchanged ? edges : edges.filter((e) => e.changed);
-}
-
 /** Stroke width in pixels, like the mockup: grows with the number of links, bounded. */
 export function edgeThickness(count: number): number {
   return Math.min(6, 1.3 + 0.9 * Math.log2(Math.max(1, count)));
