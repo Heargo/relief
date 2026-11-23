@@ -138,6 +138,9 @@ if [ "${RELIEF_INSTALL_CHECK_FULL:-}" = 1 ]; then
     if command -v xvfb-run >/dev/null; then
       HOME="$home" xvfb-run -a timeout 20 "$home/.local/bin/relief" "$fx" >"$tmp/run.log" 2>&1; rc=$?
       [ $rc -eq 124 ] && ok "relief opened acme-shop under Xvfb (still running after 20s)" || ko "relief exited $rc under Xvfb ($(tail -c 300 "$tmp/run.log"))"
+      # `relief .` from the repository: AppRun moves to $APPDIR/usr, relief must go back (OWD).
+      (cd "$fx" && HOME="$home" xvfb-run -a timeout 20 "$home/.local/bin/relief" . >"$tmp/run-dot.log" 2>&1); rc=$?
+      [ $rc -eq 124 ] && ok "relief . opened the current folder under Xvfb" || ko "relief . exited $rc under Xvfb ($(tail -c 300 "$tmp/run-dot.log"))"
     else
       ko "xvfb-run not found"
     fi

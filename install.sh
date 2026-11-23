@@ -233,8 +233,11 @@ install_linux() {
   rm -rf "$app_dir"
   mkdir -p "$(dirname "$app_dir")" "$bindir" "$(dirname "$desktop")" "$(dirname "$icon")"
   mv "$tmpx/squashfs-root" "$app_dir"
+  # AppRun moves to \$APPDIR/usr; relief goes back to OWD (set by the AppImage runtime, which
+  # an extracted AppImage does not run), so that `relief .` is the folder of the terminal.
   cat >"$launcher" <<LAUNCHER
 #!/bin/sh
+OWD="\$PWD"; export OWD
 exec "$app_dir/AppRun" "\$@"
 LAUNCHER
   chmod +x "$launcher"
