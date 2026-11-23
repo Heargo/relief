@@ -212,8 +212,14 @@ function sceneNode(node: VisibleNode, input: MapSceneInput, selecting: boolean):
   };
 }
 
-function labelRect(text: string, mx: number, my: number, scale: number): SceneRect | null {
-  if (text === '') return null;
+function labelRect(
+  text: string,
+  visible: boolean,
+  mx: number,
+  my: number,
+  scale: number,
+): SceneRect | null {
+  if (text === '' || !visible) return null;
   const w = LABEL_W / scale;
   const h = LABEL_H / scale;
   return { x: mx - w / 2, y: my - h / 2, w, h };
@@ -221,6 +227,7 @@ function labelRect(text: string, mx: number, my: number, scale: number): SceneRe
 
 function sceneEdge(line: EdgeLine, merged: boolean, input: MapSceneInput): SceneEdge {
   const { edge, shape, violations } = line;
+  const labelVisible = edgeLabelVisible(line.label, shape.length);
   return {
     from: edge.from,
     to: edge.to,
@@ -233,13 +240,9 @@ function sceneEdge(line: EdgeLine, merged: boolean, input: MapSceneInput): Scene
     impactPath: onImpactPath(input.impact, edge.from, edge.to),
     violation: violations.introduced > 0 ? 'new' : violations.existing > 0 ? 'old' : null,
     emphasis: input.emphasis.edges.get(edgeKey(edge.from, edge.to)) ?? 'normal',
-    label: {
-      text: line.label,
-      cls: line.cls,
-      visible: edgeLabelVisible(line.label, shape.length),
-    },
+    label: { text: line.label, cls: line.cls, visible: labelVisible },
     tooltip: line.tooltip,
-    labelRect: labelRect(line.label, shape.mx, shape.my, input.modesScale),
+    labelRect: labelRect(line.label, labelVisible, shape.mx, shape.my, input.modesScale),
     mid: { x: shape.mx, y: shape.my },
     shape: { d: shape.d, arrow: shape.arrow, covered: shape.covered },
   };

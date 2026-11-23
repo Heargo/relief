@@ -374,6 +374,21 @@ describe('buildMapScene, edges', () => {
     expect(edge.label.text).toBe('new');
   });
 
+  it('gives no label rect to a short edge with a label, and one to a long edge', () => {
+    const short = edgeOf(
+      { edgeLines: [line('a', 'b', { label: 'new', shape: { ...SHAPE, length: 40 } })] },
+      'a',
+      'b',
+    );
+    const long = edgeOf(
+      { edgeLines: [line('a', 'b', { label: 'new', shape: { ...SHAPE, length: 200 } })] },
+      'a',
+      'b',
+    );
+    expect(short.labelRect).toBeNull();
+    expect(long.labelRect).not.toBeNull();
+  });
+
   it('places the label rect around the middle, in world units (room is 28x16 screen pixels)', () => {
     const edge = edgeOf({ edgeLines: [line('a', 'b', { label: 'new' })], modesScale: 2 }, 'a', 'b');
     expect(edge.labelRect).toEqual({ x: 93, y: 46, w: 14, h: 8 });

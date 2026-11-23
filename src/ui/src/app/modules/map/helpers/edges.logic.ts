@@ -141,9 +141,16 @@ export function edgeLabel(edge: EdgeLabelInput, words: EdgeLabelWords): string {
   return text.trim();
 }
 
+const LABEL_MIN_SCREEN_LENGTH = 60;
+
+/** Whether an edge this long on screen can show a label, so is worth placing one. */
+export function edgeLabelNeedsPlacement(screenLength: number): boolean {
+  return screenLength > LABEL_MIN_SCREEN_LENGTH;
+}
+
 /** A label is written only on an edge longer than 60 px on screen. */
 export function edgeLabelVisible(label: string, screenLength: number): boolean {
-  return label !== '' && screenLength > 60;
+  return label !== '' && edgeLabelNeedsPlacement(screenLength);
 }
 
 function defaultUnit(count: number): string {
@@ -266,6 +273,18 @@ export function edgeShape(
     x: (1 - t) * (1 - t) * p0.x + 2 * (1 - t) * t * c.x + t * t * p1.x,
     y: (1 - t) * (1 - t) * p0.y + 2 * (1 - t) * t * c.y + t * t * p1.y,
   });
+  // An edge too short on screen shows no label: keep it mid-curve, without looking at the boxes.
+  if (!edgeLabelNeedsPlacement(geometry.length)) {
+    const mid = at(0.5);
+    return {
+      d: geometry.d,
+      arrow: geometry.arrow,
+      mx: mid.x,
+      my: mid.y,
+      covered: false,
+      length: geometry.length,
+    };
+  }
   // The count tag sits mid-curve, slid along it off the boxes it would otherwise hide.
   const halfW = LABEL_HALF_WIDTH / scale;
   const halfH = LABEL_HALF_HEIGHT / scale;

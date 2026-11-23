@@ -288,6 +288,13 @@ Edges are aggregated incrementally (only the edges under a box whose visibility 
 - Worst threshold frames: `allEdges` 5-12 → 2-8 ms, `edgeStates` 2-14 → 1-3 ms. What is left on `dense` fit is `edgeLines` (8 to 12 ms, label placement for ~4000 edges in view) and unmarked frames (GC): S22.
 - Selection is unchanged (alternate runs with and without S21). Under load its p95 on excalidraw reaches 60 to 100 ms in both cases, on 6 to 11 steps.
 
+### S22 (edge labels): budget not reached
+
+Labels are placed against the box grid only for edges long enough on screen to show one (the painter's 60 px), and a hidden label is no longer hit by a click. On `dense` this saves almost nothing: 3,883 of the 4,000 edges in view are longer than 60 px. A/B, alternate runs, wheel zoom `work` p95 fit / zoomed: before 20/16, 19/16, 18/15 ms; after 20/15, 20/14, 19/14 ms (`edgeLines` p95 6 to 7 ms either way).
+
+- Tried and dropped: `Path2D` built directly (no `d` / `arrow` strings) and cached per curve: about 1 ms on `dense` fit (17-18 against 18 ms), under the 2 ms set to keep it; the curve still depends on the resting scale (`bend`).
+- What is left on `dense` fit (~18 ms p95 against 16): the curve strings and the `Path2D` rebuilt at each threshold, and unmarked frames (GC, not profiled). The 33 ms budget of ADR 0009 is held; 60 fps on a 4,000-edge view is not.
+
 ## Shallow clones
 
 The clones are shallow (`--depth 400`). `repo_id` (the name of the data folder when it falls back to the user cache, and a cache key) is the SHA of the oldest stored commit, so it is not the same as in a full clone of the same repository, nor between clones of different depths. Churn and co-change ignore the commit at the shallow boundary (no parent to compare it with). The measures above (indexing, `analyse`, budgeted snapshot) do not depend on either, so they were not run again.
