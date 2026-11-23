@@ -6,14 +6,52 @@ Relire du code qu'on n'a pas écrit, sans lire un diff ligne par ligne. relief d
 
 ## Installer et lancer
 
-Prérequis : Rust, Node.js et npm, git. L'interface est embarquée dans l'application à la compilation : construisez-la avant d'installer.
+### En une commande (recommandé)
+
+Depuis la racine d'un clone, une seule commande construit relief à partir de la branche courante (modifications non commitées comprises) et l'installe dans votre dossier utilisateur, sans `sudo` ni droits admin. L'OS est détecté.
+
+```sh
+./install.sh            # Linux, macOS, Windows sous Git Bash
+.\install.ps1           # Windows, PowerShell
+```
+
+| OS | Ce qu'il faut sur la machine | Build | Installé dans |
+| --- | --- | --- | --- |
+| Linux | `docker` (utilisable sans `sudo`), `git` | conteneur Ubuntu 22.04 (glibc ≥ 2.35), AppImage | `~/.local/share/relief/`, commande `~/.local/bin/relief`, entrée de menu et icône |
+| Windows | Docker Desktop, `git` | build croisé dans Docker (cargo-xwin, NSIS) | `%LOCALAPPDATA%`, pour l'utilisateur seul |
+| macOS | `cargo`, `node`, Command Line Tools (Docker ne construit pas d'app macOS) | natif | `~/Applications/relief.app`, commande `~/.local/bin/relief` |
+
+Sous Linux et Windows, ni Rust ni Node ne sont nécessaires sur la machine : tout est dans l'image Docker. Le premier build prend plusieurs minutes ; les suivants réutilisent les caches (volumes Docker `relief-build-cache` et `relief-build-work`). Sous Windows, le build télécharge le CRT MSVC et le SDK Windows sous licence Microsoft : le script demande votre accord (ou `--accept-msvc-license`).
+
+| Option | Effet |
+| --- | --- |
+| `--dry-run` | affiche l'OS détecté, chaque étape et chaque chemin, sans rien construire ni installer |
+| `--uninstall` | retire ce que l'installation a posé (le lanceur seulement s'il est celui de relief) ; avec `--dry-run`, liste ce qui serait retiré |
+| `--accept-msvc-license` | Windows : accepte la licence Microsoft sans la demander |
+| `--help` | l'aide |
+
+`RELIEF_INSTALL_OS=linux|macos|windows` force la détection de l'OS. Si `~/.local/bin` n'est pas dans le `PATH`, le script le signale ; avec zsh :
+
+```sh
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc && source ~/.zshrc
+```
+
+Pour réinstaller après un `git pull` ou un changement de branche, relancez `./install.sh`. `just install-check` vérifie le script (dry-run des trois OS, désinstallation) ; `RELIEF_INSTALL_CHECK_FULL=1 just install-check` fait en plus un vrai build Docker, une installation dans un `HOME` temporaire et un lancement sous Xvfb.
+
+### Depuis les sources
+
+Prérequis : Rust, Node.js et npm, git, et sous Linux `webkit2gtk-4.1` (paquets `-dev` pour compiler). L'interface est embarquée dans l'application à la compilation : construisez-la avant d'installer.
 
 ```
 npm --prefix src/ui install && npm --prefix src/ui run build
 cargo install --path src/interfaces/relief-desktop --features custom-protocol
 ```
 
-Puis, dans n'importe quel dépôt git :
+Les paquets `.deb`, AppImage et Arch (`just package`, `packaging/arch/`) sont décrits dans la page « Commencer » de la documentation.
+
+### Lancer
+
+Dans n'importe quel dépôt git :
 
 ```
 relief                           # HEAD jusqu'à l'arbre de travail, dépôt courant
