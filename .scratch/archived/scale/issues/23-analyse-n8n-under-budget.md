@@ -20,7 +20,7 @@ Après S11 (`docs/bench.md`, « After S11 »), `analyse` d'une PR de ~50 fichier
 
 ## Critères d'acceptation
 
-- [ ] `just bench` : `analyse` sur n8n sous 1 s, ou l'écart restant expliqué et accepté par l'utilisateur. **4,3 s, écart expliqué ; acceptation de l'utilisateur en attente.**
+- [x] `just bench` : `analyse` sur n8n sous 1 s, ou l'écart restant expliqué et accepté par l'utilisateur. **4,3 s, écart expliqué, accepté par l'utilisateur le 2026-11-23.**
 - [x] Les tests de propriété de S11 passent sans changement.
 
 ## Baseline
@@ -64,5 +64,5 @@ Après S11 (`docs/bench.md`, « After S11 »), `analyse` d'une PR de ~50 fichier
 
 - Détecteur : `Detector::detect_with(.., known)` ; les détecteurs ne relisent plus un blob dont le hash est repris de la base (même chemin, même blob) ; `Indexer::detector_reads` le compte. `diff_edges` compare les arêtes par référence et trie les arêtes changées en un passage.
 - `just bench`, `analyse` : n8n 5,7 → 5,15 s (détecteur) → 4,3 s (diff) ; excalidraw 351 → 308 ms.
-- Budget de 1 s non tenu sur n8n. Reste (détail dans `docs/bench.md`, « After S23 ») : base indexée en entier dans un processus neuf 2,35 s, head 1,15 s, diff et suite ~0,7 s. Seule une persistance du snapshot dans `.relief/` retirerait la base (~2,2 s estimés, chargement non mesuré), sans atteindre 1 s. Non fait (format et invalidation hors périmètre) : à décider par l'utilisateur.
+- Budget de 1 s non tenu sur n8n. Reste (détail dans `docs/bench.md`, « After S23 ») : base indexée en entier dans un processus neuf 2,35 s, head 1,15 s, diff et suite ~0,7 s. Seule une persistance du snapshot dans `.relief/` retirerait la base (~2,2 s estimés, chargement non mesuré), sans atteindre 1 s. Non fait (format et invalidation hors périmètre) ; l'utilisateur accepte 4,3 s (2026-11-23), pas de ticket de persistance.
 - Vérifié : 3 tests `detector_reads` ; tests de propriété de S11 inchangés et verts ; cargo 657, web 862 ; e2e 154 / 1 ignoré ; `just lint` propre.
