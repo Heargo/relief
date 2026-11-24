@@ -65,6 +65,8 @@ export interface SceneEdge {
   bundle: string | null;
   /** U31: the pointer is on the edge. */
   hovered: boolean;
+  /** R19: faded by the step-by-step focus. */
+  faded: boolean;
 }
 
 /** U31: edges that enter (or leave) a box by the same side, drawn as a shared trunk. */

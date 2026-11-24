@@ -11,6 +11,8 @@ const ARROW_ALPHA = 0.85;
 const DIM_ALPHA = 0.12;
 const MERGED_ALPHA = 0.6;
 const COCHANGE_ALPHA = 0.85;
+/** Alpha of what the step-by-step reading fades, for nodes and edges alike. */
+export const STEP_FADED = 0.1;
 const OUT_WIDTH = 2.4;
 const PICKED_WIDTH = 3;
 const TRUNK_WIDTH = 4;
@@ -125,14 +127,19 @@ export function createEdgePainter(ctx: CanvasRenderingContext2D, palette: Palett
     for (const br of b.branches) {
       const e = edgesByKey.get(`${br.from}\u0000${br.to}`);
       const color = e ? colorOf(e) : (statusOf(b.status) ?? palette.faint);
-      ctx.globalAlpha = dim ? DIM_ALPHA : LINE_ALPHA;
+      ctx.globalAlpha = (dim ? DIM_ALPHA : LINE_ALPHA) * (e?.faded ? STEP_FADED : 1);
       ctx.strokeStyle = color;
       ctx.lineWidth = edgeThickness(e?.count ?? 1) * px;
       ctx.setLineDash(e ? dashOf(e, px) : NO_DASH);
       ctx.stroke(path(br.d));
     }
     ctx.setLineDash(NO_DASH);
-    ctx.globalAlpha = dim ? DIM_ALPHA : 1;
+    ctx.globalAlpha =
+      (dim ? DIM_ALPHA : 1) *
+      ((b.edges?.length ?? 0) > 0 &&
+      b.edges.every((x) => edgesByKey.get(`${x.from}\u0000${x.to}`)?.faded)
+        ? STEP_FADED
+        : 1);
     const width = (TRUNK_WIDTH + edgeThickness(b.count) / 2) * px;
     const color = b.selected ? palette.accent : (statusOf(b.status) ?? palette.faint);
     if (b.mixed) {
@@ -147,8 +154,9 @@ export function createEdgePainter(ctx: CanvasRenderingContext2D, palette: Palett
 
   const drawEdge = (e: SceneEdge, px: number): void => {
     const dim = e.emphasis === 'dim';
+    const fade = e.faded ? STEP_FADED : 1;
     if (e.coChange) {
-      ctx.globalAlpha = COCHANGE_ALPHA;
+      ctx.globalAlpha = COCHANGE_ALPHA * fade;
       ctx.strokeStyle = palette.cochange;
       ctx.lineWidth = edgeThickness(e.count) * px;
       ctx.setLineDash(dashed(6 * px, 4 * px));
@@ -165,6 +173,7 @@ export function createEdgePainter(ctx: CanvasRenderingContext2D, palette: Palett
         : e.status === 'removed'
           ? REMOVED_ALPHA
           : LINE_ALPHA;
+    ctx.globalAlpha *= fade;
     ctx.strokeStyle = color;
     ctx.fillStyle = color;
     ctx.lineWidth =
@@ -175,7 +184,7 @@ export function createEdgePainter(ctx: CanvasRenderingContext2D, palette: Palett
           : edgeThickness(e.count)) * px;
     ctx.setLineDash(dashOf(e, px));
     ctx.stroke(path(e.shape.d));
-    ctx.globalAlpha = dim ? DIM_ALPHA : ARROW_ALPHA;
+    ctx.globalAlpha = (dim ? DIM_ALPHA : ARROW_ALPHA) * fade;
     ctx.fill(path(e.shape.arrow));
   };
 
@@ -265,7 +274,13 @@ export function createEdgePainter(ctx: CanvasRenderingContext2D, palette: Palett
           ctx.lineWidth = HALO_WIDTH;
           ctx.lineJoin = 'round';
         }
-        ctx.globalAlpha = e.emphasis === 'dim' ? DIM_ALPHA : e.label.cls === 'violOld' ? 0.8 : 1;
+        ctx.globalAlpha = e.faded
+          ? STEP_FADED
+          : e.emphasis === 'dim'
+            ? DIM_ALPHA
+            : e.label.cls === 'violOld'
+              ? 0.8
+              : 1;
         const lx = e.mid.x * s + tx;
         const ly = e.mid.y * s + ty;
         ctx.strokeStyle = palette.map;

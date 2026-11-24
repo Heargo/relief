@@ -285,8 +285,18 @@ export class MapPageComponent implements OnInit {
   });
   protected readonly labelOf = (id: string): string => this.map.label(id);
 
+  /** What the step-by-step reading keeps sharp; null while it is off. */
+  private readonly stepFocus = computed(() => {
+    const snapshot = this.repo.snapshot();
+    return snapshot ? this.reading.stepFocus(snapshot.graph) : null;
+  });
+  protected readonly stepElements = computed(() => this.stepFocus()?.elements ?? null);
+  protected readonly stepEdges = computed(() => this.stepFocus()?.edges ?? null);
+
   /** The ids kept sharp by the PR focus layer; null when it is off or there is no diff. */
   protected readonly focusIds = computed(() => {
+    const step = this.stepFocus();
+    if (step) return step.nodes;
     const diff = this.mapDiff();
     const snapshot = this.repo.snapshot();
     if (!this.review.focusLayer() || !diff || !snapshot) return null;
@@ -367,6 +377,28 @@ export class MapPageComponent implements OnInit {
       untracked(() => {
         this.map.setCommitFiles(scope?.files ?? null);
         this.map.frameNodes(scope ? [...scope.files] : null);
+      });
+    });
+    // The map selection is the entry the reader opened.
+    effect(() => {
+      const id = this.map.selectedNodeId();
+      untracked(() => {
+        if (id && this.reading.has(id)) this.reading.open(id);
+      });
+    });
+    // Step by step frames the current element and its neighbours; off, the view comes back.
+    let framing = false;
+    effect(() => {
+      const snapshot = this.repo.snapshot();
+      const ids = snapshot ? this.reading.frameIds(snapshot.graph) : null;
+      untracked(() => {
+        if (ids) {
+          framing = true;
+          this.map.frameNodes(ids, 'step');
+        } else if (framing) {
+          framing = false;
+          this.map.frameNodes(null, 'step');
+        }
       });
     });
     // The impact follows the selection and the range.
@@ -521,7 +553,9 @@ export class MapPageComponent implements OnInit {
       if (current && this.reading.has(current)) this.reading.toggle(current);
       return;
     }
-    const target = this.reading.step(current, move === 'next' ? 1 : -1);
+    const target = this.reading.stepByStep()
+      ? this.reading.stepCurrent(move === 'next' ? 1 : -1)
+      : this.reading.step(current, move === 'next' ? 1 : -1);
     if (target) this.map.selectResult(target);
   }
 

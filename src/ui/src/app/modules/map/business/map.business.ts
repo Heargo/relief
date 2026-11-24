@@ -275,7 +275,7 @@ export class MapBusiness {
   private flightTarget: Camera | null = null;
 
   private pristine = true;
-  private beforeFrame: { camera: Camera; level: number | null } | null = null;
+  private readonly beforeFrame = new Map<string, { camera: Camera; level: number | null }>();
   private animation = 0;
   private pendingSettle: (() => void) | null = null;
 
@@ -1225,11 +1225,11 @@ export class MapBusiness {
   }
 
   /** Frames the union of some nodes (the files of a replayed commit); `null` goes back to where the view was. */
-  frameNodes(ids: readonly string[] | null): void {
-    if (this.deferUntilLaidOut(() => this.frameNodes(ids))) return;
+  frameNodes(ids: readonly string[] | null, owner = 'scope'): void {
+    if (this.deferUntilLaidOut(() => this.frameNodes(ids, owner))) return;
     if (ids === null) {
-      const saved = this.beforeFrame;
-      this.beforeFrame = null;
+      const saved = this.beforeFrame.get(owner);
+      this.beforeFrame.delete(owner);
       if (!saved) return;
       this.interrupt();
       this._forcedLevel.set(saved.level);
@@ -1239,7 +1239,8 @@ export class MapBusiness {
     }
     const nodes = ids.map((id) => this._layout().nodes.get(id)).filter((n) => n !== undefined);
     if (nodes.length === 0) return;
-    this.beforeFrame ??= { camera: this._camera(), level: this._forcedLevel() };
+    if (!this.beforeFrame.has(owner))
+      this.beforeFrame.set(owner, { camera: this._camera(), level: this._forcedLevel() });
     const x = Math.min(...nodes.map((n) => n.x));
     const y = Math.min(...nodes.map((n) => n.y));
     const right = Math.max(...nodes.map((n) => n.x + n.w));

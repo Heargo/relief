@@ -26,6 +26,9 @@ export class ReadingOrderSectionComponent {
   readonly persisted = input(true);
   /** Groups of files that make the same change: the entry stands for the whole group. */
   readonly repeated = input<RepeatedChange[]>([]);
+  readonly stepByStep = input(false);
+  /** The current element of the step-by-step reading, null while it is off. */
+  readonly current = input<string | null>(null);
   readonly commits = input<CommitRow[]>([]);
   readonly selectedCommit = input<string | null>(null);
   readonly modeChange = output<ReadingMode>();
@@ -36,6 +39,8 @@ export class ReadingOrderSectionComponent {
   readonly markNext = output<void>();
   /** The representative of a group whose members the user asks to mark seen. */
   readonly groupMark = output<string>();
+  readonly stepChange = output<boolean>();
+  readonly move = output<'next' | 'previous'>();
 
   protected readonly modes: ReadingMode[] = ['file', 'symbol', 'commit'];
   protected readonly label = nodeLabel;

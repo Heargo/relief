@@ -1,7 +1,7 @@
 // Canvas 2D painter of the map nodes (ADR 0009). No Angular: it draws a `MapScene` on a context,
 // shapes in world units under the camera, text in screen pixels.
 import type { Camera } from '../../helpers/camera.logic';
-import { createEdgePainter, dashed, NO_DASH } from './edge-painter';
+import { createEdgePainter, dashed, NO_DASH, STEP_FADED } from './edge-painter';
 import { headerFontSize } from '../../helpers/header.logic';
 import {
   closedFontPx,
@@ -129,7 +129,7 @@ export function createMapPainter(
 
   const alphaOf = (n: SceneNode): number => {
     let a = 1;
-    if (n.faded) a *= FADED;
+    if (n.faded) a *= n.deepFade ? STEP_FADED : FADED;
     if (n.test) a *= TEST_DIM;
     if (n.impact === 'dim') a *= IMPACT_DIM;
     if (n.emphasis === 'dim') a *= EMPHASIS_DIM;

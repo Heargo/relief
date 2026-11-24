@@ -322,6 +322,9 @@
       "counts": "{{seen}}/{{total}} vus",
       "mark": "Marquer vu",
       "markNext": "Vu, suivant →",
+      "stepByStep": "Pas à pas",
+      "next": "Entrée suivante",
+      "previous": "Entrée précédente",
       "memoryOnly": "Pas de dossier de données : la progression reste en mémoire seulement.",
       "reasons": {
         "breakingSignature": "signature cassante",

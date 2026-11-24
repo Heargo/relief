@@ -44,6 +44,8 @@ export interface SceneNode {
   loading: boolean;
   risk: number | null;
   faded: boolean;
+  /** Faded by the step-by-step reading: painted much lighter. */
+  deepFade?: boolean;
   /** A test box: drawn dimmed. */
   test?: boolean;
   /** "Tested by N (of which M new)" on the target of folded test edges, null without. */
@@ -72,6 +74,8 @@ export interface SceneEdge {
   impactPath: boolean;
   violation: 'new' | 'old' | null;
   emphasis: EdgeEmphasis;
+  /** Outside the step-by-step neighbourhood: painted much lighter. */
+  faded?: boolean;
   label: { text: string; cls: string; visible: boolean };
   tooltip: string;
   labelRect: SceneRect | null;
@@ -128,6 +132,10 @@ export interface MapSceneInput {
   impact: ImpactMarks | null;
   reading: ((id: string) => ReadingNodeState | null) | null;
   focus: ReadonlySet<string> | null;
+  /** Step-by-step reading: the sharp edges (`edgeKey`); the others are faded. Null when off. */
+  stepEdges?: ReadonlySet<string> | null;
+  /** Step-by-step reading: the current element and its neighbours; what they hold stays sharp. */
+  stepElements?: ReadonlySet<string> | null;
   archi: ReadonlySet<string> | null;
   risk: ReadonlyMap<string, number> | null;
   loading: ReadonlySet<string>;
@@ -271,10 +279,11 @@ function sceneNode(node: VisibleNode, input: MapSceneInput, selecting: boolean):
     flagged: !!input.archi?.has(node.id),
     loading: input.loading.has(node.id),
     risk: input.risk ? (input.risk.get(node.id) ?? 0) : null,
-    faded: (!!input.focus && !input.focus.has(node.id)) || !!input.repeated?.faded.has(node.id),
+    faded: (!!input.focus && fadedNode(node.id, input)) || !!input.repeated?.faded.has(node.id),
     repeated: repeatedCount === undefined ? null : { count: repeatedCount },
     test: input.tests?.isTest(node.id) ?? false,
     testedBy: input.tests?.badges.get(node.id) ?? null,
+    deepFade: !!input.stepEdges && !!input.focus && fadedNode(node.id, input),
     emphasis: emphasis === 'dim' && kept ? null : emphasis,
     rect: { x: node.x, y: node.y, w: node.w, h: node.h },
     headerHeight: open ? open.height : 0,
@@ -303,6 +312,68 @@ function labelRect(
   const w = LABEL_W / scale;
   const h = LABEL_H / scale;
   return { x: mx - w / 2, y: my - h / 2, w, h };
+}
+
+const fine = (id: string): boolean => /^(file|sym):/.test(id.split('::').pop() ?? '');
+const within = (id: string, box: string): boolean =>
+  id === box || id.startsWith(`${box}::`) || id.startsWith(`${box}/`);
+
+/** What the step-by-step reading looks up for each node and edge, built once per scene. */
+interface StepIndex {
+  elements: string[];
+  pairs: [string, string][];
+  of: Map<string, string | undefined>;
+}
+const stepIndexes = new WeakMap<object, StepIndex>();
+
+function stepIndexOf(input: Pick<MapSceneInput, 'stepEdges' | 'stepElements'>): StepIndex {
+  let index = stepIndexes.get(input);
+  if (!index) {
+    index = {
+      elements: [...(input.stepElements ?? [])],
+      pairs: [...(input.stepEdges ?? [])].map((k) => k.split('\u0000') as [string, string]),
+      of: new Map(),
+    };
+    stepIndexes.set(input, index);
+  }
+  return index;
+}
+
+/** The current element or neighbour that holds `id`, if any. */
+function elementOf(index: StepIndex, id: string): string | undefined {
+  if (!index.of.has(id))
+    index.of.set(
+      id,
+      index.elements.find((e) => within(id, e)),
+    );
+  return index.of.get(id);
+}
+
+/** Not in the focus, nor inside the current element or one of its neighbours. */
+function fadedNode(id: string, input: MapSceneInput): boolean {
+  if (input.focus?.has(id)) return false;
+  return elementOf(stepIndexOf(input), id) === undefined;
+}
+
+/**
+ * Whether an edge lies outside the sharp edges of the step-by-step reading. A line between files
+ * or symbols is sharp when its own key is; a line aggregated up to a box is sharp when it covers
+ * a sharp edge.
+ */
+export function edgeFaded(
+  from: string,
+  to: string,
+  input: Pick<MapSceneInput, 'stepEdges' | 'stepElements'>,
+): boolean {
+  const sharp = input.stepEdges;
+  if (!sharp) return false;
+  const index = stepIndexOf(input);
+  const a = elementOf(index, from);
+  const b = elementOf(index, to);
+  if (a !== undefined && b !== undefined && (a === b || sharp.has(edgeKey(a, b)))) return false;
+  if (sharp.has(edgeKey(from, to))) return false;
+  if (fine(from) && fine(to)) return true;
+  return !index.pairs.some(([x, y]) => within(x, from) && within(y, to));
 }
 
 function sceneEdge(
@@ -336,6 +407,7 @@ function sceneEdge(
     impactPath: onImpactPath(input.impact, edge.from, edge.to),
     violation: violations.introduced > 0 ? 'new' : violations.existing > 0 ? 'old' : null,
     emphasis: input.emphasis.edges.get(edgeKey(edge.from, edge.to)) ?? 'normal',
+    faded: edgeFaded(edge.from, edge.to, input),
     label: { text: line.label, cls: line.cls, visible: labelVisible },
     tooltip: line.tooltip,
     labelRect: labelRect(line.label, labelVisible, mid.x, mid.y, input.modesScale),
@@ -359,6 +431,7 @@ function sceneCoChange({ edge, shape }: CoChangeLine, input: MapSceneInput): Sce
     impactPath: false,
     violation: null,
     emphasis: input.emphasis.edges.get(edgeKey(edge.from, edge.to)) ?? 'normal',
+    faded: edgeFaded(edge.from, edge.to, input),
     label: { text: '', cls: 'base', visible: false },
     tooltip: '',
     labelRect: null,

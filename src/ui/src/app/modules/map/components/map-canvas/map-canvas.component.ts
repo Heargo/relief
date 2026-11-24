@@ -59,6 +59,9 @@ export class MapCanvasComponent {
   readonly impact = input<ImpactMarks | null>(null);
   /** Ids kept sharp by the PR focus layer; everything else is faded. Null when the layer is off. */
   readonly focus = input<ReadonlySet<string> | null>(null);
+  /** Step-by-step reading: the sharp edges, the others are faded to 10 %. Null when it is off. */
+  readonly stepEdges = input<ReadonlySet<string> | null>(null);
+  readonly stepElements = input<ReadonlySet<string> | null>(null);
 
   /** Violations painted on the edges; empty while the rules layer is off. */
   readonly violations = input<readonly Violation[]>([]);
@@ -150,6 +153,8 @@ export class MapCanvasComponent {
       this.repeated();
       this.map.selectedNodeId();
       this.focus();
+      this.stepEdges();
+      this.stepElements();
       this.archi();
       this.risk();
       this.loading();
@@ -386,6 +391,8 @@ export class MapCanvasComponent {
       impact: this.impact(),
       reading: this.reading(),
       focus: this.focus(),
+      stepEdges: this.stepEdges(),
+      stepElements: this.stepElements(),
       archi: this.archi(),
       risk: this.risk(),
       loading: this.loading(),

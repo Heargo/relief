@@ -41,6 +41,38 @@
       {{ 'review.reading.markNext' | translate }}
     </button>
   </div>
+  <div class="actions">
+    <button
+      type="button"
+      class="iconbtn"
+      data-testid="toggle-step-by-step"
+      [class.on]="stepByStep()"
+      [attr.aria-pressed]="stepByStep()"
+      (click)="stepChange.emit(!stepByStep())"
+    >
+      {{ 'review.reading.stepByStep' | translate }}
+    </button>
+    @if (stepByStep()) {
+      <button
+        type="button"
+        class="iconbtn"
+        data-testid="reading-previous"
+        [attr.aria-label]="'review.reading.previous' | translate"
+        (click)="move.emit('previous')"
+      >
+        ←
+      </button>
+      <button
+        type="button"
+        class="iconbtn"
+        data-testid="reading-next"
+        [attr.aria-label]="'review.reading.next' | translate"
+        (click)="move.emit('next')"
+      >
+        →
+      </button>
+    }
+  </div>
   @if (mode() === 'commit') {
     @if (selectedCommit()) {
       <button type="button" class="iconbtn" data-testid="commit-show-all" (click)="showAll.emit()">
@@ -94,6 +126,7 @@
         data-testid="reading-row"
         [attr.data-node-id]="item.id"
         [attr.data-seen]="seenIds().has(item.id)"
+        [attr.data-current]="current() === item.id"
         [attr.data-group-size]="groupSize(item.id)"
         [class.selected]="selected() === item.id"
         (click)="nodeSelect.emit(item.id)"

@@ -168,6 +168,12 @@ A group of repeated changes is a single entry in the reading order, in File mode
 
 ![The Reading order section, in File mode](../../../assets/screens/en/review-reading-order.png)
 
+## Read step by step
+
+The **Step by step** button of the Reading order section keeps only the current element and its direct neighbours sharp (what it calls and what calls it, with the boxes holding them). Everything else on the map, arrows included, fades to 10 %. The current element is the entry you just opened, else the first unseen entry; its row is marked in the list.
+
+The **←** and **→** buttons (or the `p` and `n` keys) move to the previous or next entry, and the camera frames it and its neighbours. The setting is not kept from one session to the next. Turned off, the map goes back to normal and the selection stays.
+
 ## Replay commit by commit
 
 In **Commit** mode, each row is a commit of the range: short SHA, message, "x/y seen" and, if any, the number of files without a structural change (formatting only). The files of the selected commit show below it, in reading order.

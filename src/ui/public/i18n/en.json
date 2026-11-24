@@ -322,6 +322,9 @@
       "counts": "{{seen}}/{{total}} seen",
       "mark": "Mark seen",
       "markNext": "Seen, next →",
+      "stepByStep": "Step by step",
+      "next": "Next entry",
+      "previous": "Previous entry",
       "memoryOnly": "No data folder: the progress is kept in memory only.",
       "reasons": {
         "breakingSignature": "breaking signature",

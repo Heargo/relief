@@ -168,6 +168,12 @@ Un groupe de changements répétitifs n'est qu'une seule entrée dans l'ordre de
 
 ![La section Ordre de lecture, en mode Fichier](../../assets/screens/fr/review-reading-order.png)
 
+## Lire pas à pas
+
+Le bouton **Pas à pas** de la section Ordre de lecture ne garde vifs que l'élément courant et ses voisins directs (ce qu'il appelle et ce qui l'appelle, avec les boîtes qui les contiennent). Tout le reste de la carte, flèches comprises, est estompé à 10 %. L'élément courant est l'entrée que tu viens d'ouvrir, sinon la première entrée non vue ; sa ligne est marquée dans la liste.
+
+Les boutons **←** et **→** (ou les touches `p` et `n`) passent à l'entrée précédente ou suivante, et la caméra se cadre sur elle et ses voisins. Le réglage n'est pas gardé d'une session à l'autre. Désactivé, la carte redevient normale et la sélection reste.
+
 ## Rejouer commit par commit
 
 En mode **Commit**, chaque ligne est un commit de la plage : SHA court, message, « x/y vus » et, s'il y en a, le nombre de fichiers sans changement structurel (mise en forme seule). Les fichiers du commit sélectionné s'affichent en dessous, dans l'ordre de lecture.
