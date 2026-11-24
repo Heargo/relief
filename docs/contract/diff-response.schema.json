@@ -349,6 +349,13 @@
     "Node": {
       "type": "object",
       "properties": {
+        "branch": {
+          "description": "Branch the repository is read at, on the `repo:<name>` node of a workspace.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "childCount": {
           "description": "Exact number of direct children in the full graph, on a container of a subgraph whose\nchildren are not all in it.",
           "type": [
@@ -381,6 +388,16 @@
         },
         "kind": {
           "$ref": "#/$defs/NodeKind"
+        },
+        "labels": {
+          "description": "Labels of the repository (`front`, `back`...), on the `repo:<name>` node of a workspace.",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
         },
         "lang": {
           "type": [

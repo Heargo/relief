@@ -1,0 +1,5 @@
+{
+  "name": "@shop/web",
+  "version": "1.0.0",
+  "dependencies": { "@shop/api": "^1.0.0" }
+}

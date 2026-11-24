@@ -92,10 +92,11 @@ describe('MenuBarComponent', () => {
     ]);
   });
 
-  it('the multi-repo entries are disabled with a tooltip, Open a repository is not', async () => {
+  it('the other multi-repo entries are disabled with a tooltip, the opening ones are not', async () => {
     await click('menu-trigger-workspace');
     expect(must('menu-item-open-repo').getAttribute('aria-disabled')).not.toBe('true');
-    for (const id of ['open-workspace', 'add-repo', 'open-as-workspace']) {
+    expect(must('menu-item-open-workspace').getAttribute('aria-disabled')).not.toBe('true');
+    for (const id of ['add-repo', 'open-as-workspace']) {
       const item = must(`menu-item-${id}`);
       expect(item.getAttribute('aria-disabled')).toBe('true');
       expect((item.getAttribute('title') ?? '').length).toBeGreaterThan(0);
@@ -221,7 +222,9 @@ describe('MenuBarComponent', () => {
     await key(window, { key: 'w', altKey: true });
     expect(focusedId()).toBe('menu-item-open-repo');
     await key(document.activeElement as Element, { key: 'ArrowDown' });
-    // every other workspace entry is disabled for now: the focus wraps back
+    // the next entries are disabled: the focus goes to the open workspace entry, then wraps back
+    expect(focusedId()).toBe('menu-item-open-workspace');
+    await key(document.activeElement as Element, { key: 'ArrowDown' });
     expect(focusedId()).toBe('menu-item-open-repo');
 
     await key(document.activeElement as Element, { key: 'Escape' });

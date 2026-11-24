@@ -84,7 +84,7 @@ relief [path] [range]
 
 La fenêtre de relief s'ouvre sur le dépôt `path`. Rien n'est écrit dans votre dépôt.
 
-- Sans argument, `relief` n'ouvre aucun dépôt : il affiche l'écran d'accueil, où vous ouvrez un dépôt avec le sélecteur de dossier ou choisissez un dépôt récent (la liste est gardée dans votre dossier de configuration). Pour ouvrir le dossier courant, lancez `relief .`. Les entrées de menu pour créer ou ouvrir un espace de travail multidépôt ne sont pas encore actives ; en ligne de commande, voir « Espace de travail » ci-dessous.
+- Sans argument, `relief` n'ouvre aucun dépôt : il affiche l'écran d'accueil, où vous ouvrez un dépôt avec le sélecteur de dossier ou choisissez un dépôt récent (la liste est gardée dans votre dossier de configuration). Pour ouvrir le dossier courant, lancez `relief .`. L'entrée « Ouvrir un espace de travail… » (écran d'accueil et menu **Espace de travail**) ouvre un espace existant depuis son dossier ; créer un espace ou y ajouter un dépôt n'est pas encore possible depuis les menus, voir « Espace de travail » ci-dessous.
 - Sans plage, la plage affichée va de `HEAD` à l'arbre de travail. Pour une autre plage (`range`), donnez-la : `relief . main...ma-branche` (contre le merge-base) ou `relief . A..B`.
 - Le premier argument (`path`) est le dossier à analyser : `relief ~/code/mon-depot`.
 
@@ -123,7 +123,7 @@ relief ~/code/boutique/boutique.relief.json
 relief ~/code/boutique
 ```
 
-Pour l'instant, relief ouvre l'espace et connaît ses dépôts, mais la carte multidépôt n'est pas encore disponible : elle arrive avec la prochaine étape.
+La carte réunit les dépôts de l'espace : un niveau **Dépôts** s'ajoute au-dessus des systèmes, et chaque dépôt montre son diff sur sa propre plage (voir « La carte »).
 
 ## Premier regard
 

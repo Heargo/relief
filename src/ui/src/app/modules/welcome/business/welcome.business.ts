@@ -33,11 +33,24 @@ export class WelcomeBusiness {
     }
   }
 
-  /** Starts the session on a repository. False (with the error) when it fails. */
-  async open(path: string): Promise<boolean> {
+  /** Asks for a workspace folder, then opens it. False when cancelled or failed. */
+  async pickAndOpenWorkspace(): Promise<boolean> {
     this._error.set(null);
     try {
-      await this.api.openRepo(path);
+      const path = await this.api.pickRepoFolder();
+      return path === null ? false : await this.open(path, 'workspace');
+    } catch (error) {
+      this._error.set(error instanceof Error ? error.message : String(error));
+      return false;
+    }
+  }
+
+  /** Starts the session on a repository or a workspace. False (with the error) when it fails. */
+  async open(path: string, kind: 'repo' | 'workspace' = 'repo'): Promise<boolean> {
+    this._error.set(null);
+    try {
+      if (kind === 'workspace') await this.api.openWorkspace(path);
+      else await this.api.openRepo(path);
       return true;
     } catch (error) {
       this._error.set(error instanceof Error ? error.message : String(error));

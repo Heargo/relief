@@ -13,7 +13,10 @@ function filePathOf(id: string): string | null {
   if (at < 0) return null;
   const rest = id.slice(at + FILE_MARK.length);
   const symbol = rest.indexOf(SYMBOL_MARK);
-  return symbol < 0 ? rest : rest.slice(0, symbol);
+  const path = symbol < 0 ? rest : rest.slice(0, symbol);
+  // In a workspace the paths of the diff carry their repository (`repo:<name>/<path>`).
+  const repo = /^repo:([^/]+)\//.exec(id);
+  return repo ? `repo:${repo[1]}/${path}` : path;
 }
 
 /** The changed symbols of a file, in the order of the diff. */

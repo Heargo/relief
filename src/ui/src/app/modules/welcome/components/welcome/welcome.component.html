@@ -5,12 +5,7 @@
     <button type="button" class="primary" data-testid="welcome-open-repo" (click)="pick()">
       {{ 'welcome.openRepo' | translate }}
     </button>
-    <button
-      type="button"
-      data-testid="welcome-open-workspace"
-      disabled
-      [attr.title]="'menu.multiRepoSoon' | translate"
-    >
+    <button type="button" data-testid="welcome-open-workspace" (click)="pickWorkspace()">
       {{ 'welcome.openWorkspace' | translate }}
     </button>
   </div>
@@ -28,9 +23,7 @@
             type="button"
             class="recent"
             data-testid="welcome-recent"
-            [disabled]="entry.kind === 'workspace'"
-            [attr.title]="entry.kind === 'workspace' ? ('menu.multiRepoSoon' | translate) : null"
-            (click)="openRecent(entry.path)"
+            (click)="openRecent(entry.path, entry.kind)"
           >
             <span class="name">{{ entry.name }}</span>
             <span class="path">{{ entry.path }}</span>

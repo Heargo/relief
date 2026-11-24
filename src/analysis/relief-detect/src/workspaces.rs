@@ -171,6 +171,8 @@ pub(crate) fn node(
         entry_type: None,
         child_count: None,
         is_test: false,
+        branch: None,
+        labels: None,
     }
 }
 

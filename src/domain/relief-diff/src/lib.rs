@@ -36,17 +36,17 @@ pub fn format_only_files(diff: &GraphDiff) -> Vec<FileChange> {
         NodeStatus::Moved { from, .. } => Some(from),
         _ => None,
     });
-    let changed: HashSet<&str> = diff
+    let changed: HashSet<String> = diff
         .nodes
         .iter()
         .map(|n| &n.id)
         .chain(moved_from)
         .chain(diff.edges.iter().map(|e| &e.from))
-        .filter_map(|id| id.file_path())
+        .filter_map(|id| id.repo_file_path())
         .collect();
     diff.files
         .iter()
-        .filter(|f| !changed.contains(f.path.as_str()))
+        .filter(|f| !changed.contains(&f.path))
         .cloned()
         .collect()
 }
@@ -916,7 +916,7 @@ fn file_node(graph: &GraphSnapshot, path: &str) -> Option<NodeId> {
     graph
         .nodes()
         .iter()
-        .find(|n| n.kind == NodeKind::File && n.id.file_path() == Some(path))
+        .find(|n| n.kind == NodeKind::File && n.id.repo_file_path().as_deref() == Some(path))
         .map(|n| n.id.clone())
 }
 
@@ -947,9 +947,9 @@ fn file_groups(
             })
             .filter(|c| graph.node(&c.id).is_some_and(|n| n.kind == NodeKind::File))
             .filter_map(|c| {
-                let path = c.id.file_path()?;
-                (!skip.contains(path)).then(|| FileRef {
-                    path: path.to_owned(),
+                let path = c.id.repo_file_path()?;
+                (!skip.contains(path.as_str())).then(|| FileRef {
+                    path,
                     node: c.id.clone(),
                 })
             })
@@ -1022,11 +1022,11 @@ pub struct CommitReading {
 }
 
 /// Paths of the old locations of moved files: gone from `head`.
-fn moved_old_paths<'a>(diff: &'a GraphDiff, head: &GraphSnapshot) -> HashSet<&'a str> {
+fn moved_old_paths(diff: &GraphDiff, head: &GraphSnapshot) -> HashSet<String> {
     diff.nodes
         .iter()
         .filter_map(|n| match &n.status {
-            NodeStatus::Moved { from, .. } => from.file_path(),
+            NodeStatus::Moved { from, .. } => from.repo_file_path(),
             _ => None,
         })
         .filter(|p| file_node(head, p).is_none())
@@ -1079,7 +1079,7 @@ pub fn reading_order(
         .files
         .iter()
         .map(|f| f.path.as_str())
-        .filter(|p| !format_only.contains(*p) && !old_paths.contains(p))
+        .filter(|p| !format_only.contains(*p) && !old_paths.contains(*p))
         .collect();
 
     // (sort key, item) of every entry to read.
@@ -1090,7 +1090,7 @@ pub fn reading_order(
                 let in_file: Vec<&NodeChange> = diff
                     .nodes
                     .iter()
-                    .filter(|n| n.id.file_path() == Some(path))
+                    .filter(|n| n.id.repo_file_path().as_deref() == Some(path))
                     .collect();
                 let Some(id) = file_node(head, path).or_else(|| {
                     in_file
@@ -1132,10 +1132,10 @@ pub fn reading_order(
         }
         Granularity::Symbol => {
             for c in &diff.nodes {
-                let (Some(path), Some(name)) = (c.id.file_path(), c.id.symbol_key()) else {
+                let (Some(path), Some(name)) = (c.id.repo_file_path(), c.id.symbol_key()) else {
                     continue;
                 };
-                if !paths.contains(&path) {
+                if !paths.contains(&path.as_str()) {
                     continue;
                 }
                 let mut reasons = Vec::new();
@@ -1155,7 +1155,7 @@ pub fn reading_order(
                     _ => lines_reason(c.lines_added, c.lines_removed, &mut reasons),
                 }
                 entries.push((
-                    (path.to_owned(), name),
+                    (path, name),
                     ReadingItem {
                         id: c.id.clone(),
                         reasons,
@@ -1171,7 +1171,7 @@ pub fn reading_order(
     let index_of: HashMap<&(String, String), usize> =
         entries.iter().enumerate().map(|(i, e)| (&e.0, i)).collect();
     let key_of = |id: &NodeId| -> Option<(String, String)> {
-        let path = id.file_path()?.to_owned();
+        let path = id.repo_file_path()?;
         match granularity {
             Granularity::File => Some((path, String::new())),
             Granularity::Symbol => Some((path, id.symbol_key()?)),

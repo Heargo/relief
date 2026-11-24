@@ -13,7 +13,12 @@ const RECENTS = [
 
 const META = { repo: 'acme', range: null, branches: ['main'], tags: [] };
 
-const api = { recents: vi.fn(), openRepo: vi.fn(), pickRepoFolder: vi.fn() };
+const api = {
+  recents: vi.fn(),
+  openRepo: vi.fn(),
+  openWorkspace: vi.fn(),
+  pickRepoFolder: vi.fn(),
+};
 
 async function render(lang: 'en' | 'fr' = 'en') {
   TestBed.configureTestingModule({
@@ -35,6 +40,7 @@ describe('WelcomeComponent', () => {
   beforeEach(() => {
     api.recents.mockReset().mockResolvedValue(RECENTS);
     api.openRepo.mockReset().mockResolvedValue(META);
+    api.openWorkspace.mockReset().mockResolvedValue(META);
     api.pickRepoFolder.mockReset().mockResolvedValue('/picked/repo');
   });
 
@@ -68,14 +74,14 @@ describe('WelcomeComponent', () => {
     expect(opened()).toBe(0);
   });
 
-  it('keeps the multi-repository workspace entry disabled, with a tooltip', async () => {
-    const { fixture, el } = await render();
-    const button = byId(el, 'welcome-open-workspace') as HTMLButtonElement;
-    expect(button.disabled).toBe(true);
-    expect(button.getAttribute('title')).toContain('Available soon');
-    button.click();
+  it('opens the workspace chosen in the folder picker, then tells the page', async () => {
+    const { fixture, el, opened } = await render();
+    byId(el, 'welcome-open-workspace')?.click();
     await fixture.whenStable();
-    expect(api.pickRepoFolder).not.toHaveBeenCalled();
+    expect(api.pickRepoFolder).toHaveBeenCalledOnce();
+    expect(api.openWorkspace).toHaveBeenCalledExactlyOnceWith('/picked/repo');
+    expect(api.openRepo).not.toHaveBeenCalled();
+    expect(opened()).toBe(1);
   });
 
   it('lists the recent repositories and workspaces', async () => {
@@ -104,13 +110,13 @@ describe('WelcomeComponent', () => {
     expect(opened()).toBe(1);
   });
 
-  it('a recent workspace is disabled until multi-repository workspaces exist', async () => {
-    const { fixture, el } = await render();
-    const row = el.querySelectorAll<HTMLButtonElement>('[data-testid="welcome-recent"]')[1];
-    expect(row?.disabled).toBe(true);
-    row?.click();
+  it('opens a recent workspace as a workspace', async () => {
+    const { fixture, el, opened } = await render();
+    el.querySelectorAll<HTMLElement>('[data-testid="welcome-recent"]')[1]?.click();
     await fixture.whenStable();
+    expect(api.openWorkspace).toHaveBeenCalledOnce();
     expect(api.openRepo).not.toHaveBeenCalled();
+    expect(opened()).toBe(1);
   });
 
   it('shows the API error when the repository cannot be opened', async () => {

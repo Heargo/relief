@@ -178,6 +178,11 @@ export class ReliefApiService {
     return this.command<MetaResponse>('open_repo', { path });
   }
 
+  /** Starts the session on a workspace (its `.relief.json` file or its folder); answers its meta. */
+  openWorkspace(path: string): Promise<MetaResponse> {
+    return this.command<MetaResponse>('open_workspace', { path });
+  }
+
   /** The native folder picker; null when cancelled. */
   async pickRepoFolder(): Promise<string | null> {
     try {

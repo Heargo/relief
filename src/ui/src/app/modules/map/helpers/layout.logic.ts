@@ -1,4 +1,5 @@
 import type { GraphSnapshot, Node, NodeKind } from '../../../core/models/contract';
+import { isWorkspaceRepo, mapParent } from './repo-level.logic';
 
 export interface Rect {
   x: number;
@@ -48,7 +49,7 @@ export function isLeafKind(kind: NodeKind): boolean {
 }
 
 export function rankOf(kind: NodeKind): number {
-  if (kind === 'service' || kind === 'package' || kind === 'workspace') return 0;
+  if (kind === 'repo' || kind === 'service' || kind === 'package' || kind === 'workspace') return 0;
   if (kind === 'file' || kind === 'symbol') return 2;
   return 1;
 }
@@ -79,9 +80,9 @@ export function groupChildren(graph: GraphSnapshot): LayoutInput {
   const childrenOf = new Map<string, Node[]>();
   const rootNodes: Node[] = [];
   for (const node of graph.nodes) {
-    if (node.kind === 'repo') continue;
-    const parent = node.parent ? byId.get(node.parent) : undefined;
-    if (!parent || parent.kind === 'repo') {
+    if (node.kind === 'repo' && !isWorkspaceRepo(node)) continue;
+    const parent = mapParent(node, byId);
+    if (!parent) {
       rootNodes.push(node);
     } else {
       const list = childrenOf.get(parent.id) ?? [];

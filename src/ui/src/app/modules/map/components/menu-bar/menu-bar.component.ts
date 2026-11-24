@@ -61,6 +61,7 @@ export class MenuBarComponent {
   readonly reload = output<void>();
   readonly docs = output<void>();
   readonly openRepo = output<void>();
+  readonly openWorkspace = output<void>();
 
   protected readonly menus = MENU_IDS;
   protected readonly openMenu = signal<MenuId | null>(null);
@@ -82,10 +83,7 @@ export class MenuBarComponent {
       case 'workspace':
         return [
           this.entry('open-repo', 'menu.items.openRepo', () => this.openRepo.emit()),
-          this.entry('open-workspace', 'menu.items.openWorkspace', () => undefined, {
-            disabled: true,
-            tooltip: soon,
-          }),
+          this.entry('open-workspace', 'menu.items.openWorkspace', () => this.openWorkspace.emit()),
           this.entry('add-repo', 'menu.items.addRepo', () => undefined, {
             disabled: true,
             tooltip: soon,

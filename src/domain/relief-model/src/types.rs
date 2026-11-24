@@ -113,6 +113,12 @@ pub struct Node {
     /// holds nothing but tests.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub is_test: bool,
+    /// Branch the repository is read at, on the `repo:<name>` node of a workspace.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub branch: Option<String>,
+    /// Labels of the repository (`front`, `back`...), on the `repo:<name>` node of a workspace.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub labels: Option<Vec<String>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]

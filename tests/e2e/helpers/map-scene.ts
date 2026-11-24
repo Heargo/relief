@@ -30,6 +30,8 @@ export interface SceneNode extends ClientRect {
   badges: string[];
   counts: { unit: 'symbols' | 'files'; value: number }[];
   sub: string | null;
+  /** K08: the labels of a repository box (front, back, ops, tools), empty elsewhere. */
+  tags: string[];
   impact: 'hit' | 'box' | 'dim' | null;
   impactCount: number;
   reading: { seen: boolean; count: { seen: number; total: number } | null } | null;

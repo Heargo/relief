@@ -30,6 +30,7 @@ use relief_rules::{Config, ConfigError, Rule, parse_config};
 mod data_dir;
 mod error;
 mod range;
+mod union;
 mod workspace;
 
 pub use data_dir::{DataDir, DataDirEnv};
@@ -374,9 +375,18 @@ impl Session {
 
     /// The graph of a ref (or `WORKTREE` / `INDEX`).
     pub fn snapshot(&self, request: &SnapshotRequest) -> Result<SnapshotResponse, AppError> {
-        let source = self.git()?;
-        let commit = self.resolve(&source, &request.rev)?;
-        let indexed = self.indexed_snapshot(&source, &commit)?;
+        let indexed = if self.workspace.is_some() {
+            // A workspace reads each repository at its own source: `rev` is ignored.
+            self.workspace_snapshot()?
+        } else {
+            let source = self.git()?;
+            let commit = self.resolve(&source, &request.rev)?;
+            let indexed = self.indexed_snapshot(&source, &commit)?;
+            SnapshotResponse {
+                graph: indexed.graph,
+                meta: indexed.meta,
+            }
+        };
         let graph = match request.budget {
             Some(budget) => relief_diff::budgeted(&indexed.graph, budget, &request.expand),
             None => indexed.graph,
@@ -422,6 +432,9 @@ impl Session {
 
     /// The diff of a range with the snapshots it compares and the cache warnings.
     pub fn analyse(&self, request: &DiffRequest) -> Result<DiffAnalysis, AppError> {
+        if self.workspace.is_some() {
+            return self.workspace_analysis();
+        }
         let source = self.git()?;
         let sides = self.sides(&source, request.range.as_ref())?;
         self.analyse_sides(&source, &sides)
@@ -432,6 +445,15 @@ impl Session {
         &self,
         request: &ReviewSummaryRequest,
     ) -> Result<ReviewSummary, AppError> {
+        if self.workspace.is_some() {
+            let analysed = self.workspace_analysis()?;
+            return Ok(relief_diff::review_summary(
+                &analysed.base,
+                &analysed.head,
+                &analysed.diff,
+                &analysed.renames,
+            ));
+        }
         let source = self.git()?;
         let sides = self.sides(&source, request.range.as_ref())?;
         let analysed = self.analyse_sides(&source, &sides)?;
@@ -455,9 +477,7 @@ impl Session {
         &self,
         request: &ReadingOrderRequest,
     ) -> Result<ReadingOrderResponse, AppError> {
-        let source = self.git()?;
-        let sides = self.sides(&source, request.range.as_ref())?;
-        let analysed = self.analyse_sides(&source, &sides)?;
+        let analysed = self.analyse_range(request.range.as_ref())?;
         let items = relief_diff::reading_order(&analysed.diff, &analysed.head, request.granularity)
             .into_iter()
             .map(|item| ReadingItem {
@@ -636,9 +656,7 @@ impl Session {
     /// The symbols reached from the seeds in the head of a range, with their
     /// path, whether a test reaches them and whether the range left them untouched.
     pub fn impact(&self, request: &ImpactRequest) -> Result<ImpactResponse, AppError> {
-        let source = self.git()?;
-        let sides = self.sides(&source, request.range.as_ref())?;
-        let analysed = self.analyse_sides(&source, &sides)?;
+        let analysed = self.analyse_range(request.range.as_ref())?;
         let direction = match request.direction {
             ImpactDirection::Callers => relief_diff::Direction::Callers,
             ImpactDirection::Dependencies => relief_diff::Direction::Dependencies,
@@ -1126,12 +1144,23 @@ impl Session {
         let config = self.read_config(source, commit)?.and_then(|(_, c)| c.ok());
         let exclude = |path: &str| config.as_ref().is_some_and(|c| c.is_excluded(path));
         let exclude: Option<&dyn Fn(&str) -> bool> = config.as_ref().map(|_| &exclude as _);
+        // A workspace names the root of each repository after its folder.
+        let name = match (&self.workspace, source.workdir()) {
+            (Some(_), Some(dir)) => repo_name(dir),
+            _ => self.name.clone(),
+        };
         let indexed = match from {
-            Some((base_commit, base)) => {
-                self.indexer
-                    .snapshot_from_excluding(source, base_commit, base, commit, exclude)?
-            }
-            None => self.indexer.snapshot_excluding(source, commit, exclude)?,
+            Some((base_commit, base)) => self.indexer.snapshot_from_named_excluding(
+                &name,
+                source,
+                base_commit,
+                base,
+                commit,
+                exclude,
+            )?,
+            None => self
+                .indexer
+                .snapshot_named_excluding(&name, source, commit, exclude)?,
         };
         self.indexed.fetch_add(1, Ordering::SeqCst);
         if real && let Ok(mut memory) = self.memory.lock() {
@@ -1170,6 +1199,16 @@ impl Session {
             }
         }
         Ok(texts)
+    }
+
+    /// The analysis of a range; a workspace diffs each repository on its own range.
+    fn analyse_range(&self, range: Option<&RangeSpec>) -> Result<DiffAnalysis, AppError> {
+        if self.workspace.is_some() {
+            return self.workspace_analysis();
+        }
+        let source = self.git()?;
+        let sides = self.sides(&source, range)?;
+        self.analyse_sides(&source, &sides)
     }
 
     /// Indexes both sides of `sides` and computes the `GraphDiff` between them:

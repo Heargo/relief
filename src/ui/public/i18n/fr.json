@@ -42,6 +42,13 @@
       "system": "Système"
     },
     "level": "Niveau",
+    "levelNames": {
+      "repos": "Dépôts",
+      "system": "Système",
+      "modules": "Modules",
+      "files": "Fichiers",
+      "symbols": "Symboles"
+    },
     "levels": {
       "0": "Système",
       "1": "Modules",

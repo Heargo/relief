@@ -214,6 +214,8 @@ impl LanguageAdapter for PythonAdapter {
                 entry_type: None,
                 child_count: None,
                 is_test: false,
+                branch: None,
+                labels: None,
             })
             .collect();
         Extraction {
@@ -357,6 +359,8 @@ fn external_node(name: &str, ctx: &LinkContext<'_>, out: &mut Extraction) -> Nod
         entry_type: None,
         child_count: None,
         is_test: false,
+        branch: None,
+        labels: None,
     };
     out.nodes
         .push(make(&group, NodeKind::Module, "external-group", ctx.repo));

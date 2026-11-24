@@ -86,7 +86,12 @@ export class MapCanvasComponent {
   private readonly destroyRef = inject(DestroyRef);
   private readonly canvas = viewChild.required<ElementRef<HTMLElement>>('canvas');
 
-  protected readonly levels = [0, 1, 2, 3];
+  protected readonly levelIndexes = computed(() => this.map.levels().map((_, i) => i));
+
+  /** Translation key of the name of a level. */
+  protected levelName(level: number): string {
+    return `map.levelNames.${this.map.levels()[level] ?? 'symbols'}`;
+  }
   protected readonly statuses = ['added', 'modified', 'removed', 'moved'] as const;
   protected readonly edgeKinds = [
     { status: 'added', key: 'newEdge' },
@@ -444,7 +449,7 @@ export class MapCanvasComponent {
   }
 
   protected crumbText(crumb: Crumb): string {
-    return crumb.kind === 'level' ? this.language.t(`map.levels.${crumb.level}`) : crumb.label;
+    return crumb.kind === 'level' ? this.language.t(this.levelName(crumb.level)) : crumb.label;
   }
 
   protected zoomFromCenter(factor: number): void {

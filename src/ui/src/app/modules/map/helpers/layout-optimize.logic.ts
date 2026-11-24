@@ -1,5 +1,6 @@
 import type { GraphSnapshot } from '../../../core/models/contract';
 import { type BoxPair, boxPairsAtLevel, crossingsOfPairs } from './crossings.logic';
+import { isWorkspaceRepo, mapParent } from './repo-level.logic';
 import { type ChildOrder, groupChildren, layoutInput, rankOf } from './layout.logic';
 
 export type { ChildOrder } from './layout.logic';
@@ -21,12 +22,10 @@ export interface OptimizeResult {
 /** Children of each container sorted by id (`null`: the children of the repo). */
 export function alphabeticalOrder(graph: GraphSnapshot): ChildOrder {
   const order: ChildOrder = new Map();
-  const repos = new Set(graph.nodes.filter((n) => n.kind === 'repo').map((n) => n.id));
-  const ids = new Set(graph.nodes.map((n) => n.id));
+  const byId = new Map(graph.nodes.map((n) => [n.id, n]));
   for (const node of graph.nodes) {
-    if (node.kind === 'repo') continue;
-    const parent =
-      node.parent && ids.has(node.parent) && !repos.has(node.parent) ? node.parent : null;
+    if (node.kind === 'repo' && !isWorkspaceRepo(node)) continue;
+    const parent = mapParent(node, byId)?.id ?? null;
     // Loose files at the top come last whatever the order: they are not part of it.
     if (parent === null && rankOf(node.kind) === 2) continue;
     const list = order.get(parent) ?? [];

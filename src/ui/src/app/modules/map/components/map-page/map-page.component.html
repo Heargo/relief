@@ -23,6 +23,7 @@
       (reload)="reloader.reload()"
       (docs)="docs.open()"
       (openRepo)="onOpenRepo()"
+      (openWorkspace)="onOpenWorkspace()"
     />
     <div class="search-box">
       <span class="mag" data-testid="search-icon" aria-hidden="true">⌕</span>
@@ -95,7 +96,18 @@
               }
             </div>
           }
-          @if (repo.ref(); as ref) {
+          @if (workspaceRepos().length > 0) {
+            <ul class="repos" data-testid="workspace-repos">
+              @for (item of workspaceRepos(); track item.id) {
+                <li data-testid="workspace-repo">
+                  <b>{{ item.name }}</b>
+                  @if (item.branch) {
+                    <span class="ref" data-testid="workspace-repo-branch">{{ item.branch }}</span>
+                  }
+                </li>
+              }
+            </ul>
+          } @else if (repo.ref(); as ref) {
             <span class="ref" data-testid="ref">{{ ref }}</span>
           }
         </div>
@@ -121,7 +133,7 @@
             </button>
           </div>
         </div>
-        @if (review.reviewMode() && repo.meta()) {
+        @if (review.reviewMode() && repo.meta() && !repo.meta()?.workspace) {
           <div class="sec" data-testid="compare-section">
             <app-range-picker />
           </div>

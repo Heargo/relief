@@ -99,10 +99,17 @@ const RISK_TINT = 0.32;
 const BOX_RADIUS = 6;
 const TAB_RADIUS = 4;
 /** Height of the content row of a closed box, by kind (symbols use the whole box). */
-const CLOSED_ROW: Record<string, number> = { service: 38, package: 38, workspace: 38, module: 30 };
+const CLOSED_ROW: Record<string, number> = {
+  repo: 38,
+  service: 38,
+  package: 38,
+  workspace: 38,
+  module: 30,
+};
 
 function padding(kind: string): number {
-  if (kind === 'service' || kind === 'package' || kind === 'workspace') return 14;
+  if (kind === 'repo' || kind === 'service' || kind === 'package' || kind === 'workspace')
+    return 14;
   return kind === 'module' ? 10 : 8;
 }
 
@@ -309,6 +316,10 @@ export function createMapPainter(
       ctx.fillStyle = palette.muted;
       ctx.fillText(n.sub, x, cy);
       x += measure(sub, n.sub) + 6;
+    }
+    for (const tag of n.tags ?? []) {
+      if (x + measure(BADGE_FONT, tag) + 8 > right) break;
+      x += pill(tag, x, cy, 'tag') + 6;
     }
     const badges: [string, string, string?][] = n.badges.map((b) => [b, t(`review.badges.${b}`)]);
     if (n.impact === 'box' && n.impactCount > 0)

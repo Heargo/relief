@@ -37,6 +37,8 @@ export interface SceneNode {
   badges: string[];
   counts: NodeContent['counts'];
   sub: string | null;
+  /** Labels of a repository box, empty elsewhere. */
+  tags?: string[];
   impact: 'hit' | 'box' | 'dim' | null;
   impactCount: number;
   reading: ReadingNodeState | null;
@@ -176,7 +178,8 @@ export function labelFont(kind: string, fontPx: number): string {
 
 /** Font size in pixels of the title of a closed box, by kind (`map-canvas.component.scss`). */
 export function closedFontPx(kind: string): number {
-  if (kind === 'service' || kind === 'package' || kind === 'workspace') return 15;
+  if (kind === 'repo' || kind === 'service' || kind === 'package' || kind === 'workspace')
+    return 15;
   if (kind === 'module') return 13;
   return kind === 'symbol' ? 11.5 : 12;
 }
@@ -275,6 +278,7 @@ function sceneNode(node: VisibleNode, input: MapSceneInput, selecting: boolean):
     badges: mark ? [...mark.badges] : [],
     counts: content?.counts ?? [],
     sub: content?.sub ?? null,
+    tags: content?.tags ?? [],
     impact: state === '' ? null : state,
     impactCount: impact && state === 'box' ? (impact.counts.get(node.id) ?? 0) : 0,
     reading: input.reading?.(node.id) ?? null,

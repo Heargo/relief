@@ -42,6 +42,13 @@
       "system": "System"
     },
     "level": "Level",
+    "levelNames": {
+      "repos": "Repos",
+      "system": "System",
+      "modules": "Modules",
+      "files": "Files",
+      "symbols": "Symbols"
+    },
     "levels": {
       "0": "System",
       "1": "Modules",

@@ -1,0 +1,10 @@
+# The front repository of the `shop-space` workspace: imports the type published by shop-api
+# (`@shop/api`) and calls its `GET /orders` route. `feat/order-badge` changes `OrderList`.
+commits:
+  - id: base
+    message: "chore: orders screen"
+    date: "2024-05-01T09:30:00Z"
+  - id: order-badge
+    message: "feat(orders): count badge on the list"
+    date: "2024-05-03T10:00:00Z"
+    branch: feat/order-badge

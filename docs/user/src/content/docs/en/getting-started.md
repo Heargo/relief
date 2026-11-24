@@ -84,7 +84,7 @@ relief [path] [range]
 
 The relief window opens on the current repository. Nothing is written to your repository.
 
-- With no argument, `relief` opens no repository: it shows the welcome screen, where you open a repository with the folder picker or choose a recent one (the list is kept in your configuration folder). To open the current folder, run `relief .`. The menu entries to create or open a multi-repository workspace are not active yet; on the command line, see "Workspace" below.
+- With no argument, `relief` opens no repository: it shows the welcome screen, where you open a repository with the folder picker or choose a recent one (the list is kept in your configuration folder). To open the current folder, run `relief .`. The "Open a workspace…" entry (welcome screen and **Workspace** menu) opens an existing workspace from its folder; creating a workspace or adding a repository to one is not possible from the menus yet, see "Workspace" below.
 - With no range, the range shown goes from `HEAD` to the working tree. For another range (`range`), pass it: `relief . main...my-branch` (against the merge-base) or `relief . A..B`.
 - The first argument (`path`) is the folder to analyse: `relief ~/code/my-repo`.
 
@@ -123,7 +123,7 @@ relief ~/code/shop/shop.relief.json
 relief ~/code/shop
 ```
 
-For now relief opens the workspace and knows its repositories, but the multi-repository map is not available yet: it comes with the next step.
+The map brings the repositories of the workspace together: a **Repos** level sits above the systems, and each repository shows its diff on its own range (see "The map").
 
 ## First look
 

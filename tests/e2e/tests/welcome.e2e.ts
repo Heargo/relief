@@ -12,7 +12,7 @@ it('relief without a path shows the welcome screen, no map', async () => {
   await browser.execute(() => window.location.assign('/'));
   await expect(tid('welcome')).toBeDisplayed();
   await expect(tid('welcome-open-repo')).toBeDisplayed();
-  await expect(tid('welcome-open-workspace')).toBeDisabled();
+  await expect(tid('welcome-open-workspace')).toBeEnabled();
   await expect(tid('repo-name')).not.toExist();
 });
 

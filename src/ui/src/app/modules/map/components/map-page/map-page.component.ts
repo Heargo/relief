@@ -67,6 +67,7 @@ import { PanelsBusiness } from '../../business/panels.business';
 import { RepoBusiness } from '../../business/repo.business';
 import { SubgraphBusiness } from '../../business/subgraph.business';
 import { repoMetaLine } from '../../helpers/repo-meta.logic';
+import { repoBoxes } from '../../helpers/repo-level.logic';
 import { isPartial } from '../../../review/helpers/review-graph.logic';
 import type { EdgeBundle } from '../../helpers/edge-bundles.logic';
 import type { SearchResult } from '../../helpers/search.logic';
@@ -168,6 +169,12 @@ export class MapPageComponent implements OnInit {
   protected readonly results = computed(() => {
     const found = this.found();
     return found && found.query === this.query() ? found.results : this.map.search(this.query());
+  });
+
+  /** The repositories of a workspace with their current branch; empty on a single repository. */
+  protected readonly workspaceRepos = computed(() => {
+    const snapshot = this.repo.snapshot();
+    return this.repo.meta()?.workspace && snapshot ? repoBoxes(snapshot.graph) : [];
   });
 
   /** The grey line after the repo name: languages and detector. */
@@ -488,6 +495,14 @@ export class MapPageComponent implements OnInit {
     const wasOpen = !this.repo.noSession();
     if (!(await this.welcomeState.pickAndOpen())) return;
     // A map already shown holds the state of the previous repository: start the page again.
+    if (wasOpen) this.reloadPage();
+    else await this.start();
+  }
+
+  /** The menu entry "Open a workspace": folder picker, then the map of the chosen one. */
+  protected async onOpenWorkspace(): Promise<void> {
+    const wasOpen = !this.repo.noSession();
+    if (!(await this.welcomeState.pickAndOpenWorkspace())) return;
     if (wasOpen) this.reloadPage();
     else await this.start();
   }

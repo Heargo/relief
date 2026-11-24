@@ -3,6 +3,7 @@
 // tauri-driver and drives the release build of the desktop app, one session (one window) per spec file.
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import {
+  copyFileSync,
   existsSync,
   globSync,
   mkdirSync,
@@ -13,7 +14,7 @@ import {
 } from 'node:fs';
 import { createConnection } from 'node:net';
 import { tmpdir } from 'node:os';
-import { delimiter, join, resolve } from 'node:path';
+import { basename, delimiter, join, resolve } from 'node:path';
 import type { Options } from '@wdio/types';
 
 export const root = resolve(import.meta.dirname, '../..');
@@ -54,6 +55,42 @@ function waitForPort(): Promise<void> {
 export function fixtureOf(specFile: string): string {
   const first = readFileSync(specFile.replace(/^file:\/\//, ''), 'utf8').split('\n', 1)[0] ?? '';
   return /^\/\/\s*@fixture\s+([\w-]+)\s*$/.exec(first)?.[1] ?? defaultFixture;
+}
+
+/**
+ * The workspace a spec asks for with `// @workspace <name>` on its first line: a folder of
+ * `tests/fixtures/` that holds a `<x>.relief.json` whose repositories (`path: ../<fixture>`) are
+ * fixtures of `tests/fixtures/`. The app is then opened on the workspace folder.
+ */
+export function workspaceOf(specFile: string): string | undefined {
+  const first = readFileSync(specFile.replace(/^file:\/\//, ''), 'utf8').split('\n', 1)[0] ?? '';
+  return /^\/\/\s*@workspace\s+([\w-]+)\s*$/.exec(first)?.[1];
+}
+
+/**
+ * Builds the workspace `name` in `<tmp>/<name>` (its `.relief.json` copied from the fixtures) and
+ * the repositories it names in `<tmp>/<fixture>`, the ones not built yet. Returns the workspace folder.
+ */
+function buildWorkspace(name: string, tmp: string): string {
+  const source = join(root, 'tests/fixtures', name);
+  const [file] = globSync(join(source, '*.relief.json'));
+  if (!file) throw new Error(`no .relief.json in tests/fixtures/${name}`);
+  const stored = JSON.parse(readFileSync(file, 'utf8')) as { repos: { path: string }[] };
+  for (const repo of stored.repos) {
+    const dir = join(tmp, basename(repo.path));
+    if (existsSync(dir)) continue;
+    mkdirSync(dir);
+    const build = spawnSync(
+      join(root, 'target/release/relief-fixtures'),
+      ['build', basename(repo.path), dir],
+      { stdio: 'inherit' },
+    );
+    if (build.status !== 0) throw new Error(`relief-fixtures build ${basename(repo.path)} failed`);
+  }
+  const workspace = join(tmp, name);
+  mkdirSync(workspace);
+  copyFileSync(file, join(workspace, basename(file)));
+  return workspace;
 }
 
 /** True when the second line of the spec is `// @no-range`: acme-shop is then opened without a range. */
@@ -126,7 +163,8 @@ export function makeConfig(
       tmp = mkdtempSync(join(tmpdir(), 'relief-e2e-'));
       // Each fixture asked by a spec (acme-shop only when a spec has no annotation) is built once per run, in <tmp>/<name> (the folder name is
       // the repository name shown in the top bar).
-      const names = new Set(specFiles(runConfig.spec ?? runConfig.specs).map(fixtureOf));
+      const specs = specFiles(runConfig.spec ?? runConfig.specs);
+      const names = new Set(specs.filter((s) => !workspaceOf(s)).map(fixtureOf));
       for (const name of names) {
         const repo = join(tmp, name);
         mkdirSync(repo);
@@ -141,6 +179,12 @@ export function makeConfig(
           stop();
           throw new Error(`relief-fixtures build ${name} failed`);
         }
+      }
+      try {
+        for (const name of new Set(specs.map(workspaceOf))) if (name) buildWorkspace(name, tmp);
+      } catch (error) {
+        stop();
+        throw error;
       }
       // The app reads and writes its recents in a temporary folder, never in the real ~/.config.
       mkdirSync(join(tmp, 'config'));
@@ -167,7 +211,8 @@ export function makeConfig(
     },
     // One session per spec: the app opens the repository the spec asked for.
     beforeSession: (_config, caps, specs) => {
-      const name = fixtureOf(specs[0] as string);
+      const workspace = workspaceOf(specs[0] as string);
+      const name = workspace ?? fixtureOf(specs[0] as string);
       const repo = join(process.env['RELIEF_E2E_TMP'] as string, name);
       process.env['RELIEF_E2E_REPO'] = repo;
       const options = (caps as unknown as Record<string, { args: string[] }>)['tauri:options'];
@@ -180,7 +225,7 @@ export function makeConfig(
       if (options)
         options.args = welcome
           ? []
-          : name === defaultFixture && !opensWithoutRange(specs[0] as string)
+          : !workspace && name === defaultFixture && !opensWithoutRange(specs[0] as string)
             ? [repo, range]
             : [repo];
     },

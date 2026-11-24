@@ -71,6 +71,7 @@ import { onImpactPath, type ImpactMarks } from '../../review/helpers/impact.logi
 import { foldRepeatedEdges } from '../../review/helpers/repeated-changes.logic';
 import { foldTestEdges, testNodeIds } from '../helpers/test-edges.logic';
 import { buildNodeInfos, type NodeInfo } from '../helpers/node-info.logic';
+import { mapLevels } from '../helpers/repo-level.logic';
 import { headRef } from '../helpers/repo.logic';
 import { containerToLoad, zoomedBox } from '../helpers/subgraph.logic';
 import {
@@ -295,6 +296,8 @@ export class MapBusiness {
   readonly viewport = this._viewport.asReadonly();
 
   private readonly scales = computed(() => levelScales(this._layout(), this._viewport()));
+  /** The levels of this map, widest first; the number of a level is its index. */
+  readonly levels = computed(() => mapLevels(this._graph()));
   readonly level = computed(
     () => this._forcedLevel() ?? currentLevel(this._camera().scale, this.scales()),
   );
@@ -1250,6 +1253,7 @@ export class MapBusiness {
   }
 
   setLevel(level: number): void {
+    if (level < 0 || level >= this.levels().length) return;
     if (this.deferUntilLaidOut(() => this.setLevel(level))) return;
     this.interrupt();
     this._zoomPoint.set(null);

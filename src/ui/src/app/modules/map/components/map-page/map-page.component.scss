@@ -77,6 +77,26 @@
   .ref {
     min-width: 0;
   }
+
+  .repos {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+
+    li {
+      display: flex;
+      gap: 0.6em;
+      min-width: 0;
+    }
+
+    b {
+      color: var(--relief-fg);
+      font-weight: 600;
+    }
+  }
 }
 
 .topbar button {

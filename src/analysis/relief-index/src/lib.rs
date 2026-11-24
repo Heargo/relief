@@ -220,7 +220,19 @@ impl Indexer {
         commit: &CommitId,
         exclude: Option<&dyn Fn(&str) -> bool>,
     ) -> Result<IndexedSnapshot, IndexError> {
-        self.build(source, commit, exclude, None)
+        self.build(&self.repo_name, source, commit, exclude, None)
+    }
+
+    /// Like `snapshot_excluding`, for the repository `repo_name` (a workspace indexes several
+    /// repositories with one indexer).
+    pub fn snapshot_named_excluding(
+        &self,
+        repo_name: &str,
+        source: &GitSource,
+        commit: &CommitId,
+        exclude: Option<&dyn Fn(&str) -> bool>,
+    ) -> Result<IndexedSnapshot, IndexError> {
+        self.build(repo_name, source, commit, exclude, None)
     }
 
     /// Builds the snapshot of `commit` from `base`, the snapshot of `base_commit`: only the
@@ -246,8 +258,28 @@ impl Indexer {
         commit: &CommitId,
         exclude: Option<&dyn Fn(&str) -> bool>,
     ) -> Result<IndexedSnapshot, IndexError> {
+        self.snapshot_from_named_excluding(
+            &self.repo_name,
+            source,
+            base_commit,
+            base,
+            commit,
+            exclude,
+        )
+    }
+
+    /// Like `snapshot_from_excluding`, for the repository `repo_name`.
+    pub fn snapshot_from_named_excluding(
+        &self,
+        repo_name: &str,
+        source: &GitSource,
+        base_commit: &CommitId,
+        base: &IndexedSnapshot,
+        commit: &CommitId,
+        exclude: Option<&dyn Fn(&str) -> bool>,
+    ) -> Result<IndexedSnapshot, IndexError> {
         let known = base.meta.commit == base_commit.to_string();
-        self.build(source, commit, exclude, known.then_some(base))
+        self.build(repo_name, source, commit, exclude, known.then_some(base))
     }
 
     /// What can be reused from `base` for a tree of `entries` and this `detection`.
@@ -322,6 +354,7 @@ impl Indexer {
 
     fn build(
         &self,
+        repo_name: &str,
         source: &GitSource,
         commit: &CommitId,
         exclude: Option<&dyn Fn(&str) -> bool>,
@@ -369,7 +402,7 @@ impl Indexer {
         let detection = self
             .detectors
             .iter()
-            .find_map(|d| d.detect_with(&self.repo_name, &paths, &counted_read, &known))
+            .find_map(|d| d.detect_with(repo_name, &paths, &counted_read, &known))
             .ok_or(IndexError::NoDetector)?;
         let mut nodes = detection.nodes.clone();
         let kept = nodes.iter().filter(|n| n.kind == NodeKind::File).count();
@@ -529,7 +562,7 @@ impl Indexer {
             .iter()
             .map(|(file, path)| (path.clone(), file.id.clone()))
             .collect();
-        let repo = NodeId::package(&self.repo_name);
+        let repo = NodeId::package(repo_name);
         let known: HashSet<NodeId> = nodes.iter().map(|n| n.id.clone()).collect();
         let routes: HashMap<NodeId, String> = nodes
             .iter()

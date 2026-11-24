@@ -67,7 +67,7 @@ it('Help > Documentation opens the docs window', async () => {
   await browser.switchToWindow(before[0]);
 });
 
-it('Workspace lists the four entries, the multi-repo ones disabled with a tooltip', async () => {
+it('Workspace lists the four entries, Open a workspace enabled, the other multi-repo ones disabled with a tooltip', async () => {
   await openRelief({ size: SIZE });
   await tid('menu-trigger-workspace').click();
   await expect(tid('menu-item-open-repo')).toHaveText('Open a repository…');
@@ -76,7 +76,8 @@ it('Workspace lists the four entries, the multi-repo ones disabled with a toolti
   await expect(tid('menu-item-open-as-workspace')).toHaveText(
     'Open this repository as a workspace',
   );
-  for (const id of ['open-workspace', 'add-repo', 'open-as-workspace']) {
+  await expect(tid('menu-item-open-workspace')).not.toHaveAttribute('aria-disabled', 'true');
+  for (const id of ['add-repo', 'open-as-workspace']) {
     await expect(tid(`menu-item-${id}`)).toHaveAttribute('aria-disabled', 'true');
     expect(await tid(`menu-item-${id}`).getAttribute('title')).toBeTruthy();
   }

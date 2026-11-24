@@ -13,7 +13,7 @@ import { LanguageBusiness } from '../../../../core/business/language.business';
 import type { ReviewSummary } from '../../../../core/models/contract';
 import { splitViolations } from '../../../rules/helpers/rules.logic';
 import { repeatedSummary } from '../../helpers/repeated-changes.logic';
-import { nodeLabel } from '../../helpers/review-summary.logic';
+import { displayPath, nodeLabel } from '../../helpers/review-summary.logic';
 
 type FileKind = 'added' | 'removed' | 'moved' | 'format-only';
 
@@ -50,8 +50,8 @@ export class StructuralOverviewComponent {
       from: string | null = null,
     ): FileRow => ({
       kind,
-      path,
-      from,
+      path: displayPath(path),
+      from: from === null ? null : displayPath(from),
       nodeId,
     });
     return [

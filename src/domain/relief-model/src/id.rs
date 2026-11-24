@@ -110,6 +110,16 @@ impl NodeId {
             .map(|(_, name)| name.as_str())
     }
 
+    /// Path of the file segment, prefixed by `repo:<name>/` in a workspace: unique across the
+    /// repositories, the path of a file of a single repository otherwise.
+    pub fn repo_file_path(&self) -> Option<String> {
+        let path = self.file_path()?;
+        Some(match &self.repo {
+            Some(repo) => format!("repo:{repo}/{path}"),
+            None => path.to_owned(),
+        })
+    }
+
     /// The id cut after its file segment (the id itself when it has no symbol).
     #[must_use]
     pub fn file_id(&self) -> Self {

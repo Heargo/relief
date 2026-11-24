@@ -87,7 +87,7 @@ export function fitScale(layout: MapLayout, viewport: Viewport): number {
 }
 
 /**
- * Target scale of each level 0 to 3: the one at which the median container of that depth just
+ * Target scale of each level (0 to 3, 0 to 4 on a workspace): the one at which the median container of that depth just
  * opens. Never decreasing, so a deeper level always shows at least what the previous one shows.
  */
 export function levelScales(layout: MapLayout, viewport: Viewport): number[] {
@@ -110,7 +110,9 @@ export function levelScales(layout: MapLayout, viewport: Viewport): number[] {
   const l3raw = files ? (OPEN_THRESHOLDS.file / files) * 1.06 : l1 * 2;
   const l2 = modules ? (OPEN_THRESHOLDS.module / modules) * 1.04 : Math.sqrt(l1 * l3raw);
   const l3 = Math.max(l3raw, l2);
-  return [Math.min(fit, l1 * 0.85), l1, Math.max(l1, l2), Math.max(l1, l3)];
+  const scales = [Math.min(fit, l1 * 0.85), l1, Math.max(l1, l2), Math.max(l1, l3)];
+  // A workspace has a level more, the repositories: one more step past the files.
+  return all.some((n) => n.kind === 'repo') ? [...scales, scales[3] * 1.3] : scales;
 }
 
 /** Deepest level whose scale is reached (3 % tolerance). */

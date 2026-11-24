@@ -217,6 +217,10 @@ export interface Edge {
 }
 export interface Node {
   /**
+   * Branch the repository is read at, on the `repo:<name>` node of a workspace.
+   */
+  branch?: string | null;
+  /**
    * Exact number of direct children in the full graph, on a container of a subgraph whose
    * children are not all in it.
    */
@@ -237,6 +241,10 @@ export interface Node {
    */
   isTest?: boolean;
   kind: NodeKind;
+  /**
+   * Labels of the repository (`front`, `back`...), on the `repo:<name>` node of a workspace.
+   */
+  labels?: string[] | null;
   lang?: string | null;
   metrics?: Metrics | null;
   parent?: NodeId | null;
