@@ -185,6 +185,19 @@ need_docker() {
   docker info >/dev/null 2>&1 || die "docker is installed but its daemon is not reachable. Start Docker and run this script again."
 }
 
+# docker_user_args: on Linux, `--user <uid>:<gid>` so that target/ belongs to the current user.
+# Not with a rootless Docker (container root already is the current user on the host, and runc
+# cannot hand the terminal to an unmapped uid: "chown /dev/stdout: invalid argument"), nor with
+# Docker Desktop (its VM maps the ownership of shared folders).
+docker_user_args() {
+  [ "$(uname -s 2>/dev/null)" = Linux ] || return 0
+  info=$(docker info --format '{{.OperatingSystem}} {{json .SecurityOptions}}' 2>/dev/null)
+  case "$info" in
+    *rootless* | "Docker Desktop"*) return 0 ;;
+  esac
+  echo "--user $(id -u):$(id -g)"
+}
+
 # docker_build <linux|windows>: builds the image, then the bundles inside it (as the current user on Linux)
 docker_build() {
   kind=$1
@@ -194,8 +207,7 @@ docker_build() {
   env_args=""
   # the MSVC license was accepted by the user (prompt or --accept-msvc-license) before this point
   if [ "$kind" = windows ]; then env_args="-e XWIN_ACCEPT_LICENSE=1"; fi
-  user_args=""
-  if [ "$(uname -s 2>/dev/null)" = Linux ]; then user_args="--user $(id -u):$(id -g)"; fi
+  user_args=$(docker_user_args)
   # shellcheck disable=SC2086
   MSYS_NO_PATHCONV=1 docker run --rm $user_args $env_args \
     -v "$root:/src:ro" -v "$root/target:/out" \
