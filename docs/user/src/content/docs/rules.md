@@ -75,5 +75,5 @@ La section **Règles d'architecture** de la barre de gauche liste chaque règle 
 - Clique sur une règle pour sélectionner son arête fautive : le panneau de l'arête montre la règle (description, chemins, globs) et dit si la violation est introduite par cette plage ou existait déjà sur la base.
 - **Voir le fichier** affiche le `relief.config.yaml` lu par relief, dans le panneau, sans rien ouvrir à l'extérieur.
 - Sur la carte, une violation introduite est une arête rouge animée marquée « ⚠ n », une violation existante une arête rouge discrète. Les nœuds concernés portent le badge « ⚠ archi » (en relecture, pour les violations introduites seulement).
-- Le calque **Règles d'architecture**, dans la section Calques, affiche ou masque ces marques.
+- Le calque **Règles d'architecture**, dans le menu Calques, affiche ou masque ces marques.
 - Les violations introduites comptent dans les Signaux et la vue d'ensemble ; les existantes y sont listées à part.

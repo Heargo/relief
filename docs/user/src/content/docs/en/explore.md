@@ -50,7 +50,7 @@ These measures depend on the history: relief computes them apart and keeps them 
 
 ## Logical coupling
 
-Some files often change together without depending on each other in the code: a file and its doc, a schema and its migrations, two services that share a format. The **Logical coupling** layer, in the Layers section, links them with dashed edges of another colour.
+Some files often change together without depending on each other in the code: a file and its doc, a schema and its migrations, two services that share a format. The **Logical coupling** layer, in the Layers menu, links them with dashed edges of another colour.
 
 relief draws them from the git history, not from the code: this layer works on **any repository**, even without a language adapter (Markdown, YAML, shell…).
 

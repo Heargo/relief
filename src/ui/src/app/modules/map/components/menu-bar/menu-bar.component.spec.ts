@@ -1,3 +1,4 @@
+import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { TranslateService } from '@ngx-translate/core';
 import { beforeEach, describe, expect, it } from 'vitest';
@@ -79,7 +80,7 @@ describe('MenuBarComponent', () => {
     await settle();
   });
 
-  it('shows the three menus, closed, in order', () => {
+  it('shows the four menus, closed, in order', () => {
     const bar = host.querySelector('[role="menubar"]');
     expect(bar).not.toBeNull();
     const names = [
@@ -87,7 +88,7 @@ describe('MenuBarComponent', () => {
         '[role="menubar"] > [role="menuitem"], [role="menubar"] [data-testid^="menu-trigger-"]',
       ),
     ].map((el) => el.textContent?.trim());
-    expect(names).toEqual(['Workspace', 'Settings', 'Help']);
+    expect(names).toEqual(['Workspace', 'Layers', 'Settings', 'Help']);
     expect(q('menu-panel')).toBeNull();
   });
 
@@ -299,7 +300,99 @@ describe('MenuBarComponent', () => {
     expect(must('menu-trigger-workspace').textContent?.trim()).toBe('Espace de travail');
     expect(must('menu-trigger-settings').textContent?.trim()).toBe('Paramètres');
     expect(must('menu-trigger-help').textContent?.trim()).toBe('Aide');
+    expect(must('menu-trigger-layers').textContent?.trim()).toBe('Calques');
     await key(window, { key: 'p', altKey: true });
+    expect(q('menu-item-reload')).not.toBeNull();
+  });
+
+  it('the Layers menu is disabled until the map is ready: it does not open', async () => {
+    expect(must('menu-trigger-layers').getAttribute('aria-disabled')).toBe('true');
+    await click('menu-trigger-layers');
+    expect(q('layers-panel')?.hidden).toBe(true);
+    await key(window, { key: 'l', altKey: true });
+    expect(q('layers-panel')?.hidden).toBe(true);
+  });
+});
+
+@Component({
+  imports: [MenuBarComponent],
+  template: `
+    <app-menu-bar theme="system" language="en" [languages]="languages" [layers]="true">
+      <div menuLayers data-testid="projected-layers">
+        <button type="button" role="menuitemcheckbox" data-testid="layer-a">A</button>
+        <button type="button" role="menuitemcheckbox" data-testid="layer-b">B</button>
+      </div>
+    </app-menu-bar>
+  `,
+})
+class LayersHostComponent {
+  readonly languages = LANGUAGES;
+}
+
+describe('MenuBarComponent, Layers menu', () => {
+  let fixture: ComponentFixture<LayersHostComponent>;
+  let host: HTMLElement;
+  const q = (id: string) => host.querySelector<HTMLElement>(`[data-testid="${id}"]`);
+  const settle = async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+  };
+  const key = async (target: Element | Window, init: KeyboardEventInit) => {
+    target.dispatchEvent(
+      new KeyboardEvent('keydown', { bubbles: true, cancelable: true, ...init }),
+    );
+    await settle();
+  };
+
+  beforeEach(async () => {
+    TestBed.configureTestingModule({ imports: [LayersHostComponent], providers: TEST_PROVIDERS });
+    await TestBed.inject(TranslateService).use('en').toPromise();
+    fixture = TestBed.createComponent(LayersHostComponent);
+    host = fixture.nativeElement;
+    await settle();
+  });
+
+  it('shows the projected layer toggles only while the menu is open, kept in the DOM', async () => {
+    const panel = () => q('layers-panel')!;
+    expect(panel().contains(q('projected-layers'))).toBe(true);
+    expect(panel().hidden).toBe(true);
+    q('menu-trigger-layers')!.click();
+    await settle();
+    expect(panel().hidden).toBe(false);
+    q('menu-trigger-layers')!.click();
+    await settle();
+    expect(panel().hidden).toBe(true);
+  });
+
+  it('closes on Escape, back to its trigger', async () => {
+    await key(window, { key: 'l', altKey: true });
+    await key(document.activeElement as Element, { key: 'Escape' });
+    expect(q('layers-panel')!.hidden).toBe(true);
+    expect(document.activeElement?.getAttribute('data-testid')).toBe('menu-trigger-layers');
+  });
+
+  it('keeps the menu open when a layer is toggled', async () => {
+    q('menu-trigger-layers')!.click();
+    await settle();
+    q('layer-a')!.click();
+    await settle();
+    expect(q('layers-panel')!.hidden).toBe(false);
+  });
+
+  it('Alt + L opens it on its first toggle, the arrows move between toggles', async () => {
+    await key(window, { key: 'l', altKey: true });
+    expect(document.activeElement?.getAttribute('data-testid')).toBe('layer-a');
+    await key(document.activeElement as Element, { key: 'ArrowDown' });
+    expect(document.activeElement?.getAttribute('data-testid')).toBe('layer-b');
+  });
+
+  it('sits between Workspace and Settings for ArrowLeft / ArrowRight', async () => {
+    await key(window, { key: 'w', altKey: true });
+    await key(document.activeElement as Element, { key: 'ArrowRight' });
+    expect(q('layers-panel')!.hidden).toBe(false);
+    expect(q('menu-item-open-repo')).toBeNull();
+    await key(document.activeElement as Element, { key: 'ArrowRight' });
+    expect(q('layers-panel')!.hidden).toBe(true);
     expect(q('menu-item-reload')).not.toBeNull();
   });
 });

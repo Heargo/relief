@@ -6,10 +6,12 @@
   "optimus": {},
   "menu": {
     "workspace": "Workspace",
+    "layers": "Layers",
     "settings": "Settings",
     "help": "Help",
     "access": {
       "workspace": "W",
+      "layers": "L",
       "settings": "S",
       "help": "H"
     },

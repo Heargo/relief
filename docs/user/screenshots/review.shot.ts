@@ -1,7 +1,7 @@
 import { $, $$, browser } from '@wdio/globals';
 import { openRelief } from '../../../tests/e2e/helpers/open-relief';
 import { clearReviewState } from '../../../tests/e2e/helpers/review-state';
-import { press, typeText } from '../../../tests/e2e/helpers/ui';
+import { press, toggleLayer, typeText } from '../../../tests/e2e/helpers/ui';
 import { languages, shot } from './shots';
 
 const size = { width: 1600, height: 900 };
@@ -115,7 +115,7 @@ for (const lang of languages) {
     await $('[data-testid="pr-stats"]').waitForDisplayed();
     await press('f');
     await $('[data-testid="toggle-focus-layer"][aria-checked="true"]').waitForExist();
-    await $('[data-testid="toggle-unchanged-edges"]').click();
+    await toggleLayer('toggle-unchanged-edges');
     await $('[data-testid="toggle-unchanged-edges"][aria-checked="false"]').waitForExist();
     await $('[data-testid="layers-section"]').saveScreenshot(shot(lang, 'review-layers'));
   });

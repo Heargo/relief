@@ -1,9 +1,12 @@
-<section class="sec" data-testid="layers-section">
-  <h3>{{ 'review.layers.title' | translate }}</h3>
+<section
+  class="sec"
+  data-testid="layers-section"
+  [attr.aria-label]="'review.layers.title' | translate"
+>
   @for (row of rows(); track row.layer) {
     <button
       type="button"
-      role="switch"
+      role="menuitemcheckbox"
       class="tog"
       [class.on]="row.on"
       [attr.data-testid]="row.testId"

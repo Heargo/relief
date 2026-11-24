@@ -76,6 +76,18 @@ async function explore(fixture: { whenStable(): Promise<unknown> }, el: HTMLElem
   await fixture.whenStable();
 }
 
+/** Opens the Layers menu of the top bar (closed by any click outside it) and returns its panel. */
+async function layersMenu(
+  fixture: { whenStable(): Promise<unknown> },
+  el: HTMLElement,
+): Promise<HTMLElement> {
+  if (byId(el, 'menu-trigger-layers')?.getAttribute('aria-expanded') !== 'true') {
+    byId(el, 'menu-trigger-layers')!.click();
+    await fixture.whenStable();
+  }
+  return byId(el, 'layers-panel')!;
+}
+
 describe('MapPageComponent, left panel: mode tools, then display', () => {
   beforeEach(() => {
     localStorage.clear();
@@ -129,13 +141,11 @@ describe('MapPageComponent, left panel: mode tools, then display', () => {
       'signals-section',
       'rules-section',
     ]);
-    expect(order(display, ['layers-section', 'layout-section'])).toEqual([
-      'layers-section',
-      'layout-section',
-    ]);
+    expect(byId(display, 'layout-section')).not.toBeNull();
+    // the layers live in the top bar's Layers menu, not in the left panel
+    expect(byId(panel, 'layers-section')).toBeNull();
     // nothing of the tools leaks into the display block, nor the reverse
     expect(display.querySelector('[data-testid="pr-card"]')).toBeNull();
-    expect(tools.querySelector('[data-testid="layers-section"]')).toBeNull();
     expect(tools.querySelector('[data-testid="layout-section"]')).toBeNull();
   });
 
@@ -155,10 +165,8 @@ describe('MapPageComponent, left panel: mode tools, then display', () => {
       'hotspots-section',
       'rules-section',
     ]);
-    expect(order(display, ['layers-section', 'layout-section'])).toEqual([
-      'layers-section',
-      'layout-section',
-    ]);
+    expect(byId(display, 'layout-section')).not.toBeNull();
+    expect(byId(panel, 'layers-section')).toBeNull();
     for (const id of ['pr-card', 'reading-order', 'signals-section']) {
       expect(byId(el, id), id).toBeNull();
     }
@@ -173,17 +181,18 @@ describe('MapPageComponent, left panel: mode tools, then display', () => {
 
   it('shows the diff and focus layers in PR mode only, risk and co-change in Explorer only', async () => {
     const { el, fixture } = await render();
-    const display = () => byId(el, 'display-section')!;
+    let menu = await layersMenu(fixture, el);
     for (const id of ['toggle-diff-layer', 'toggle-focus-layer']) {
-      expect(byId(display(), id), id).not.toBeNull();
+      expect(byId(menu, id), id).not.toBeNull();
     }
-    expect(byId(display(), 'toggle-co-change-layer')).toBeNull();
-    expect(byId(display(), 'toggle-risk-layer')).toBeNull();
+    expect(byId(menu, 'toggle-co-change-layer')).toBeNull();
+    expect(byId(menu, 'toggle-risk-layer')).toBeNull();
 
     await explore(fixture, el);
-    expect(byId(display(), 'toggle-diff-layer')).toBeNull();
-    expect(byId(display(), 'toggle-focus-layer')).toBeNull();
-    expect(byId(display(), 'toggle-co-change-layer')).not.toBeNull();
+    menu = await layersMenu(fixture, el);
+    expect(byId(menu, 'toggle-diff-layer')).toBeNull();
+    expect(byId(menu, 'toggle-focus-layer')).toBeNull();
+    expect(byId(menu, 'toggle-co-change-layer')).not.toBeNull();
   });
 
   it('keeps impact, unchanged edges, rules and external dependencies in both modes', async () => {
@@ -194,21 +203,39 @@ describe('MapPageComponent, left panel: mode tools, then display', () => {
       'toggle-rules-layer',
       'toggle-hide-external',
     ];
+    let menu = await layersMenu(fixture, el);
     for (const id of shared) {
-      expect(byId(byId(el, 'display-section')!, id), `pr ${id}`).not.toBeNull();
+      expect(byId(menu, id), `pr ${id}`).not.toBeNull();
     }
     await explore(fixture, el);
+    menu = await layersMenu(fixture, el);
     for (const id of shared) {
-      expect(byId(byId(el, 'display-section')!, id), `explore ${id}`).not.toBeNull();
+      expect(byId(menu, id), `explore ${id}`).not.toBeNull();
     }
   });
 
-  it('puts the external dependencies switch after the layers and before the layout', async () => {
-    const { el } = await render();
-    const display = byId(el, 'display-section')!;
+  it('puts the external dependencies switch after the layers in the Layers menu', async () => {
+    const { el, fixture } = await render();
+    const menu = await layersMenu(fixture, el);
+    expect(order(menu, ['toggle-impact-layer', 'toggle-hide-external'])).toEqual([
+      'toggle-impact-layer',
+      'toggle-hide-external',
+    ]);
+  });
+
+  it('offers the Layers menu between Workspace and Settings, and toggles a layer from it', async () => {
+    const { el, fixture } = await render();
     expect(
-      order(display, ['toggle-impact-layer', 'toggle-hide-external', 'layout-section']),
-    ).toEqual(['toggle-impact-layer', 'toggle-hide-external', 'layout-section']);
+      order(el, ['menu-trigger-workspace', 'menu-trigger-layers', 'menu-trigger-settings']),
+    ).toEqual(['menu-trigger-workspace', 'menu-trigger-layers', 'menu-trigger-settings']);
+    const menu = await layersMenu(fixture, el);
+    const focus = byId(menu, 'toggle-focus-layer')!;
+    const before = focus.getAttribute('aria-checked');
+    focus.click();
+    await fixture.whenStable();
+    // the menu stays open, so several layers can be toggled in a row
+    expect(byId(el, 'layers-panel')!.hidden).toBe(false);
+    expect(byId(el, 'toggle-focus-layer')!.getAttribute('aria-checked')).not.toBe(before);
   });
 
   it('titles the blocks with the mockup .ptitle style and the mode name', async () => {

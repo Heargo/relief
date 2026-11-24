@@ -75,5 +75,5 @@ The **Architecture rules** section of the left sidebar lists each rule (`from �
 - Click a rule to select its faulty edge: the edge panel shows the rule (description, paths, globs) and says whether the violation is introduced by this range or already existed on the base.
 - **View the file** shows the `relief.config.yaml` relief read, in the panel, without opening anything outside.
 - On the map, an introduced violation is an animated red edge marked "⚠ n", an existing violation a discreet red edge. The nodes concerned carry the "⚠ archi" badge (in review, for introduced violations only).
-- The **Architecture rules** layer, in the Layers section, shows or hides these marks.
+- The **Architecture rules** layer, in the Layers menu, shows or hides these marks.
 - Introduced violations count in the Signals and the overview; existing ones are listed apart.

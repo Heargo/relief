@@ -2,12 +2,12 @@ import { expect } from '@wdio/globals';
 import { clearReviewState } from '../helpers/review-state';
 import { openRelief } from '../helpers/open-relief';
 import { sceneNodes, settledNodeCount, waitForScene } from '../helpers/map-scene';
-import { poll, tid, tids } from '../helpers/ui';
+import { poll, tid, tids, toggleLayer } from '../helpers/ui';
 
 // Contract with the UI, on acme-shop main...feat/promo-codes (French UI), exploration mode:
 //  - the left bar has `hotspots-section` ("Hotspots") with one `hotspot-row` per symbol of the top
 //    6 by risk (carrying `data-node-id`); on acme-shop it lists exactly 6 symbols;
-//  - the `layers-section` has `toggle-risk-layer` ("Carte de risque", `aria-pressed`), off by
+//  - the Layers menu of the top bar (`layers-section`) has `toggle-risk-layer` ("Carte de risque", `aria-pressed`), off by
 //    default; while on, each node of the map scene has a `risk` (0 to 4) and at least one node
 //    has a level above 0; off, `risk` is null;
 //  - the node panel of a selected hotspot shows a `node-metrics` block.
@@ -45,10 +45,10 @@ describe('hotspots and risk map', () => {
   it('the risk map layer tints the nodes and can be switched off', async () => {
     await expect(tid('toggle-risk-layer')).toHaveAttribute('aria-checked', 'false');
     expect(await riskOff()).toBe(true);
-    await tid('toggle-risk-layer').click();
+    await toggleLayer('toggle-risk-layer');
     await expect(tid('toggle-risk-layer')).toHaveAttribute('aria-checked', 'true');
     await poll(tintedCount, (n) => n > 0);
-    await tid('toggle-risk-layer').click();
+    await toggleLayer('toggle-risk-layer');
     await expect(tid('toggle-risk-layer')).toHaveAttribute('aria-checked', 'false');
     await poll(riskOff, (off) => off);
   });

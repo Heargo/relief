@@ -68,10 +68,11 @@ describe('nextMenuIndex', () => {
 });
 
 describe('menuForAccessKey', () => {
-  const keys = { workspace: 'W', settings: 'S', help: 'H' } as const;
+  const keys = { workspace: 'W', layers: 'L', settings: 'S', help: 'H' } as const;
 
   it('finds the menu of an access letter, whatever its case', () => {
     expect(menuForAccessKey('w', keys)).toBe('workspace');
+    expect(menuForAccessKey('l', keys)).toBe('layers');
     expect(menuForAccessKey('S', keys)).toBe('settings');
     expect(menuForAccessKey('h', keys)).toBe('help');
   });

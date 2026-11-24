@@ -8,12 +8,25 @@
         aria-haspopup="menu"
         [attr.data-testid]="'menu-trigger-' + menu"
         [attr.aria-expanded]="openMenu() === menu"
+        [attr.aria-disabled]="disabledMenu(menu) ? 'true' : null"
+        [class.disabled]="disabledMenu(menu)"
         [class.on]="openMenu() === menu"
         (click)="toggle(menu)"
       >
         {{ 'menu.' + menu | translate }}
       </button>
-      @if (openMenu() === menu) {
+      @if (menu === 'layers') {
+        <!-- always in the DOM, so the layer states can be read while the menu is closed -->
+        <div
+          class="panel layers"
+          role="menu"
+          data-testid="layers-panel"
+          [attr.aria-label]="'menu.layers' | translate"
+          [hidden]="openMenu() !== 'layers'"
+        >
+          <ng-content select="[menuLayers]" />
+        </div>
+      } @else if (openMenu() === menu) {
         <div class="panel" role="menu" data-testid="menu-panel">
           @for (entry of entries(); track entry.id) {
             @if (entry.heading) {

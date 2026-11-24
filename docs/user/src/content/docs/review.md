@@ -119,7 +119,7 @@ Un clic sur une signature ou un fichier ignoré le sélectionne.
 
 ## Calques
 
-La section **Calques** de la barre de gauche regroupe les interrupteurs de l'affichage, chacun avec son raccourci :
+Le menu **Calques** de la barre du haut (`Alt` + `C`), entre Espace de travail et Paramètres, regroupe les interrupteurs de l'affichage, certains avec un raccourci. Il reste ouvert pendant que vous basculez plusieurs calques ; `Échap` ou un clic à côté le ferme. En relecture :
 
 - **Calque de diff** : affiche ou masque les couleurs, les badges, les compteurs et les arêtes ajoutées ou retirées. Les nœuds supprimés restent dessinés, sans marque.
 - **Arêtes inchangées** : masque ou affiche les dépendances que le diff ne touche pas. En relecture, elles sont masquées par défaut (celles du nœud sélectionné restent visibles) ; en exploration, elles sont affichées. Votre choix est mémorisé pour chaque mode.
@@ -127,7 +127,7 @@ La section **Calques** de la barre de gauche regroupe les interrupteurs de l'aff
 - **Focus PR** (touche `f`) : seuls les symboles changés et leurs voisins directs (ce qu'ils appellent et ce qui les appelle) restent nets, avec les boîtes qui les contiennent ; le reste est estompé. Sur acme-shop, `CheckoutPage` reste net, `LoginPage` (à deux sauts du changement le plus proche) est estompé.
 - **Rayon d'impact** (touche `i`) : voir [Rayon d'impact](#rayon-dimpact).
 
-![La section Calques de la barre de gauche](../../assets/screens/fr/review-layers.png)
+![Le menu Calques de la barre du haut](../../assets/screens/fr/review-layers.png)
 
 ## Lire le code
 
@@ -145,7 +145,7 @@ En mode « Relire la PR », sélectionner un symbole ou un fichier changé (clic
 
 Sélectionne un nœud (clic, ou recherche avec `/`) : relief calcule tout ce qui dépend de lui, directement ou de proche en proche. Sur la carte, les nœuds atteints ont un contour orange pointillé, le reste est estompé et les arêtes du chemin passent en orange. Une boîte fermée qui contient des nœuds atteints affiche « ⚡ n ».
 
-Le calque **Rayon d'impact** de la barre de gauche (touche `i`) active ou coupe ce surlignage.
+Le calque **Rayon d'impact** du menu Calques (touche `i`) active ou coupe ce surlignage.
 
 Dans le panneau du nœud, la section d'impact donne :
 

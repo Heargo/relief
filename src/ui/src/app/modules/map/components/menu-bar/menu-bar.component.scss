@@ -25,10 +25,25 @@
   padding: 4px 10px;
   border-radius: 6px;
 
-  &:hover,
+  &:hover:not(.disabled),
   &.on {
     background: var(--relief-panel-2);
   }
+
+  &.disabled {
+    color: var(--relief-faint);
+    cursor: not-allowed;
+  }
+}
+
+.panel[hidden] {
+  display: none;
+}
+
+.panel.layers {
+  width: 340px;
+  max-height: calc(100vh - 80px);
+  overflow-y: auto;
 }
 
 .panel {

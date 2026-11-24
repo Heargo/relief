@@ -1,7 +1,7 @@
 import { expect } from '@wdio/globals';
 import { openRelief } from '../helpers/open-relief';
 import { clickNode, sceneEdges, waitForScene } from '../helpers/map-scene';
-import { press, tid } from '../helpers/ui';
+import { press, tid, toggleLayer } from '../helpers/ui';
 
 // R16, on acme-shop (main...feat/promo-codes), files level (2), read from the map scene:
 //  - in review mode the "unchanged edges" layer (`toggle-unchanged-edges`, `aria-checked`) is off by
@@ -31,7 +31,7 @@ describe('unchanged edges by mode', () => {
     await press('Escape');
     await waitForScene((s) => s.edges.every((e) => e.status !== 'unchanged'), 8000);
 
-    await tid('toggle-unchanged-edges').click();
+    await toggleLayer('toggle-unchanged-edges');
     await expect(tid('toggle-unchanged-edges')).toHaveAttribute('aria-checked', 'true');
     await waitForScene((s) => s.edges.some((e) => e.status === 'unchanged'), 8000);
     expect((await unchanged()).some((e) => !touches(PAYMENT)(e))).toBe(true);
@@ -45,11 +45,11 @@ describe('unchanged edges by mode', () => {
   });
 
   it('remembers the choice of each mode apart', async () => {
-    await tid('toggle-unchanged-edges').click();
+    await toggleLayer('toggle-unchanged-edges');
     await expect(tid('toggle-unchanged-edges')).toHaveAttribute('aria-checked', 'true');
     await tid('explore-toggle').click();
     await expect(tid('toggle-unchanged-edges')).toHaveAttribute('aria-checked', 'true');
-    await tid('toggle-unchanged-edges').click();
+    await toggleLayer('toggle-unchanged-edges');
     await expect(tid('toggle-unchanged-edges')).toHaveAttribute('aria-checked', 'false');
     await tid('review-toggle').click();
     await expect(tid('toggle-unchanged-edges')).toHaveAttribute('aria-checked', 'true');

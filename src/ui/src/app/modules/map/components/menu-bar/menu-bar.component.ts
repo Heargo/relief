@@ -37,7 +37,10 @@ interface MenuEntry {
   action: () => void;
 }
 
-/** The menu bar of the top bar: Workspace, Settings and Help, with their keyboard navigation. */
+/**
+ * The menu bar of the top bar: Workspace, Layers (the projected layer toggles), Settings and Help,
+ * with their keyboard navigation.
+ */
 @Component({
   selector: 'app-menu-bar',
   imports: [TranslatePipe],
@@ -56,6 +59,8 @@ export class MenuBarComponent {
   readonly canReload = input(false);
   /** The session is a workspace: "Add a repository" applies, "Open as a workspace" does not. */
   readonly workspace = input(false);
+  /** The map is ready: the Layers menu shows the projected layer toggles; otherwise it is disabled. */
+  readonly layers = input(false);
 
   readonly themeChange = output<ThemeMode>();
   readonly languageChange = output<string>();
@@ -76,6 +81,7 @@ export class MenuBarComponent {
     const letter = (id: MenuId) => this.translate.instant(`menu.access.${id}`) as string;
     return {
       workspace: letter('workspace'),
+      layers: letter('layers'),
       settings: letter('settings'),
       help: letter('help'),
     };
@@ -140,7 +146,12 @@ export class MenuBarComponent {
     return { id, label, translate: true, disabled: false, action, ...extra };
   }
 
+  protected disabledMenu(menu: MenuId): boolean {
+    return menu === 'layers' && !this.layers();
+  }
+
   protected toggle(menu: MenuId): void {
+    if (this.disabledMenu(menu)) return;
     this.openMenu.set(this.openMenu() === menu ? null : menu);
   }
 
@@ -151,6 +162,7 @@ export class MenuBarComponent {
   }
 
   private open(menu: MenuId, focusFirst: boolean): void {
+    if (this.disabledMenu(menu)) return;
     this.openMenu.set(menu);
     if (focusFirst)
       afterNextRender(() => this.focusItem('ArrowDown', -1), { injector: this.injector });
@@ -159,13 +171,13 @@ export class MenuBarComponent {
   private items(): HTMLElement[] {
     return [
       ...this.host.nativeElement.querySelectorAll<HTMLElement>(
-        '[data-testid="menu-panel"] [role^="menuitem"]',
+        '.panel:not([hidden]) [role^="menuitem"]',
       ),
     ];
   }
 
   private focusItem(key: string, current: number): void {
-    const disabled = this.entries().map((e) => e.disabled);
+    const disabled = this.items().map((el) => el.getAttribute('aria-disabled') === 'true');
     this.items()[nextItemIndex(disabled, current, key)]?.focus();
   }
 
@@ -217,7 +229,10 @@ export class MenuBarComponent {
       case 'ArrowLeft': {
         event.preventDefault();
         event.stopPropagation();
-        const next = nextMenuIndex(MENU_IDS.length, MENU_IDS.indexOf(current), event.key);
+        let next = nextMenuIndex(MENU_IDS.length, MENU_IDS.indexOf(current), event.key);
+        while (this.disabledMenu(MENU_IDS[next])) {
+          next = nextMenuIndex(MENU_IDS.length, next, event.key);
+        }
         this.open(MENU_IDS[next], true);
         return;
       }

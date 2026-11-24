@@ -27,7 +27,42 @@
       (openWorkspace)="onOpenWorkspace()"
       (addRepo)="onAddRepo()"
       (openAsWorkspace)="onOpenAsWorkspace()"
-    />
+      [layers]="map.status() === 'ready'"
+    >
+      @if (map.status() === 'ready') {
+        <app-layers-section
+          menuLayers
+          [diff]="review.showDiffLayer()"
+          [unchangedEdges]="map.showUnchangedEdges()"
+          [focus]="review.focusLayer()"
+          [impact]="impactState.layer()"
+          [hasTestEdges]="true"
+          [testEdges]="map.showTestEdges()"
+          (testEdgesChange)="map.setShowTestEdges($event)"
+          [hasHideExternal]="true"
+          [hasDiff]="review.reviewMode()"
+          [hasFocus]="review.reviewMode()"
+          [hideExternal]="map.hideExternal()"
+          (hideExternalChange)="map.setHideExternal($event)"
+          [hasEdgeLabels]="true"
+          [edgeLabelsAlways]="map.edgeLabelsAlways()"
+          (edgeLabelsAlwaysChange)="map.setEdgeLabelsAlways($event)"
+          (diffChange)="review.setShowDiffLayer($event)"
+          (unchangedEdgesChange)="map.setShowUnchangedEdges($event)"
+          (focusChange)="review.setFocusLayer($event)"
+          (impactChange)="setImpactLayer($event)"
+          [rules]="ruleState.layer()"
+          [hasRules]="ruleState.rules().length > 0"
+          (rulesChange)="ruleState.setLayer($event)"
+          [risk]="riskState.layer()"
+          [hasRisk]="!review.reviewMode() && hasMetrics()"
+          (riskChange)="riskState.setLayer($event)"
+          [hasCoChange]="!review.reviewMode()"
+          [coChange]="coChangeState.layer()"
+          (coChangeChange)="coChangeState.setLayer($event)"
+        />
+      }
+    </app-menu-bar>
     <div class="search-box">
       <span class="mag" data-testid="search-icon" aria-hidden="true">⌕</span>
       <input
@@ -327,36 +362,6 @@
           @if (map.status() === 'ready') {
             <div data-testid="display-section">
               <div class="ptitle">{{ 'map.panel.display' | translate }}</div>
-              <app-layers-section
-                [diff]="review.showDiffLayer()"
-                [unchangedEdges]="map.showUnchangedEdges()"
-                [focus]="review.focusLayer()"
-                [impact]="impactState.layer()"
-                [hasTestEdges]="true"
-                [testEdges]="map.showTestEdges()"
-                (testEdgesChange)="map.setShowTestEdges($event)"
-                [hasHideExternal]="true"
-                [hasDiff]="review.reviewMode()"
-                [hasFocus]="review.reviewMode()"
-                [hideExternal]="map.hideExternal()"
-                (hideExternalChange)="map.setHideExternal($event)"
-                [hasEdgeLabels]="true"
-                [edgeLabelsAlways]="map.edgeLabelsAlways()"
-                (edgeLabelsAlwaysChange)="map.setEdgeLabelsAlways($event)"
-                (diffChange)="review.setShowDiffLayer($event)"
-                (unchangedEdgesChange)="map.setShowUnchangedEdges($event)"
-                (focusChange)="review.setFocusLayer($event)"
-                (impactChange)="setImpactLayer($event)"
-                [rules]="ruleState.layer()"
-                [hasRules]="ruleState.rules().length > 0"
-                (rulesChange)="ruleState.setLayer($event)"
-                [risk]="riskState.layer()"
-                [hasRisk]="!review.reviewMode() && hasMetrics()"
-                (riskChange)="riskState.setLayer($event)"
-                [hasCoChange]="!review.reviewMode()"
-                [coChange]="coChangeState.layer()"
-                (coChangeChange)="coChangeState.setLayer($event)"
-              />
               @if (workspaceRepos().length > 0) {
                 <section class="sec" data-testid="label-filter">
                   <h3>{{ 'map.repoLabels.filter' | translate }}</h3>

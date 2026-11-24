@@ -1,7 +1,7 @@
 import { $, expect } from '@wdio/globals';
 import { openRelief } from '../helpers/open-relief';
 import { clickNode, sceneEdges, sceneNode, waitForNode, waitForScene } from '../helpers/map-scene';
-import { press, tid } from '../helpers/ui';
+import { press, tid, toggleLayer } from '../helpers/ui';
 
 // R17, on acme-shop (main...feat/promo-codes), files level (2), read from the map scene. The
 // fixture has test files (`*.spec.ts` next to the code) that import the code they test, e.g.
@@ -57,7 +57,7 @@ describe('tests layer', () => {
   });
 
   it('draws everything once the layer is switched on', async () => {
-    await tid('toggle-test-edges').click();
+    await toggleLayer('toggle-test-edges');
     await expect(tid('toggle-test-edges')).toHaveAttribute('aria-checked', 'true');
     await waitForScene((s) => s.edges.some(fromTest), 8000);
     expect((await sceneNode(PAYMENT))?.testedBy ?? null).toBeNull();

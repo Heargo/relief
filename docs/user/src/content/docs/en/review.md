@@ -119,7 +119,7 @@ Clicking a signature or an ignored file selects it.
 
 ## Layers
 
-The **Layers** section of the left sidebar groups the display switches, each with its shortcut:
+The **Layers** menu of the top bar (`Alt` + `L`), between Workspace and Settings, groups the display switches, some with a shortcut. It stays open while you flip several layers; `Esc` or a click outside closes it. In review:
 
 - **Diff layer**: shows or hides the colours, badges, counters and the added or removed edges. Removed nodes stay drawn, without a mark.
 - **Unchanged edges**: hides or shows the dependencies the diff does not touch. In review they are hidden by default (those of the selected node stay visible); in exploration they are shown. Your choice is remembered for each mode.
@@ -127,7 +127,7 @@ The **Layers** section of the left sidebar groups the display switches, each wit
 - **PR focus** (key `f`): only the changed symbols and their direct neighbours (what they call and what calls them) stay sharp, with the boxes that hold them; the rest is faded. On acme-shop, `CheckoutPage` stays sharp, `LoginPage` (two hops from the nearest change) is faded.
 - **Impact radius** (key `i`): see [Impact radius](#impact-radius).
 
-![The Layers section of the left sidebar](../../../assets/screens/en/review-layers.png)
+![The Layers menu of the top bar](../../../assets/screens/en/review-layers.png)
 
 ## Read the code
 
@@ -145,7 +145,7 @@ In "Review the PR" mode, selecting a changed symbol or file (click it on the map
 
 Select a node (click it, or search with `/`): relief computes everything that depends on it, directly or step by step. On the map, reached nodes get a dashed orange outline, the rest is dimmed and the edges of the path turn orange. A closed box that contains reached nodes shows "⚡ n".
 
-The **Impact radius** layer in the left sidebar (key `i`) turns this highlighting on or off.
+The **Impact radius** layer in the Layers menu (key `i`) turns this highlighting on or off.
 
 In the node panel, the impact section gives:
 

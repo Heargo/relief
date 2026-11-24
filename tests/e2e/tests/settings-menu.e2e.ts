@@ -7,9 +7,11 @@ const focusedTestId = () =>
   browser.execute(() => document.activeElement?.getAttribute('data-testid') ?? null);
 const SIZE = { width: 1280, height: 800 };
 
-it('the top bar has the Workspace, Settings and Help menus on the left, all closed', async () => {
+it('the top bar has the Workspace, Layers, Settings and Help menus on the left, all closed', async () => {
   await openRelief({ size: SIZE });
   await expect(tid('menu-trigger-workspace')).toHaveText('Workspace');
+  await expect(tid('menu-trigger-layers')).toHaveText('Layers');
+  await expect(tid('layers-panel')).not.toBeDisplayed();
   await expect(tid('menu-trigger-settings')).toHaveText('Settings');
   await expect(tid('menu-trigger-help')).toHaveText('Help');
   await expect(tid('menu-panel')).not.toBeDisplayed();
@@ -97,6 +99,8 @@ it('Alt + letter opens a menu, arrows move through it, Enter picks, Escape close
   await press('ArrowRight');
   await expect(tid('menu-item-docs')).toBeDisplayed();
   await press('ArrowLeft');
+  await press('ArrowLeft');
+  await expect(tid('layers-panel')).toBeDisplayed();
   await press('ArrowLeft');
   await expect(tid('menu-item-open-repo')).toBeDisplayed();
   await press('Escape');

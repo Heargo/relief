@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { $$, browser, expect } from '@wdio/globals';
 import { clickEdge, sceneEdge, settledNode, waitForNode, waitForScene } from '../helpers/map-scene';
 import { setViewport } from '../helpers/open-relief';
-import { tid } from '../helpers/ui';
+import { tid, toggleLayer } from '../helpers/ui';
 
 // Ticket K13: the whole multi-repo journey, from the welcome screen. The app starts without
 // argument and with no recent; `shop-web` and `shop-api` (tests/fixtures) are built next to each
@@ -97,7 +97,7 @@ describe('a multi-repo review, from the welcome screen to an edge between reposi
     await tid('level-0').click();
     // The edge between the repositories did not change in this review: like any unchanged
     // edge, it shows once "Unchanged edges" is on.
-    await tid('toggle-unchanged-edges').click();
+    await toggleLayer('toggle-unchanged-edges');
     await waitForScene((s) =>
       s.edges.some((e) => e.from === 'repo:shop-web' && e.to === 'repo:shop-api'),
     );

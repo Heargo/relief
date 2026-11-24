@@ -1,7 +1,7 @@
 import { $, browser, expect } from '@wdio/globals';
 import { openRelief } from '../helpers/open-relief';
 import { sceneEdge, sceneEdges, sceneNodes, waitForNode, waitForScene } from '../helpers/map-scene';
-import { tid } from '../helpers/ui';
+import { tid, toggleLayer } from '../helpers/ui';
 
 // Contract with the UI (data attributes, no i18n dependency), on main...feat/promo-codes:
 //  - while the diff layer is on, each node of the map scene carries `status`
@@ -60,7 +60,7 @@ it('hiding the unchanged edges keeps only the changed ones', async () => {
   await waitForScene((s) => s.edges.length > 0);
   const before = (await sceneEdges()).length;
 
-  await tid('toggle-unchanged-edges').click();
+  await toggleLayer('toggle-unchanged-edges');
   await waitForScene((s) => s.edges.length > 0 && s.edges.every((e) => e.status !== 'unchanged'));
   const after = await sceneEdges();
   expect(after.length).toBeLessThanOrEqual(before);
@@ -99,7 +99,7 @@ it('switching off "Relire la PR" shows the map without the diff', async () => {
 
 it('the diff layer can be hidden', async () => {
   await openFilesLevel();
-  await tid('toggle-diff-layer').click();
+  await toggleLayer('toggle-diff-layer');
   await expect(tid('toggle-diff-layer')).toHaveAttribute('aria-checked', 'false');
   await waitForScene((s) => s.nodes.find((n) => n.id === DISCOUNT)?.status === null);
 });

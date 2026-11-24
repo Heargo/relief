@@ -30,7 +30,8 @@ async function render(
   const el = fixture.nativeElement as HTMLElement;
   const toggle = (layer: string) =>
     el.querySelector(`[data-testid="layer-toggle"][data-layer="${layer}"]`) as HTMLElement;
-  const switchOf = (layer: string) => toggle(layer).closest('[role="switch"]') as HTMLElement;
+  const switchOf = (layer: string) =>
+    toggle(layer).closest('[role="menuitemcheckbox"]') as HTMLElement;
   return { el, events, toggle, switchOf, fixture };
 }
 
@@ -53,10 +54,10 @@ describe('LayersSectionComponent', () => {
     ).toBe('i');
   });
 
-  it('exposes each layer as a switch whose state is in aria-checked', async () => {
+  it('exposes each layer as a menu checkbox whose state is in aria-checked', async () => {
     const { switchOf } = await render({ focus: true, diff: true });
     for (const layer of ['diff', 'unchanged-edges', 'focus', 'impact']) {
-      expect(switchOf(layer).getAttribute('role')).toBe('switch');
+      expect(switchOf(layer).getAttribute('role')).toBe('menuitemcheckbox');
       expect(switchOf(layer).classList.contains('tog')).toBe(true);
     }
     expect(switchOf('focus').getAttribute('aria-checked')).toBe('true');
@@ -87,11 +88,11 @@ describe('LayersSectionComponent', () => {
     ).toBe('le changé + 1 saut, le reste estompé');
   });
 
-  it('is a panel section with the common class', async () => {
+  it('is a section with the common class, without its own title (the menu names it)', async () => {
     const { el } = await render();
     const section = el.querySelector('[data-testid="layers-section"]');
     expect(section?.classList.contains('sec')).toBe(true);
-    expect(section?.querySelector('h3')).not.toBeNull();
+    expect(section?.querySelector('h3')).toBeNull();
   });
 
   it('emits the opposite value when a toggle is clicked', async () => {
@@ -103,9 +104,11 @@ describe('LayersSectionComponent', () => {
     expect(events).toEqual(['focus:true', 'diff:false', 'impact:true', 'unchangedEdges:true']);
   });
 
-  it('is titled "Layers" in English and "Calques" in French', async () => {
-    expect((await render()).el.querySelector('h3')?.textContent?.trim()).toBe('Layers');
+  it('is labelled "Layers" in English and "Calques" in French', async () => {
+    const label = (el: HTMLElement) =>
+      el.querySelector('[data-testid="layers-section"]')?.getAttribute('aria-label');
+    expect(label((await render()).el)).toBe('Layers');
     TestBed.resetTestingModule();
-    expect((await render({}, 'fr')).el.querySelector('h3')?.textContent?.trim()).toBe('Calques');
+    expect(label((await render({}, 'fr')).el)).toBe('Calques');
   });
 });

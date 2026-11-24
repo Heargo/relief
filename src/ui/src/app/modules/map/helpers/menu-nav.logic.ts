@@ -1,6 +1,6 @@
-export type MenuId = 'workspace' | 'settings' | 'help';
+export type MenuId = 'workspace' | 'layers' | 'settings' | 'help';
 
-export const MENU_IDS: readonly MenuId[] = ['workspace', 'settings', 'help'];
+export const MENU_IDS: readonly MenuId[] = ['workspace', 'layers', 'settings', 'help'];
 
 function wrap(index: number, size: number): number {
   return ((index % size) + size) % size;

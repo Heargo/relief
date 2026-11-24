@@ -50,7 +50,7 @@ Ces mesures dépendent de l'historique : relief les calcule à part et les garde
 
 ## Couplage logique
 
-Certains fichiers changent souvent ensemble sans dépendre l'un de l'autre dans le code : un fichier et sa doc, un schéma et ses migrations, deux services qui partagent un format. Le calque **Couplage logique**, dans la section Calques, les relie par des arêtes pointillées d'une autre couleur.
+Certains fichiers changent souvent ensemble sans dépendre l'un de l'autre dans le code : un fichier et sa doc, un schéma et ses migrations, deux services qui partagent un format. Le calque **Couplage logique**, dans le menu Calques, les relie par des arêtes pointillées d'une autre couleur.
 
 relief les tire de l'historique git, pas du code : ce calque marche donc sur **n'importe quel dépôt**, même sans adapter de langage (Markdown, YAML, shell…).
 

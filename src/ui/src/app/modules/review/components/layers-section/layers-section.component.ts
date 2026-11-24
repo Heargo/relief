@@ -11,7 +11,7 @@ interface LayerRow {
   toggle: () => void;
 }
 
-/** The "Layers" section of the left panel: the toggles of what the map paints. */
+/** The content of the "Layers" menu of the top bar: the toggles of what the map paints. */
 @Component({
   selector: 'app-layers-section',
   imports: [TranslatePipe],

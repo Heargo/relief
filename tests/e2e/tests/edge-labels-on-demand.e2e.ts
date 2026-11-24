@@ -8,7 +8,7 @@ import {
   waitForScene,
   type SceneEdge,
 } from '../helpers/map-scene';
-import { press, tid } from '../helpers/ui';
+import { press, tid, toggleLayer } from '../helpers/ui';
 
 // U29, on acme-shop (main...feat/promo-codes), level 0, read from the map scene:
 //  - at rest only the labels of the edges with a rule violation (web -> db `⚠ 2`, api -> db `⚠ 14`) are visible
@@ -78,7 +78,7 @@ describe('edge labels on demand', () => {
 
   it('shows every label with the "always" switch', async () => {
     await expect(tid('toggle-edge-labels-always')).toHaveAttribute('aria-checked', 'false');
-    await tid('toggle-edge-labels-always').click();
+    await toggleLayer('toggle-edge-labels-always');
     await expect(tid('toggle-edge-labels-always')).toHaveAttribute('aria-checked', 'true');
     await waitForScene((s) =>
       individual(s.edges)
@@ -90,7 +90,7 @@ describe('edge labels on demand', () => {
     expect(worded.length).toBeGreaterThan(0);
     expect(worded.every((e) => e.label.visible)).toBe(true);
 
-    await tid('toggle-edge-labels-always').click();
+    await toggleLayer('toggle-edge-labels-always');
     await waitForScene(
       (s) =>
         individual(s.edges).every((e) => e.label.visible === REST.includes(`${e.from}>${e.to}`)),

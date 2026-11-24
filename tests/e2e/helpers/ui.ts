@@ -105,3 +105,26 @@ export async function drag(selector: string, dx: number): Promise<void> {
 export async function viewportSize(): Promise<{ width: number; height: number }> {
   return browser.execute(() => ({ width: window.innerWidth, height: window.innerHeight }));
 }
+
+/** Opens the Layers menu of the top bar, unless it is already open. */
+export async function openLayersMenu(): Promise<void> {
+  const trigger = tid('menu-trigger-layers');
+  await trigger.waitForExist();
+  await browser.waitUntil(async () => (await trigger.getAttribute('aria-disabled')) !== 'true', {
+    timeoutMsg: 'the Layers menu stays disabled',
+  });
+  if ((await trigger.getAttribute('aria-expanded')) !== 'true') await trigger.click();
+  await tid('layers-panel').waitForDisplayed();
+}
+
+/**
+ * Flips the layer toggle `id` (`toggle-*`) from the Layers menu of the top bar: opens the menu,
+ * clicks the toggle, then closes the menu (Escape) so it covers nothing of the map. The toggles
+ * stay in the DOM while the menu is closed, so their `aria-checked` can be read at any time.
+ */
+export async function toggleLayer(id: string): Promise<void> {
+  await openLayersMenu();
+  await tid(id).click();
+  await browser.keys('Escape');
+  await tid('layers-panel').waitForDisplayed({ reverse: true });
+}

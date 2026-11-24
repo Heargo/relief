@@ -6,10 +6,12 @@
   "optimus": {},
   "menu": {
     "workspace": "Espace de travail",
+    "layers": "Calques",
     "settings": "Paramètres",
     "help": "Aide",
     "access": {
       "workspace": "E",
+      "layers": "C",
       "settings": "P",
       "help": "A"
     },

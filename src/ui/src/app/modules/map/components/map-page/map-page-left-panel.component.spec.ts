@@ -118,14 +118,12 @@ describe('MapPageComponent, left panel like the mockup', () => {
 
   it('gives every section of the left panel the common section class and an h3', async () => {
     const { el } = await render();
-    for (const id of ['pr-card', 'layers-section', 'layout-section', 'reading-order']) {
+    for (const id of ['pr-card', 'layout-section', 'reading-order']) {
       const section = byId(el, id);
       expect(section, id).not.toBeNull();
       expect(section?.classList.contains('sec'), id).toBe(true);
     }
-    for (const id of ['layers-section', 'layout-section']) {
-      expect(byId(el, id)?.querySelector('h3'), id).not.toBeNull();
-    }
+    expect(byId(el, 'layout-section')?.querySelector('h3')).not.toBeNull();
   });
 
   it('shows the layout as a segmented control', async () => {
