@@ -64,6 +64,8 @@ import { HotspotsSectionComponent } from '../../../explore/components/hotspots-s
 import { hotspots, riskLevel, riskMap } from '../../../explore/helpers/risk.logic';
 import { MapBusiness } from '../../business/map.business';
 import { PanelsBusiness } from '../../business/panels.business';
+import { RepoComparisonsBusiness } from '../../business/repo-comparisons.business';
+import { RepoComparisonsComponent } from '../repo-comparisons/repo-comparisons.component';
 import { RepoBusiness } from '../../business/repo.business';
 import { SubgraphBusiness } from '../../business/subgraph.business';
 import { repoMetaLine } from '../../helpers/repo-meta.logic';
@@ -117,6 +119,7 @@ const CHANGED_FILES_LEVEL = 2;
     StructuralOverviewComponent,
     ExploreSectionComponent,
     HotspotsSectionComponent,
+    RepoComparisonsComponent,
   ],
   providers: [
     RepoBusiness,
@@ -131,6 +134,7 @@ const CHANGED_FILES_LEVEL = 2;
     ReadingOrderBusiness,
     ReloadBusiness,
     RangePickerBusiness,
+    RepoComparisonsBusiness,
     RulesBusiness,
     RiskBusiness,
     CoChangeBusiness,
@@ -151,6 +155,7 @@ export class MapPageComponent implements OnInit {
   protected readonly reading = inject(ReadingOrderBusiness);
   protected readonly reloader = inject(ReloadBusiness);
   private readonly rangePicker = inject(RangePickerBusiness);
+  protected readonly repoComparisons = inject(RepoComparisonsBusiness);
   protected readonly ruleState = inject(RulesBusiness);
   protected readonly riskState = inject(RiskBusiness);
   protected readonly coChangeState = inject(CoChangeBusiness);

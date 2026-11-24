@@ -15,7 +15,8 @@ use relief_app::{
 use relief_model::{
     ApiError, CoChangeResponse, CommitReadingResponse, DiffResponse, EdgeUsagesResponse,
     ImpactDirection, ImpactResponse, LogResponse, MetaResponse, MetricsResponse, NodeId,
-    ReadingOrderResponse, ReviewState, ReviewSummary, SearchResponse, Settings, SnapshotResponse,
+    ReadingOrderResponse, RepoComparison, ReviewState, ReviewSummary, SearchResponse, Settings,
+    SnapshotResponse,
 };
 use tauri::{AppHandle, Builder, Manager, Runtime, State, WebviewUrl, WebviewWindowBuilder};
 
@@ -128,6 +129,8 @@ fn handlers<R: Runtime>(builder: Builder<R>) -> Builder<R> {
         remove_workspace_repo,
         workspace_labels,
         set_workspace_repo_labels,
+        workspace_comparisons,
+        set_workspace_repo_comparison,
         recents
     ])
 }
@@ -709,6 +712,45 @@ async fn set_workspace_repo_labels<R: Runtime>(
     let labels: Vec<&str> = labels.iter().map(String::as_str).collect();
     workspace.set_labels(&name, &labels).map_err(api_error)?;
     start_workspace(&app, file, false).await
+}
+
+fn need_workspace(session: &Session) -> Result<(), ApiError> {
+    if session.workspace_file().is_some() {
+        return Ok(());
+    }
+    Err(ApiError {
+        code: "bad_request".to_owned(),
+        message: "no workspace is open in this window".to_owned(),
+    })
+}
+
+/// The comparison of each repository of the open workspace.
+#[tauri::command]
+async fn workspace_comparisons(session: Shared<'_>) -> Result<Vec<RepoComparison>, ApiError> {
+    run(session, |s| {
+        need_workspace(s)?;
+        Ok(s.repo_comparisons())
+    })
+    .await
+}
+
+/// Changes the comparison of one repository of the open workspace, for the session and, with
+/// `save`, in the workspace file; answers the comparisons of the workspace.
+#[tauri::command]
+async fn set_workspace_repo_comparison(
+    session: Shared<'_>,
+    name: String,
+    source: String,
+    destination: String,
+    save: bool,
+) -> Result<Vec<RepoComparison>, ApiError> {
+    run(session, move |s| {
+        need_workspace(s)?;
+        s.set_repo_comparison(&name, &source, &destination, save)
+            .map_err(api_error)?;
+        Ok(s.repo_comparisons())
+    })
+    .await
 }
 
 /// The repositories and workspaces opened before, most recent first.

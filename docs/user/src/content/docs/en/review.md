@@ -26,6 +26,14 @@ Picking a source or a destination reloads the diff.
 - For now, the selector only offers pairs of branches: neither the working tree nor the index.
 - The diff follows the chosen range; the map itself keeps the repository as relief opened it.
 
+## Compare each repository of a workspace
+
+In a workspace, the range selector is replaced by one comparison per repository. Under the Review / Explore toggle, the **Comparisons per repository** button turns the left panel into a menu: one line per repository, `source` **merged into** `destination`, with the same pickers as for a single repository (the branches offered are those of that repository). Click a side to choose another branch, or the working tree for the source.
+
+- A change only reads that repository again; the others are kept as they are, and the map and the diff follow.
+- The change lasts for the session. **Set as default** on a line writes that repository's comparison in the workspace file (`source` and `destination`), where relief reads it back the next time.
+- The **Back** button brings the usual panel back. The button is only in the Review mode of a workspace.
+
 ## Review changes in progress
 
 Without a range (`relief .`), relief opens the saved default comparison, by default the working tree against `main`: that is how to review what an AI agent just wrote, before committing. When the range touches the working tree or the index, the **Reload** entry of the Settings menu reads the repository again, and relief also reloads by itself when its window gets the focus back. The selection, the zoom level and the "seen" state are kept; a node that disappeared is simply deselected. Ranges between two commits do not change and do not reload.

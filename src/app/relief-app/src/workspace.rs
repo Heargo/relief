@@ -282,6 +282,23 @@ impl Workspace {
         self.save()
     }
 
+    /// Replaces the comparison of a repository and saves the file (the rest is kept as is).
+    pub fn set_comparison(
+        &mut self,
+        repo: &str,
+        source: &str,
+        destination: &str,
+    ) -> Result<(), AppError> {
+        let target = self
+            .repos
+            .iter_mut()
+            .find(|r| r.name == repo)
+            .ok_or_else(|| error(format!("'{repo}' is not in the workspace")))?;
+        target.source = source.to_owned();
+        target.destination = destination.to_owned();
+        self.save()
+    }
+
     fn save(&self) -> Result<(), AppError> {
         let stored = Stored {
             labels: self.declared.clone(),

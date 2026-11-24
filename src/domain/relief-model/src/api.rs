@@ -106,6 +106,19 @@ pub struct WorkspaceRepoMeta {
     pub labels: Vec<String>,
 }
 
+/// The comparison of one repository of a workspace: `source` is merged into `destination`
+/// (a ref or `WORKTREE` for the source), and the local branches to choose from.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct RepoComparison {
+    pub name: String,
+    pub source: String,
+    pub destination: String,
+    pub branches: Vec<String>,
+    /// Why the repository could not be read (branches then empty), when it could not.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+}
+
 /// A symbol whose signature changed, with the callers it reaches in the head.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]

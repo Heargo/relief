@@ -26,6 +26,14 @@ Choisir une source ou une destination recharge le diff.
 - Pour l'instant, le sélecteur ne propose que des paires de branches : ni l'arbre de travail, ni l'index.
 - Le calcul du diff suit la plage choisie ; la carte, elle, garde le dépôt tel que relief l'a ouvert.
 
+## Comparer chaque dépôt d'un espace
+
+Dans un espace, le sélecteur de plage est remplacé par une comparaison par dépôt. Sous la bascule Relecture / Exploration, le bouton **Comparaisons par dépôt** transforme le panneau gauche en un menu : une ligne par dépôt, `source` **fusionnée dans** `destination`, avec les mêmes sélecteurs que pour un dépôt seul (les branches proposées sont celles de ce dépôt). Cliquez un côté pour choisir une autre branche, ou l'arbre de travail pour la source.
+
+- Un changement ne relit que ce dépôt ; les autres sont gardés tels quels, et la carte et le diff suivent.
+- Le changement vaut pour la session. **Définir par défaut** sur une ligne écrit la comparaison de ce dépôt dans le fichier d'espace (`source` et `destination`), où relief la relit à la prochaine ouverture.
+- Le bouton **Retour** ramène le panneau habituel. Le bouton n'existe qu'en mode Relecture d'un espace.
+
 ## Relire des changements en cours
 
 Sans plage (`relief .`), relief ouvre la comparaison par défaut enregistrée, par défaut l'arbre de travail contre `main` : c'est le moyen de relire ce qu'un agent IA vient d'écrire, avant de committer. Quand la plage touche l'arbre de travail ou l'index, l'entrée **Recharger** du menu Paramètres relit le dépôt, et relief recharge aussi tout seul quand sa fenêtre reprend le focus. La sélection, le niveau de zoom et l'état « vu » sont gardés ; un nœud qui a disparu est simplement désélectionné. Les plages entre deux commits ne changent pas et ne se rechargent pas.

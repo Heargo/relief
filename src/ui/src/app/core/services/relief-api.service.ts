@@ -10,6 +10,7 @@ import type {
   ImpactResponse,
   LogResponse,
   MetaResponse,
+  RepoComparison,
   CoChangeResponse,
   MetricsResponse,
   ReadingOrderResponse,
@@ -191,6 +192,29 @@ export class ReliefApiService {
   /** Replaces the labels of a repository of the open workspace; answers its meta. */
   setRepoLabels(name: string, labels: string[]): Promise<MetaResponse> {
     return this.command<MetaResponse>('set_workspace_repo_labels', { name, labels });
+  }
+
+  /** The comparison of each repository of the open workspace. */
+  workspaceComparisons(): Promise<RepoComparison[]> {
+    return this.command<RepoComparison[]>('workspace_comparisons');
+  }
+
+  /**
+   * Changes the comparison of one repository of the open workspace for the session and, with
+   * `save`, in the workspace file; answers the comparisons of the workspace.
+   */
+  setRepoComparison(
+    name: string,
+    source: string,
+    destination: string,
+    save: boolean,
+  ): Promise<RepoComparison[]> {
+    return this.command<RepoComparison[]>('set_workspace_repo_comparison', {
+      name,
+      source,
+      destination,
+      save,
+    });
   }
 
   /** The native folder picker; null when cancelled. */

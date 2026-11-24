@@ -189,6 +189,7 @@ export interface Contract {
   CoChangeResponse: CoChangeResponse;
   ReviewState: ReviewState;
   Settings: Settings;
+  RepoComparison: RepoComparison;
   ReadingOrderResponse: ReadingOrderResponse;
   CommitReadingResponse: CommitReadingResponse;
   LogResponse: LogResponse;
@@ -649,6 +650,20 @@ export interface ReviewState {
  */
 export interface Settings {
   destination: string;
+  source: string;
+}
+/**
+ * The comparison of one repository of a workspace: `source` is merged into `destination`
+ * (a ref or `WORKTREE` for the source), and the local branches to choose from.
+ */
+export interface RepoComparison {
+  branches: string[];
+  destination: string;
+  /**
+   * Why the repository could not be read (branches then empty), when it could not.
+   */
+  error?: string | null;
+  name: string;
   source: string;
 }
 /**

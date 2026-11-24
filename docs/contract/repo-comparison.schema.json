@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RepoComparison",
+  "description": "The comparison of one repository of a workspace: `source` is merged into `destination`\n(a ref or `WORKTREE` for the source), and the local branches to choose from.",
+  "type": "object",
+  "properties": {
+    "branches": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "destination": {
+      "type": "string"
+    },
+    "error": {
+      "description": "Why the repository could not be read (branches then empty), when it could not.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "name": {
+      "type": "string"
+    },
+    "source": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "name",
+    "source",
+    "destination",
+    "branches"
+  ]
+}

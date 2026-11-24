@@ -171,6 +171,11 @@
       "unsupported": "Utilisations : non pris en charge pour ce langage.",
       "more": "et {{count}} de plus",
       "in": "dans"
+    },
+    "repoComparisons": {
+      "button": "Comparaisons par dépôt",
+      "title": "Comparaisons par dépôt",
+      "back": "Retour au panneau"
     }
   },
   "review": {

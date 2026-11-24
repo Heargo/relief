@@ -88,305 +88,319 @@
       [style.--rw.px]="panels.widths().right"
     >
       <aside class="panel left" data-testid="left-panel">
-        <div class="ws-head" data-testid="workspace-header">
-          @if (repo.repoName(); as name) {
-            <div class="repo">
-              <span data-testid="repo-name"
-                ><b>{{ name }}</b></span
-              >
-              @if (repoMeta(); as line) {
-                <span class="sep">·</span> <span data-testid="repo-meta">{{ line }}</span>
-              }
-            </div>
-          }
-          @if (workspaceRepos().length > 0) {
-            <ul class="repos" data-testid="workspace-repos">
-              @for (item of workspaceRepos(); track item.id) {
-                <li data-testid="workspace-repo">
-                  <b>{{ item.name }}</b>
-                  @if (item.branch) {
-                    <span class="ref" data-testid="workspace-repo-branch">{{ item.branch }}</span>
-                  }
-                  @for (label of item.labels; track label) {
-                    <span class="tag" data-testid="repo-label">{{ label }}</span>
-                  }
-                  <button
-                    type="button"
-                    class="chip edit"
-                    data-testid="repo-labels-edit"
-                    [attr.aria-label]="'map.repoLabels.edit' | translate: { name: item.name }"
-                    [attr.aria-expanded]="editingRepo() === item.name"
-                    (click)="toggleLabelEditor(item.name)"
-                  >
-                    +
-                  </button>
-                  @if (editingRepo() === item.name) {
-                    <span
-                      class="options"
-                      role="group"
-                      [attr.aria-label]="'map.repoLabels.title' | translate"
-                    >
-                      @for (option of repo.availableLabels(); track option) {
-                        <button
-                          type="button"
-                          class="chip"
-                          [attr.data-testid]="'repo-label-option-' + option"
-                          [class.on]="item.labels.includes(option)"
-                          [attr.aria-pressed]="item.labels.includes(option)"
-                          (click)="toggleRepoLabel(item, option)"
-                        >
-                          {{ option }}
-                        </button>
-                      }
-                    </span>
-                  }
-                </li>
-              }
-            </ul>
-          } @else if (repo.ref(); as ref) {
-            <span class="ref" data-testid="ref">{{ ref }}</span>
-          }
-        </div>
-        <div class="sec">
-          <div class="seg">
-            <button
-              type="button"
-              data-testid="review-toggle"
-              [class.on]="review.reviewMode()"
-              [attr.aria-pressed]="review.reviewMode()"
-              (click)="review.setReviewMode(!review.reviewMode())"
-            >
-              {{ 'review.toggle' | translate }}
-            </button>
-            <button
-              type="button"
-              data-testid="explore-toggle"
-              [class.on]="!review.reviewMode()"
-              [attr.aria-pressed]="!review.reviewMode()"
-              (click)="review.setReviewMode(false)"
-            >
-              {{ 'explore.toggle' | translate }}
-            </button>
-          </div>
-        </div>
-        @if (review.reviewMode() && repo.meta() && !repo.meta()?.workspace) {
-          <div class="sec" data-testid="compare-section">
-            <app-range-picker />
-          </div>
-        }
-        <div data-testid="tools-section">
-          <div class="ptitle">
-            {{ 'map.panel.tools' | translate }}
-            <span class="sub">{{
-              (review.reviewMode() ? 'map.panel.modePr' : 'map.panel.modeExplore') | translate
-            }}</span>
-          </div>
-          @if (review.reviewMode() && review.status() !== 'loading') {
-            <section class="sec pr-card" data-testid="pr-card">
-              <div class="range" data-testid="pr-range">{{ review.range() }}</div>
-              @if (review.stats(); as stats) {
-                <div
-                  class="stats"
-                  data-testid="pr-stats"
-                  [attr.data-files]="stats.files"
-                  [attr.data-lines-added]="stats.linesAdded"
-                  [attr.data-lines-removed]="stats.linesRemoved"
-                  [attr.data-symbols-added]="stats.symbols.added"
-                  [attr.data-symbols-removed]="stats.symbols.removed"
-                  [attr.data-symbols-modified]="stats.symbols.modified"
-                  [attr.data-symbols-moved]="stats.symbols.moved"
-                  [attr.data-signatures]="stats.signatures"
+        @if (repoComparisons.menuOpen()) {
+          <app-repo-comparisons />
+        } @else {
+          <div class="ws-head" data-testid="workspace-header">
+            @if (repo.repoName(); as name) {
+              <div class="repo">
+                <span data-testid="repo-name"
+                  ><b>{{ name }}</b></span
                 >
-                  <span>
-                    {{ plural('review.card.files', stats.files) }}
-                    <span class="plus">+{{ stats.linesAdded }}</span>
-                    <span class="minus">−{{ stats.linesRemoved }}</span>
-                  </span>
-                  @if (stats.symbols.added > 0) {
-                    <span><i class="dot add"></i>{{ stats.symbols.added }}</span>
-                    <span class="sr-only">{{
-                      plural('review.card.added', stats.symbols.added)
-                    }}</span>
-                  }
-                  @if (stats.symbols.modified > 0) {
-                    <span><i class="dot mod"></i>{{ stats.symbols.modified }}</span>
-                    <span class="sr-only">{{
-                      plural('review.card.modified', stats.symbols.modified)
-                    }}</span>
-                  }
-                  @if (stats.symbols.removed > 0) {
-                    <span><i class="dot del"></i>{{ stats.symbols.removed }}</span>
-                    <span class="sr-only">{{
-                      plural('review.card.removed', stats.symbols.removed)
-                    }}</span>
-                  }
-                  @if (stats.symbols.moved > 0) {
-                    <span><i class="dot mov"></i>{{ stats.symbols.moved }}</span>
-                    <span class="sr-only">{{
-                      plural('review.card.moved', stats.symbols.moved)
-                    }}</span>
-                  }
-                  <span class="hint">
-                    {{ plural('review.card.signatures', stats.signatures) }}
-                    ·
-                    {{ plural('review.card.filesMoved', stats.filesMoved) }}
-                    ·
-                    {{ plural('review.card.formatOnly', stats.formatOnlyFiles) }}
-                  </span>
-                </div>
-              } @else {
-                <p class="state error" data-testid="diff-error">{{ review.error() }}</p>
-              }
-              @if (reading.progress(); as progress) {
-                @if (progress.total > 0) {
-                  <div
-                    class="prog"
-                    role="progressbar"
-                    data-testid="pr-progress"
-                    aria-valuemin="0"
-                    [attr.aria-valuenow]="progress.seen"
-                    [attr.aria-valuemax]="progress.total"
-                  >
-                    <i [style.width.%]="(progress.seen / progress.total) * 100"></i>
-                  </div>
-                  <p class="hint">
-                    {{
-                      'review.reading.counts'
-                        | translate: { seen: progress.seen, total: progress.total }
-                    }}
-                  </p>
+                @if (repoMeta(); as line) {
+                  <span class="sep">·</span> <span data-testid="repo-meta">{{ line }}</span>
                 }
-              }
-            </section>
-          }
-          @if (review.reviewMode() && reading.items().length > 0) {
-            <app-reading-order-section
-              [items]="reading.items()"
-              [mode]="reading.mode()"
-              [selected]="map.selectedNodeId()"
-              [seenIds]="seenIds()"
-              [progress]="reading.progress()"
-              [persisted]="reading.persisted()"
-              [repeated]="repeated()"
-              [commits]="reading.commitRows()"
-              [selectedCommit]="reading.selectedCommit()"
-              [stepByStep]="reading.stepByStep()"
-              [current]="reading.current()"
-              (stepChange)="reading.setStepByStep($event)"
-              (move)="onReading($event)"
-              (commitSelect)="reading.selectCommit($event)"
-              (showAll)="reading.selectCommit(null)"
-              (modeChange)="reading.setMode($event)"
-              (nodeSelect)="map.selectResult($event)"
-              (toggle)="reading.toggle($event)"
-              (groupMark)="reading.markGroup($event)"
-              (markNext)="markSeenAndNext()"
-            />
-          }
-          @if (review.reviewMode() && overview.summary(); as summary) {
-            <app-signals-section [summary]="summary" (nodeSelect)="map.selectResult($event)" />
-          }
-          @if (!review.reviewMode() && map.status() === 'ready') {
-            <app-explore-section
-              [groups]="entryGroups()"
-              [overview]="exploreOverview()"
-              [label]="labelOf"
-              (nodeSelect)="traceEntryPoint($event)"
-            />
-            <app-hotspots-section
-              [hotspots]="hotspotRows()"
-              [label]="labelOf"
-              (nodeSelect)="map.selectResult($event)"
-            />
-          }
-          @if (ruleState.rules().length > 0) {
-            <app-rules-section
-              [rules]="ruleState.rules()"
-              [violations]="violations()"
-              [source]="ruleState.source()"
-              (ruleSelect)="selectRule($event)"
-            />
-          }
-        </div>
-        @if (map.status() === 'ready') {
-          <div data-testid="display-section">
-            <div class="ptitle">{{ 'map.panel.display' | translate }}</div>
-            <app-layers-section
-              [diff]="review.showDiffLayer()"
-              [unchangedEdges]="map.showUnchangedEdges()"
-              [focus]="review.focusLayer()"
-              [impact]="impactState.layer()"
-              [hasTestEdges]="true"
-              [testEdges]="map.showTestEdges()"
-              (testEdgesChange)="map.setShowTestEdges($event)"
-              [hasHideExternal]="true"
-              [hasDiff]="review.reviewMode()"
-              [hasFocus]="review.reviewMode()"
-              [hideExternal]="map.hideExternal()"
-              (hideExternalChange)="map.setHideExternal($event)"
-              [hasEdgeLabels]="true"
-              [edgeLabelsAlways]="map.edgeLabelsAlways()"
-              (edgeLabelsAlwaysChange)="map.setEdgeLabelsAlways($event)"
-              (diffChange)="review.setShowDiffLayer($event)"
-              (unchangedEdgesChange)="map.setShowUnchangedEdges($event)"
-              (focusChange)="review.setFocusLayer($event)"
-              (impactChange)="setImpactLayer($event)"
-              [rules]="ruleState.layer()"
-              [hasRules]="ruleState.rules().length > 0"
-              (rulesChange)="ruleState.setLayer($event)"
-              [risk]="riskState.layer()"
-              [hasRisk]="!review.reviewMode() && hasMetrics()"
-              (riskChange)="riskState.setLayer($event)"
-              [hasCoChange]="!review.reviewMode()"
-              [coChange]="coChangeState.layer()"
-              (coChangeChange)="coChangeState.setLayer($event)"
-            />
+              </div>
+            }
             @if (workspaceRepos().length > 0) {
-              <section class="sec" data-testid="label-filter">
-                <h3>{{ 'map.repoLabels.filter' | translate }}</h3>
-                <div
-                  class="seg"
-                  role="group"
-                  [attr.aria-label]="'map.repoLabels.title' | translate"
-                >
-                  @for (label of repo.availableLabels(); track label) {
+              <ul class="repos" data-testid="workspace-repos">
+                @for (item of workspaceRepos(); track item.id) {
+                  <li data-testid="workspace-repo">
+                    <b>{{ item.name }}</b>
+                    @if (item.branch) {
+                      <span class="ref" data-testid="workspace-repo-branch">{{ item.branch }}</span>
+                    }
+                    @for (label of item.labels; track label) {
+                      <span class="tag" data-testid="repo-label">{{ label }}</span>
+                    }
                     <button
                       type="button"
-                      [attr.data-testid]="'label-filter-' + label"
-                      [class.on]="map.labelFilter().includes(label)"
-                      [attr.aria-pressed]="map.labelFilter().includes(label)"
-                      (click)="toggleLabelFilter(label)"
+                      class="chip edit"
+                      data-testid="repo-labels-edit"
+                      [attr.aria-label]="'map.repoLabels.edit' | translate: { name: item.name }"
+                      [attr.aria-expanded]="editingRepo() === item.name"
+                      (click)="toggleLabelEditor(item.name)"
                     >
-                      {{ label }}
+                      +
                     </button>
+                    @if (editingRepo() === item.name) {
+                      <span
+                        class="options"
+                        role="group"
+                        [attr.aria-label]="'map.repoLabels.title' | translate"
+                      >
+                        @for (option of repo.availableLabels(); track option) {
+                          <button
+                            type="button"
+                            class="chip"
+                            [attr.data-testid]="'repo-label-option-' + option"
+                            [class.on]="item.labels.includes(option)"
+                            [attr.aria-pressed]="item.labels.includes(option)"
+                            (click)="toggleRepoLabel(item, option)"
+                          >
+                            {{ option }}
+                          </button>
+                        }
+                      </span>
+                    }
+                  </li>
+                }
+              </ul>
+            } @else if (repo.ref(); as ref) {
+              <span class="ref" data-testid="ref">{{ ref }}</span>
+            }
+          </div>
+          <div class="sec">
+            <div class="seg">
+              <button
+                type="button"
+                data-testid="review-toggle"
+                [class.on]="review.reviewMode()"
+                [attr.aria-pressed]="review.reviewMode()"
+                (click)="review.setReviewMode(!review.reviewMode())"
+              >
+                {{ 'review.toggle' | translate }}
+              </button>
+              <button
+                type="button"
+                data-testid="explore-toggle"
+                [class.on]="!review.reviewMode()"
+                [attr.aria-pressed]="!review.reviewMode()"
+                (click)="review.setReviewMode(false)"
+              >
+                {{ 'explore.toggle' | translate }}
+              </button>
+            </div>
+            @if (review.reviewMode() && repoComparisons.available()) {
+              <button
+                type="button"
+                class="chip"
+                data-testid="repo-comparisons-button"
+                (click)="repoComparisons.openMenu()"
+              >
+                {{ 'map.repoComparisons.button' | translate }}
+              </button>
+            }
+          </div>
+          @if (review.reviewMode() && repo.meta() && !repo.meta()?.workspace) {
+            <div class="sec" data-testid="compare-section">
+              <app-range-picker />
+            </div>
+          }
+          <div data-testid="tools-section">
+            <div class="ptitle">
+              {{ 'map.panel.tools' | translate }}
+              <span class="sub">{{
+                (review.reviewMode() ? 'map.panel.modePr' : 'map.panel.modeExplore') | translate
+              }}</span>
+            </div>
+            @if (review.reviewMode() && review.status() !== 'loading') {
+              <section class="sec pr-card" data-testid="pr-card">
+                <div class="range" data-testid="pr-range">{{ review.range() }}</div>
+                @if (review.stats(); as stats) {
+                  <div
+                    class="stats"
+                    data-testid="pr-stats"
+                    [attr.data-files]="stats.files"
+                    [attr.data-lines-added]="stats.linesAdded"
+                    [attr.data-lines-removed]="stats.linesRemoved"
+                    [attr.data-symbols-added]="stats.symbols.added"
+                    [attr.data-symbols-removed]="stats.symbols.removed"
+                    [attr.data-symbols-modified]="stats.symbols.modified"
+                    [attr.data-symbols-moved]="stats.symbols.moved"
+                    [attr.data-signatures]="stats.signatures"
+                  >
+                    <span>
+                      {{ plural('review.card.files', stats.files) }}
+                      <span class="plus">+{{ stats.linesAdded }}</span>
+                      <span class="minus">−{{ stats.linesRemoved }}</span>
+                    </span>
+                    @if (stats.symbols.added > 0) {
+                      <span><i class="dot add"></i>{{ stats.symbols.added }}</span>
+                      <span class="sr-only">{{
+                        plural('review.card.added', stats.symbols.added)
+                      }}</span>
+                    }
+                    @if (stats.symbols.modified > 0) {
+                      <span><i class="dot mod"></i>{{ stats.symbols.modified }}</span>
+                      <span class="sr-only">{{
+                        plural('review.card.modified', stats.symbols.modified)
+                      }}</span>
+                    }
+                    @if (stats.symbols.removed > 0) {
+                      <span><i class="dot del"></i>{{ stats.symbols.removed }}</span>
+                      <span class="sr-only">{{
+                        plural('review.card.removed', stats.symbols.removed)
+                      }}</span>
+                    }
+                    @if (stats.symbols.moved > 0) {
+                      <span><i class="dot mov"></i>{{ stats.symbols.moved }}</span>
+                      <span class="sr-only">{{
+                        plural('review.card.moved', stats.symbols.moved)
+                      }}</span>
+                    }
+                    <span class="hint">
+                      {{ plural('review.card.signatures', stats.signatures) }}
+                      ·
+                      {{ plural('review.card.filesMoved', stats.filesMoved) }}
+                      ·
+                      {{ plural('review.card.formatOnly', stats.formatOnlyFiles) }}
+                    </span>
+                  </div>
+                } @else {
+                  <p class="state error" data-testid="diff-error">{{ review.error() }}</p>
+                }
+                @if (reading.progress(); as progress) {
+                  @if (progress.total > 0) {
+                    <div
+                      class="prog"
+                      role="progressbar"
+                      data-testid="pr-progress"
+                      aria-valuemin="0"
+                      [attr.aria-valuenow]="progress.seen"
+                      [attr.aria-valuemax]="progress.total"
+                    >
+                      <i [style.width.%]="(progress.seen / progress.total) * 100"></i>
+                    </div>
+                    <p class="hint">
+                      {{
+                        'review.reading.counts'
+                          | translate: { seen: progress.seen, total: progress.total }
+                      }}
+                    </p>
                   }
-                </div>
+                }
               </section>
             }
-            <section class="sec" data-testid="layout-section">
-              <h3>{{ 'map.layout.title' | translate }}</h3>
-              <div class="seg">
-                <button
-                  type="button"
-                  data-testid="layout-fewer-crossings"
-                  [class.on]="map.layoutMode() === 'fewer-crossings'"
-                  [attr.aria-pressed]="map.layoutMode() === 'fewer-crossings'"
-                  (click)="map.setLayoutMode('fewer-crossings')"
-                >
-                  {{ 'map.layout.fewerCrossings' | translate }}
-                </button>
-                <button
-                  type="button"
-                  data-testid="layout-raw-grid"
-                  [class.on]="map.layoutMode() === 'raw-grid'"
-                  [attr.aria-pressed]="map.layoutMode() === 'raw-grid'"
-                  (click)="map.setLayoutMode('raw-grid')"
-                >
-                  {{ 'map.layout.rawGrid' | translate }}
-                </button>
-              </div>
-            </section>
+            @if (review.reviewMode() && reading.items().length > 0) {
+              <app-reading-order-section
+                [items]="reading.items()"
+                [mode]="reading.mode()"
+                [selected]="map.selectedNodeId()"
+                [seenIds]="seenIds()"
+                [progress]="reading.progress()"
+                [persisted]="reading.persisted()"
+                [repeated]="repeated()"
+                [commits]="reading.commitRows()"
+                [selectedCommit]="reading.selectedCommit()"
+                [stepByStep]="reading.stepByStep()"
+                [current]="reading.current()"
+                (stepChange)="reading.setStepByStep($event)"
+                (move)="onReading($event)"
+                (commitSelect)="reading.selectCommit($event)"
+                (showAll)="reading.selectCommit(null)"
+                (modeChange)="reading.setMode($event)"
+                (nodeSelect)="map.selectResult($event)"
+                (toggle)="reading.toggle($event)"
+                (groupMark)="reading.markGroup($event)"
+                (markNext)="markSeenAndNext()"
+              />
+            }
+            @if (review.reviewMode() && overview.summary(); as summary) {
+              <app-signals-section [summary]="summary" (nodeSelect)="map.selectResult($event)" />
+            }
+            @if (!review.reviewMode() && map.status() === 'ready') {
+              <app-explore-section
+                [groups]="entryGroups()"
+                [overview]="exploreOverview()"
+                [label]="labelOf"
+                (nodeSelect)="traceEntryPoint($event)"
+              />
+              <app-hotspots-section
+                [hotspots]="hotspotRows()"
+                [label]="labelOf"
+                (nodeSelect)="map.selectResult($event)"
+              />
+            }
+            @if (ruleState.rules().length > 0) {
+              <app-rules-section
+                [rules]="ruleState.rules()"
+                [violations]="violations()"
+                [source]="ruleState.source()"
+                (ruleSelect)="selectRule($event)"
+              />
+            }
           </div>
+          @if (map.status() === 'ready') {
+            <div data-testid="display-section">
+              <div class="ptitle">{{ 'map.panel.display' | translate }}</div>
+              <app-layers-section
+                [diff]="review.showDiffLayer()"
+                [unchangedEdges]="map.showUnchangedEdges()"
+                [focus]="review.focusLayer()"
+                [impact]="impactState.layer()"
+                [hasTestEdges]="true"
+                [testEdges]="map.showTestEdges()"
+                (testEdgesChange)="map.setShowTestEdges($event)"
+                [hasHideExternal]="true"
+                [hasDiff]="review.reviewMode()"
+                [hasFocus]="review.reviewMode()"
+                [hideExternal]="map.hideExternal()"
+                (hideExternalChange)="map.setHideExternal($event)"
+                [hasEdgeLabels]="true"
+                [edgeLabelsAlways]="map.edgeLabelsAlways()"
+                (edgeLabelsAlwaysChange)="map.setEdgeLabelsAlways($event)"
+                (diffChange)="review.setShowDiffLayer($event)"
+                (unchangedEdgesChange)="map.setShowUnchangedEdges($event)"
+                (focusChange)="review.setFocusLayer($event)"
+                (impactChange)="setImpactLayer($event)"
+                [rules]="ruleState.layer()"
+                [hasRules]="ruleState.rules().length > 0"
+                (rulesChange)="ruleState.setLayer($event)"
+                [risk]="riskState.layer()"
+                [hasRisk]="!review.reviewMode() && hasMetrics()"
+                (riskChange)="riskState.setLayer($event)"
+                [hasCoChange]="!review.reviewMode()"
+                [coChange]="coChangeState.layer()"
+                (coChangeChange)="coChangeState.setLayer($event)"
+              />
+              @if (workspaceRepos().length > 0) {
+                <section class="sec" data-testid="label-filter">
+                  <h3>{{ 'map.repoLabels.filter' | translate }}</h3>
+                  <div
+                    class="seg"
+                    role="group"
+                    [attr.aria-label]="'map.repoLabels.title' | translate"
+                  >
+                    @for (label of repo.availableLabels(); track label) {
+                      <button
+                        type="button"
+                        [attr.data-testid]="'label-filter-' + label"
+                        [class.on]="map.labelFilter().includes(label)"
+                        [attr.aria-pressed]="map.labelFilter().includes(label)"
+                        (click)="toggleLabelFilter(label)"
+                      >
+                        {{ label }}
+                      </button>
+                    }
+                  </div>
+                </section>
+              }
+              <section class="sec" data-testid="layout-section">
+                <h3>{{ 'map.layout.title' | translate }}</h3>
+                <div class="seg">
+                  <button
+                    type="button"
+                    data-testid="layout-fewer-crossings"
+                    [class.on]="map.layoutMode() === 'fewer-crossings'"
+                    [attr.aria-pressed]="map.layoutMode() === 'fewer-crossings'"
+                    (click)="map.setLayoutMode('fewer-crossings')"
+                  >
+                    {{ 'map.layout.fewerCrossings' | translate }}
+                  </button>
+                  <button
+                    type="button"
+                    data-testid="layout-raw-grid"
+                    [class.on]="map.layoutMode() === 'raw-grid'"
+                    [attr.aria-pressed]="map.layoutMode() === 'raw-grid'"
+                    (click)="map.setLayoutMode('raw-grid')"
+                  >
+                    {{ 'map.layout.rawGrid' | translate }}
+                  </button>
+                </div>
+              </section>
+            </div>
+          }
         }
       </aside>
       <section class="center">

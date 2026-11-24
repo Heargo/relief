@@ -27,6 +27,8 @@
     "allow-recents",
     "allow-workspace-labels",
     "allow-set-workspace-repo-labels",
+    "allow-workspace-comparisons",
+    "allow-set-workspace-repo-comparison",
     "dialog:allow-open"
   ]
 }

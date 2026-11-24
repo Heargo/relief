@@ -171,6 +171,11 @@
       "unsupported": "Usages are not supported for this language.",
       "more": "and {{count}} more",
       "in": "in"
+    },
+    "repoComparisons": {
+      "button": "Comparisons per repository",
+      "title": "Comparisons per repository",
+      "back": "Back to the panel"
     }
   },
   "review": {

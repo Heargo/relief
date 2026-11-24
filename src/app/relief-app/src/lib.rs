@@ -171,6 +171,8 @@ pub struct Session {
     indexer: Indexer,
     data_dir: Option<DataDir>,
     workspace: Option<Workspace>,
+    /// The comparisons changed in session, by repository: (source, destination).
+    comparisons: Mutex<HashMap<String, (String, String)>>,
     memory: Mutex<HashMap<String, IndexedSnapshot>>,
     indexed: AtomicUsize,
 }
@@ -241,6 +243,7 @@ impl Session {
             indexer,
             data_dir,
             workspace: None,
+            comparisons: Mutex::new(HashMap::new()),
             memory: Mutex::new(HashMap::new()),
             indexed: AtomicUsize::new(0),
         };
@@ -279,6 +282,7 @@ impl Session {
             indexer,
             data_dir,
             workspace: Some(workspace),
+            comparisons: Mutex::new(HashMap::new()),
             memory: Mutex::new(HashMap::new()),
             indexed: AtomicUsize::new(0),
         })

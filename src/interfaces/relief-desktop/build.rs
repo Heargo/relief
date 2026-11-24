@@ -25,6 +25,8 @@ fn main() {
         "recents",
         "workspace_labels",
         "set_workspace_repo_labels",
+        "workspace_comparisons",
+        "set_workspace_repo_comparison",
     ]);
     tauri_build::try_build(tauri_build::Attributes::new().app_manifest(manifest))
         .expect("failed to run the tauri build script");

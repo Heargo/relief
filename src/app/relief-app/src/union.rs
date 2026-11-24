@@ -5,14 +5,14 @@
 use relief_git::{CommitId, GitSource, ResolvedRange};
 use relief_model::{
     Edge, EdgeChange, FileChange, FileRename, GraphDiff, GraphSnapshot, Node, NodeChange, NodeId,
-    NodeKind, NodeStatus, SnapshotMeta, SnapshotResponse, Visibility,
+    NodeKind, NodeStatus, RepoComparison, SnapshotMeta, SnapshotResponse, Visibility,
 };
 
-use crate::{AppError, DiffAnalysis, Session, WorkspaceRepo, is_virtual};
+use crate::{AppError, DiffAnalysis, Session, Workspace, WorkspaceRepo, is_virtual};
 
 /// One repository of the workspace, open.
-struct Member<'a> {
-    repo: &'a WorkspaceRepo,
+struct Member {
+    repo: WorkspaceRepo,
     source: GitSource,
 }
 
@@ -116,8 +116,12 @@ fn prefixed_change(change: &NodeChange, repo: &str) -> Result<NodeChange, AppErr
     })
 }
 
+fn poisoned<T>(_: std::sync::PoisonError<T>) -> AppError {
+    AppError::Workspace("the comparisons of the session are unavailable".to_owned())
+}
+
 impl Session {
-    fn members(&self) -> Result<Vec<Member<'_>>, AppError> {
+    fn members(&self) -> Result<Vec<Member>, AppError> {
         let workspace = self
             .workspace
             .as_ref()
@@ -126,22 +130,100 @@ impl Session {
             .repos
             .iter()
             .map(|repo| {
+                let mut repo = repo.clone();
+                if let Some((source, destination)) = self.comparison_of(&repo.name)? {
+                    repo.source = source;
+                    repo.destination = destination;
+                }
                 Ok(Member {
+                    source: GitSource::open(&workspace.path_of(&repo))?,
                     repo,
-                    source: GitSource::open(&workspace.path_of(repo))?,
                 })
             })
             .collect()
     }
 
+    /// The comparison changed in session for a repository, when there is one.
+    fn comparison_of(&self, name: &str) -> Result<Option<(String, String)>, AppError> {
+        Ok(self
+            .comparisons
+            .lock()
+            .map_err(poisoned)?
+            .get(name)
+            .cloned())
+    }
+
+    /// The comparison of each repository of the workspace (empty on a single repository).
+    pub fn repo_comparisons(&self) -> Vec<RepoComparison> {
+        let Some(workspace) = &self.workspace else {
+            return Vec::new();
+        };
+        // A repository that cannot be read keeps its row, with the reason: the menu stays usable
+        // for the others.
+        workspace
+            .repos
+            .iter()
+            .map(|repo| {
+                let mut row = RepoComparison {
+                    name: repo.name.clone(),
+                    source: repo.source.clone(),
+                    destination: repo.destination.clone(),
+                    branches: Vec::new(),
+                    error: None,
+                };
+                let read = (|| -> Result<(), AppError> {
+                    if let Some((source, destination)) = self.comparison_of(&repo.name)? {
+                        row.source = source;
+                        row.destination = destination;
+                    }
+                    row.branches = GitSource::open(&workspace.path_of(repo))?.branches()?;
+                    Ok(())
+                })();
+                row.error = read.err().map(|e| e.to_string());
+                row
+            })
+            .collect()
+    }
+
+    /// Changes the comparison of one repository for the session; with `save`, in the workspace
+    /// file too. The other repositories are not read again.
+    pub fn set_repo_comparison(
+        &self,
+        repo: &str,
+        source: &str,
+        destination: &str,
+        save: bool,
+    ) -> Result<(), AppError> {
+        let workspace = self
+            .workspace
+            .as_ref()
+            .ok_or_else(|| AppError::Workspace("this operation needs a workspace".to_owned()))?;
+        let member = workspace
+            .repos
+            .iter()
+            .find(|r| r.name == repo)
+            .ok_or_else(|| AppError::Workspace(format!("'{repo}' is not in the workspace")))?;
+        let git = GitSource::open(&workspace.path_of(member))?;
+        self.resolve(&git, source)?;
+        self.resolve(&git, destination)?;
+        if save {
+            Workspace::open(workspace.file())?.set_comparison(repo, source, destination)?;
+        }
+        self.comparisons
+            .lock()
+            .map_err(poisoned)?
+            .insert(repo.to_owned(), (source.to_owned(), destination.to_owned()));
+        Ok(())
+    }
+
     /// The commit a repository is read at (its `source`).
-    fn member_head(&self, member: &Member<'_>) -> Result<CommitId, AppError> {
+    fn member_head(&self, member: &Member) -> Result<CommitId, AppError> {
         self.resolve(&member.source, &member.repo.source)
     }
 
     /// The two commits of a repository's own range: its `destination` (at the merge base with its
     /// `source`) against its `source`.
-    fn member_sides(&self, member: &Member<'_>) -> Result<ResolvedRange, AppError> {
+    fn member_sides(&self, member: &Member) -> Result<ResolvedRange, AppError> {
         let new = self.member_head(member)?;
         let tip = if is_virtual(&new) {
             self.resolve(&member.source, "HEAD")?
@@ -153,7 +235,7 @@ impl Session {
         Ok(ResolvedRange { old, new })
     }
 
-    fn member_branch(member: &Member<'_>) -> String {
+    fn member_branch(member: &Member) -> String {
         if matches!(member.repo.source.as_str(), "WORKTREE" | "INDEX") {
             member
                 .source
@@ -172,7 +254,7 @@ impl Session {
             let commit = self.member_head(&member)?;
             let indexed = self.indexed_snapshot(&member.source, &commit)?;
             let root = repo_node(
-                member.repo,
+                &member.repo,
                 Self::member_branch(&member),
                 &commit.to_string(),
             )?;
@@ -237,7 +319,7 @@ impl Session {
             };
             let branch = Self::member_branch(&member);
             let root =
-                |graph: &GraphSnapshot| repo_node(member.repo, branch.clone(), graph.commit());
+                |graph: &GraphSnapshot| repo_node(&member.repo, branch.clone(), graph.commit());
             bases.push(part(root(&analysed.base)?, &analysed.base));
             heads.push(part(root(&analysed.head)?, &analysed.head));
             bases_text.push(analysed.diff.base.clone());
