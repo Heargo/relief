@@ -17,6 +17,7 @@
       [language]="language.current()"
       [languages]="language.languages"
       [canReload]="reloader.canReload()"
+      [workspace]="!!repo.meta()?.workspace"
       (themeChange)="theme.setMode($event)"
       (languageChange)="onLanguageChange($any($event))"
       (shortcuts)="map.openHelp()"
@@ -24,6 +25,8 @@
       (docs)="docs.open()"
       (openRepo)="onOpenRepo()"
       (openWorkspace)="onOpenWorkspace()"
+      (addRepo)="onAddRepo()"
+      (openAsWorkspace)="onOpenAsWorkspace()"
     />
     <div class="search-box">
       <span class="mag" data-testid="search-icon" aria-hidden="true">⌕</span>

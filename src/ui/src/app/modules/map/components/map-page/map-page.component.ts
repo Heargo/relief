@@ -545,6 +545,18 @@ export class MapPageComponent implements OnInit {
     else await this.start();
   }
 
+  /** The menu entry "Add a repository to the workspace": folder picker, then the workspace again. */
+  protected async onAddRepo(): Promise<void> {
+    if (await this.welcomeState.pickAndAddRepo()) this.reloadPage();
+  }
+
+  /** The menu entry "Open this repository as a workspace": folder picker, then the workspace. */
+  protected async onOpenAsWorkspace(): Promise<void> {
+    const path = this.repo.meta()?.path;
+    if (!path) return;
+    if (await this.welcomeState.pickFolderAndOpenAsWorkspace(path)) this.reloadPage();
+  }
+
   @HostListener('window:keydown', ['$event'])
   protected onKey(event: KeyboardEvent): void {
     if (event.key === 'Escape' && this.rangePicker.open()) {

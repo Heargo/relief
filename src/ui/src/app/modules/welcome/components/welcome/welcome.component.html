@@ -8,6 +8,9 @@
     <button type="button" data-testid="welcome-open-workspace" (click)="pickWorkspace()">
       {{ 'welcome.openWorkspace' | translate }}
     </button>
+    <button type="button" data-testid="welcome-create-workspace" (click)="createWorkspace()">
+      {{ 'welcome.createWorkspace' | translate }}
+    </button>
   </div>
   @if (welcome.error(); as error) {
     <p class="error" data-testid="welcome-error">{{ error }}</p>

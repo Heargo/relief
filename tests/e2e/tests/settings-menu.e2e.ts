@@ -77,10 +77,9 @@ it('Workspace lists the four entries, Open a workspace enabled, the other multi-
     'Open this repository as a workspace',
   );
   await expect(tid('menu-item-open-workspace')).not.toHaveAttribute('aria-disabled', 'true');
-  for (const id of ['add-repo', 'open-as-workspace']) {
-    await expect(tid(`menu-item-${id}`)).toHaveAttribute('aria-disabled', 'true');
-    expect(await tid(`menu-item-${id}`).getAttribute('title')).toBeTruthy();
-  }
+  // A single repository is open: it can become a workspace, but there is no workspace to add to.
+  await expect(tid('menu-item-open-as-workspace')).not.toHaveAttribute('aria-disabled', 'true');
+  await expect(tid('menu-item-add-repo')).toHaveAttribute('aria-disabled', 'true');
 });
 
 it('Alt + letter opens a menu, arrows move through it, Enter picks, Escape closes', async () => {

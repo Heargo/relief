@@ -10,6 +10,13 @@
         "type": "string"
       }
     },
+    "path": {
+      "description": "Folder of the open repository; for a workspace, the folder of the workspace.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
     "range": {
       "description": "Range the server was opened with, if any.",
       "type": [

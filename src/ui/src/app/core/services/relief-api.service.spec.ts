@@ -49,6 +49,36 @@ describe('ReliefApiService', () => {
     expect(calls).toEqual([{ cmd: 'open_repo', args: { path: '/work/acme' } }]);
   });
 
+  it('addWorkspaceRepo invokes add_workspace_repo with the repository and its labels (K13)', async () => {
+    const meta = { repo: 'space', range: null, branches: [], tags: [] };
+    const calls = mockTauri(() => meta);
+    expect(await service.addWorkspaceRepo('/work/shop-api', ['back'])).toEqual(meta);
+    expect(calls).toEqual([
+      { cmd: 'add_workspace_repo', args: { repo: '/work/shop-api', labels: ['back'] } },
+    ]);
+  });
+
+  it('openRepoAsWorkspace invokes open_repo_as_workspace with the repository and the folder (K13)', async () => {
+    const meta = { repo: 'shop-web', range: null, branches: [], tags: [] };
+    const calls = mockTauri(() => meta);
+    expect(await service.openRepoAsWorkspace('/work/shop-web', '/work/space')).toEqual(meta);
+    expect(calls).toEqual([
+      { cmd: 'open_repo_as_workspace', args: { repo: '/work/shop-web', dir: '/work/space' } },
+    ]);
+  });
+
+  it('pickRepoFolder answers the paths queued in window.__reliefE2ePicks, in order, without any dialog (K13, e2e only)', async () => {
+    const holder = window as unknown as { __reliefE2ePicks?: string[] };
+    holder.__reliefE2ePicks = ['/tmp/one', '/tmp/two'];
+    try {
+      expect(await service.pickRepoFolder()).toBe('/tmp/one');
+      expect(await service.pickRepoFolder()).toBe('/tmp/two');
+      expect(holder.__reliefE2ePicks).toEqual([]);
+    } finally {
+      delete holder.__reliefE2ePicks;
+    }
+  });
+
   it('openRepo rejects with the API message', async () => {
     mockTauri(() => {
       throw { code: 'not_a_repository', message: 'not a git repository: /tmp/x' };

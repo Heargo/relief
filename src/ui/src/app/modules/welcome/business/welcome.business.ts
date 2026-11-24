@@ -50,6 +50,47 @@ export class WelcomeBusiness {
     }
   }
 
+  /** Asks for a repository then for the workspace folder, and opens the new workspace. */
+  async pickAndCreateWorkspace(): Promise<boolean> {
+    this._error.set(null);
+    try {
+      const repo = await this.api.pickRepoFolder();
+      if (repo === null) return false;
+      return await this.pickFolderAndOpenAsWorkspace(repo);
+    } catch (error) {
+      this.fail(error);
+      return false;
+    }
+  }
+
+  /** Asks for the workspace folder, then makes a workspace of `repo` there and opens it. */
+  async pickFolderAndOpenAsWorkspace(repo: string): Promise<boolean> {
+    this._error.set(null);
+    try {
+      const dir = await this.api.pickRepoFolder();
+      if (dir === null) return false;
+      await this.api.openRepoAsWorkspace(repo, dir);
+      return true;
+    } catch (error) {
+      this.fail(error);
+      return false;
+    }
+  }
+
+  /** Asks for a repository and adds it, without labels, to the open workspace. */
+  async pickAndAddRepo(): Promise<boolean> {
+    this._error.set(null);
+    try {
+      const repo = await this.api.pickRepoFolder();
+      if (repo === null) return false;
+      await this.api.addWorkspaceRepo(repo, []);
+      return true;
+    } catch (error) {
+      this.fail(error);
+      return false;
+    }
+  }
+
   /** Starts the session on a repository or a workspace. False (with the error) when it fails. */
   async open(path: string, kind: 'repo' | 'workspace' = 'repo'): Promise<boolean> {
     this._error.set(null);

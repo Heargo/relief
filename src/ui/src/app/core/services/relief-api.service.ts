@@ -184,6 +184,16 @@ export class ReliefApiService {
     return this.command<MetaResponse>('open_workspace', { path });
   }
 
+  /** Makes a workspace named after a repository in `dir` and opens it; answers its meta. */
+  openRepoAsWorkspace(repo: string, dir: string): Promise<MetaResponse> {
+    return this.command<MetaResponse>('open_repo_as_workspace', { repo, dir });
+  }
+
+  /** Adds a repository (with labels) to the open workspace; answers the meta of the workspace. */
+  addWorkspaceRepo(repo: string, labels: string[]): Promise<MetaResponse> {
+    return this.command<MetaResponse>('add_workspace_repo', { repo, labels });
+  }
+
   /** The labels a repository of the open workspace can carry. */
   workspaceLabels(): Promise<string[]> {
     return this.command<string[]>('workspace_labels');
@@ -217,8 +227,20 @@ export class ReliefApiService {
     });
   }
 
-  /** The native folder picker; null when cancelled. */
+  /**
+   * The native folder picker; null when cancelled.
+   *
+   * E2E ONLY: the native dialog cannot be driven by WebdriverIO, so when `window.__reliefE2ePicks`
+   * is a non-empty string array, its first entry is answered instead (and removed), without any
+   * dialog. Only the e2e specs set it (through `browser.execute`); nothing in the app does, so it
+   * is inert in normal use.
+   */
   async pickRepoFolder(): Promise<string | null> {
+    const queued = (window as unknown as { __reliefE2ePicks?: unknown }).__reliefE2ePicks;
+    if (Array.isArray(queued) && queued.length > 0) {
+      const next: unknown = queued.shift();
+      if (typeof next === 'string') return next;
+    }
     try {
       const chosen = await open({ directory: true, multiple: false });
       return typeof chosen === 'string' ? chosen : null;

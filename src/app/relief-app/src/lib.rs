@@ -326,6 +326,7 @@ impl Session {
         };
         MetaResponse {
             repo: self.name.clone(),
+            path: Some(self.path.to_string_lossy().into_owned()),
             range: self.range.as_ref().map(|r| r.text().to_owned()),
             branches: source
                 .as_ref()

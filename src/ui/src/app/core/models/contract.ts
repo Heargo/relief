@@ -387,6 +387,10 @@ export interface FileRename {
 export interface MetaResponse {
   branches: string[];
   /**
+   * Folder of the open repository; for a workspace, the folder of the workspace.
+   */
+  path?: string | null;
+  /**
    * Range the server was opened with, if any.
    */
   range?: string | null;

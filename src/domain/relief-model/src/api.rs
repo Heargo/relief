@@ -85,6 +85,8 @@ pub struct SearchResponse {
 pub struct MetaResponse {
     /// Name of the repository directory.
     pub repo: String,
+    /// Folder of the open repository; for a workspace, the folder of the workspace.
+    pub path: Option<String>,
     /// Range the server was opened with, if any.
     pub range: Option<String>,
     pub branches: Vec<String>,

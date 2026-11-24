@@ -17,6 +17,8 @@ interface Emitted {
   reload: number;
   docs: number;
   openRepo: number;
+  addRepo: number;
+  openAsWorkspace: number;
 }
 
 describe('MenuBarComponent', () => {
@@ -54,7 +56,16 @@ describe('MenuBarComponent', () => {
     fixture.componentRef.setInput('language', 'en');
     fixture.componentRef.setInput('languages', LANGUAGES);
     fixture.componentRef.setInput('canReload', true);
-    emitted = { theme: [], language: [], shortcuts: 0, reload: 0, docs: 0, openRepo: 0 };
+    emitted = {
+      theme: [],
+      language: [],
+      shortcuts: 0,
+      reload: 0,
+      docs: 0,
+      openRepo: 0,
+      addRepo: 0,
+      openAsWorkspace: 0,
+    };
     const c = fixture.componentInstance;
     c.themeChange.subscribe((v: string) => emitted.theme.push(v));
     c.languageChange.subscribe((v: string) => emitted.language.push(v));
@@ -62,6 +73,8 @@ describe('MenuBarComponent', () => {
     c.reload.subscribe(() => emitted.reload++);
     c.docs.subscribe(() => emitted.docs++);
     c.openRepo.subscribe(() => emitted.openRepo++);
+    c.addRepo.subscribe(() => emitted.addRepo++);
+    c.openAsWorkspace.subscribe(() => emitted.openAsWorkspace++);
     host = fixture.nativeElement;
     await settle();
   });
@@ -92,22 +105,43 @@ describe('MenuBarComponent', () => {
     ]);
   });
 
-  it('the other multi-repo entries are disabled with a tooltip, the opening ones are not', async () => {
+  it('on a single repository, "Open this repository as a workspace" is enabled and "Add a repository" is not', async () => {
     await click('menu-trigger-workspace');
     expect(must('menu-item-open-repo').getAttribute('aria-disabled')).not.toBe('true');
     expect(must('menu-item-open-workspace').getAttribute('aria-disabled')).not.toBe('true');
-    for (const id of ['add-repo', 'open-as-workspace']) {
-      const item = must(`menu-item-${id}`);
-      expect(item.getAttribute('aria-disabled')).toBe('true');
-      expect((item.getAttribute('title') ?? '').length).toBeGreaterThan(0);
-    }
+    expect(must('menu-item-open-as-workspace').getAttribute('aria-disabled')).not.toBe('true');
+    expect(must('menu-item-add-repo').getAttribute('aria-disabled')).toBe('true');
+  });
+
+  it('in a workspace, "Add a repository to the workspace" is enabled and "Open as a workspace" is not', async () => {
+    fixture.componentRef.setInput('workspace', true);
+    await settle();
+    await click('menu-trigger-workspace');
+    expect(must('menu-item-add-repo').getAttribute('aria-disabled')).not.toBe('true');
+    expect(must('menu-item-open-as-workspace').getAttribute('aria-disabled')).toBe('true');
   });
 
   it('clicking a disabled entry emits nothing and keeps the menu open', async () => {
     await click('menu-trigger-workspace');
     await click('menu-item-add-repo');
-    expect(emitted.openRepo).toBe(0);
+    expect(emitted.addRepo).toBe(0);
     expect(q('menu-panel')).not.toBeNull();
+  });
+
+  it('Open this repository as a workspace emits openAsWorkspace and closes the menu', async () => {
+    await click('menu-trigger-workspace');
+    await click('menu-item-open-as-workspace');
+    expect(emitted.openAsWorkspace).toBe(1);
+    expect(q('menu-panel')).toBeNull();
+  });
+
+  it('Add a repository to the workspace emits addRepo and closes the menu', async () => {
+    fixture.componentRef.setInput('workspace', true);
+    await settle();
+    await click('menu-trigger-workspace');
+    await click('menu-item-add-repo');
+    expect(emitted.addRepo).toBe(1);
+    expect(q('menu-panel')).toBeNull();
   });
 
   it('Open a repository emits openRepo and closes the menu', async () => {
@@ -222,8 +256,10 @@ describe('MenuBarComponent', () => {
     await key(window, { key: 'w', altKey: true });
     expect(focusedId()).toBe('menu-item-open-repo');
     await key(document.activeElement as Element, { key: 'ArrowDown' });
-    // the next entries are disabled: the focus goes to the open workspace entry, then wraps back
     expect(focusedId()).toBe('menu-item-open-workspace');
+    // "Add a repository" is disabled on a single repository: the focus skips it
+    await key(document.activeElement as Element, { key: 'ArrowDown' });
+    expect(focusedId()).toBe('menu-item-open-as-workspace');
     await key(document.activeElement as Element, { key: 'ArrowDown' });
     expect(focusedId()).toBe('menu-item-open-repo');
 

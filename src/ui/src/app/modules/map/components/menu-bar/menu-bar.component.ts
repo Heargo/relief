@@ -54,6 +54,8 @@ export class MenuBarComponent {
   readonly language = input.required<string>();
   readonly languages = input.required<readonly { code: string; label: string }[]>();
   readonly canReload = input(false);
+  /** The session is a workspace: "Add a repository" applies, "Open as a workspace" does not. */
+  readonly workspace = input(false);
 
   readonly themeChange = output<ThemeMode>();
   readonly languageChange = output<string>();
@@ -62,6 +64,8 @@ export class MenuBarComponent {
   readonly docs = output<void>();
   readonly openRepo = output<void>();
   readonly openWorkspace = output<void>();
+  readonly addRepo = output<void>();
+  readonly openAsWorkspace = output<void>();
 
   protected readonly menus = MENU_IDS;
   protected readonly openMenu = signal<MenuId | null>(null);
@@ -78,20 +82,22 @@ export class MenuBarComponent {
   });
 
   protected readonly entries = computed<MenuEntry[]>(() => {
-    const soon = 'menu.multiRepoSoon';
     switch (this.openMenu()) {
       case 'workspace':
         return [
           this.entry('open-repo', 'menu.items.openRepo', () => this.openRepo.emit()),
           this.entry('open-workspace', 'menu.items.openWorkspace', () => this.openWorkspace.emit()),
-          this.entry('add-repo', 'menu.items.addRepo', () => undefined, {
-            disabled: true,
-            tooltip: soon,
+          this.entry('add-repo', 'menu.items.addRepo', () => this.addRepo.emit(), {
+            disabled: !this.workspace(),
           }),
-          this.entry('open-as-workspace', 'menu.items.openAsWorkspace', () => undefined, {
-            disabled: true,
-            tooltip: soon,
-          }),
+          this.entry(
+            'open-as-workspace',
+            'menu.items.openAsWorkspace',
+            () => this.openAsWorkspace.emit(),
+            {
+              disabled: this.workspace(),
+            },
+          ),
         ];
       case 'settings':
         return [

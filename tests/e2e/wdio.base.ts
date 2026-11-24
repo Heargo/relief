@@ -58,6 +58,17 @@ export function fixtureOf(specFile: string): string {
 }
 
 /**
+ * The fixtures a spec asks for with `// @fixtures <name> <name>…` on its first line: each is built
+ * in `<tmp>/<name>` and nothing else (no workspace, no default fixture): the spec creates its own
+ * workspace in the app. Undefined when the line is not there.
+ */
+export function fixturesOf(specFile: string): string[] | undefined {
+  const first = readFileSync(specFile.replace(/^file:\/\//, ''), 'utf8').split('\n', 1)[0] ?? '';
+  const names = /^\/\/\s*@fixtures\s+([\w-]+(?:\s+[\w-]+)*)\s*$/.exec(first)?.[1];
+  return names?.split(/\s+/);
+}
+
+/**
  * The workspace a spec asks for with `// @workspace <name>` on its first line: a folder of
  * `tests/fixtures/` that holds a `<x>.relief.json` whose repositories (`path: ../<fixture>`) are
  * fixtures of `tests/fixtures/`. The app is then opened on the workspace folder.
@@ -164,7 +175,9 @@ export function makeConfig(
       // Each fixture asked by a spec (acme-shop only when a spec has no annotation) is built once per run, in <tmp>/<name> (the folder name is
       // the repository name shown in the top bar).
       const specs = specFiles(runConfig.spec ?? runConfig.specs);
-      const names = new Set(specs.filter((s) => !workspaceOf(s)).map(fixtureOf));
+      const names = new Set(
+        specs.filter((s) => !workspaceOf(s)).flatMap((s) => fixturesOf(s) ?? [fixtureOf(s)]),
+      );
       for (const name of names) {
         const repo = join(tmp, name);
         mkdirSync(repo);
@@ -212,22 +225,26 @@ export function makeConfig(
     // One session per spec: the app opens the repository the spec asked for.
     beforeSession: (_config, caps, specs) => {
       const workspace = workspaceOf(specs[0] as string);
-      const name = workspace ?? fixtureOf(specs[0] as string);
+      const several = fixturesOf(specs[0] as string);
+      const name = workspace ?? several?.[0] ?? fixtureOf(specs[0] as string);
       const repo = join(process.env['RELIEF_E2E_TMP'] as string, name);
-      process.env['RELIEF_E2E_REPO'] = repo;
+      // With `@fixtures`, RELIEF_E2E_REPO is the temporary folder that holds all of them.
+      process.env['RELIEF_E2E_REPO'] = several ? (process.env['RELIEF_E2E_TMP'] as string) : repo;
       const options = (caps as unknown as Record<string, { args: string[] }>)['tauri:options'];
       const welcome = opensWithoutPath(specs[0] as string);
       // Welcome specs start without argument; the fixture is their only recent repository.
       writeFileSync(
         join(process.env['RELIEF_E2E_TMP'] as string, 'config', 'recents.json'),
-        JSON.stringify({ entries: welcome ? [{ kind: 'repo', path: repo }] : [] }),
+        JSON.stringify({ entries: welcome && !several ? [{ kind: 'repo', path: repo }] : [] }),
       );
       if (options)
         options.args = welcome
           ? []
-          : !workspace && name === defaultFixture && !opensWithoutRange(specs[0] as string)
-            ? [repo, range]
-            : [repo];
+          : several
+            ? [repo]
+            : !workspace && name === defaultFixture && !opensWithoutRange(specs[0] as string)
+              ? [repo, range]
+              : [repo];
     },
     onComplete: () => stop(),
     ...overrides,

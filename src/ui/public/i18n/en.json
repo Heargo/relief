@@ -18,14 +18,14 @@
       "openWorkspace": "Open a workspace…",
       "addRepo": "Add a repository to the workspace…",
       "openAsWorkspace": "Open this repository as a workspace"
-    },
-    "multiRepoSoon": "Available soon: multi-repository workspaces are not implemented yet"
+    }
   },
   "welcome": {
     "title": "Welcome to relief",
     "subtitle": "Open a repository to see its map.",
     "openRepo": "Open a repository…",
     "openWorkspace": "Open a workspace…",
+    "createWorkspace": "Create a workspace from a repository…",
     "recents": "Recent",
     "noRecents": "Nothing opened yet."
   },

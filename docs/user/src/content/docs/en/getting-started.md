@@ -84,13 +84,13 @@ relief [path] [range]
 
 The relief window opens on the current repository. Nothing is written to your repository.
 
-- With no argument, `relief` opens no repository: it shows the welcome screen, where you open a repository with the folder picker or choose a recent one (the list is kept in your configuration folder). To open the current folder, run `relief .`. The "Open a workspace…" entry (welcome screen and **Workspace** menu) opens an existing workspace from its folder; creating a workspace or adding a repository to one is not possible from the menus yet, see "Workspace" below.
+- With no argument, `relief` opens no repository: it shows the welcome screen, where you open a repository with the folder picker or choose a recent one (the list is kept in your configuration folder). To open the current folder, run `relief .`. The "Open a workspace…" entry (welcome screen and **Workspace** menu) opens an existing workspace from its folder; "Create a workspace from a repository…" creates one from a repository. The whole journey is in [Workspace](../workspace/).
 - With no range, the range shown goes from `HEAD` to the working tree. For another range (`range`), pass it: `relief . main...my-branch` (against the merge-base) or `relief . A..B`.
 - The first argument (`path`) is the folder to analyse: `relief ~/code/my-repo`.
 
 ## Workspace
 
-A workspace groups several repositories (a front end, an API, a shared library) so you can read them together. It is a folder of your choice that holds:
+A workspace groups several repositories (a front end, an API, a shared library) so you can read them together; the whole journey (create, add, label, compare) is in [Workspace](../workspace/). Here is its file format. It is a folder of your choice that holds:
 
 - `<name>.relief.json`, the configuration, which you can version or write by hand;
 - `.relief/`, the local data of the workspace (cache, review state), in the same format as the `.relief/` of a repository.

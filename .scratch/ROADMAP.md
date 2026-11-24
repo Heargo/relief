@@ -195,7 +195,9 @@ Brainstorm du 2026-11-20 : la carte rame sur un gros écran et les budgets de S0
 | ✓ | 54i | **K10** Comparaison par dépôt | Menu du panneau gauche, une ligne par dépôt. | K05, K08 |
 | ✓ | 54j | **K11** Imports de paquets entre dépôts | Paquets publiés résolus vers le dépôt local, par les adapters. | K08 |
 | ✓ | 54k | **K12** Appels HTTP entre dépôts | T04 entre dépôts. | K08 |
-| ☐ | 54l | **K13** Parcours multidépôt de bout en bout | e2e de l'accueil à l'arête entre dépôts ; doc. | K09, K10, K11, K12 |
+| ✓ | 54l | **K13** Parcours multidépôt de bout en bout | e2e de l'accueil à l'arête entre dépôts ; doc. | K09, K10, K11, K12 |
+| ☐ | 54m | **K14** Règles d'architecture dans un espace | Relevé à la review de K08 ; à trier. | K08 |
+| ☐ | 54n | **K15** Commit des arêtes HTTP entre dépôts | Relevé à la review de K12 ; à trier. | K12 |
 
 ## Phase 13 : confort de relecture (nouvelles fonctionnalités)
 

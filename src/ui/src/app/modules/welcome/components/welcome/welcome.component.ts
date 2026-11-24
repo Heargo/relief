@@ -31,6 +31,10 @@ export class WelcomeComponent implements OnInit {
     if (await this.welcome.pickAndOpenWorkspace()) this.opened.emit();
   }
 
+  protected async createWorkspace(): Promise<void> {
+    if (await this.welcome.pickAndCreateWorkspace()) this.opened.emit();
+  }
+
   protected async openRecent(path: string, kind: 'repo' | 'workspace'): Promise<void> {
     if (await this.welcome.open(path, kind)) this.opened.emit();
   }
