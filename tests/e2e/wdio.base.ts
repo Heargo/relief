@@ -2,7 +2,15 @@
 // builds the fixtures the specs ask for (acme-shop by default) in a temporary directory, starts
 // tauri-driver and drives the release build of the desktop app, one session (one window) per spec file.
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
-import { existsSync, globSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import {
+  existsSync,
+  globSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { createConnection } from 'node:net';
 import { tmpdir } from 'node:os';
 import { delimiter, join, resolve } from 'node:path';
@@ -52,6 +60,15 @@ export function fixtureOf(specFile: string): string {
 export function opensWithoutRange(specFile: string): boolean {
   const second = readFileSync(specFile.replace(/^file:\/\//, ''), 'utf8').split('\n')[1] ?? '';
   return /^\/\/\s*@no-range\s*$/.test(second);
+}
+
+/**
+ * True when the second line of the spec is `// @welcome`: the app is started without argument
+ * (welcome screen), with the fixture of the spec as its only recent repository.
+ */
+export function opensWithoutPath(specFile: string): boolean {
+  const second = readFileSync(specFile.replace(/^file:\/\//, ''), 'utf8').split('\n')[1] ?? '';
+  return /^\/\/\s*@welcome\s*$/.test(second);
 }
 
 /** Spec files of a run: the `--spec` files when given, else the configured globs. */
@@ -125,6 +142,9 @@ export function makeConfig(
           throw new Error(`relief-fixtures build ${name} failed`);
         }
       }
+      // The app reads and writes its recents in a temporary folder, never in the real ~/.config.
+      mkdirSync(join(tmp, 'config'));
+      process.env['RELIEF_CONFIG_DIR'] = join(tmp, 'config');
       // Read by the workers (beforeSession) to find the fixtures.
       process.env['RELIEF_E2E_TMP'] = tmp;
       driver = spawn(
@@ -151,9 +171,16 @@ export function makeConfig(
       const repo = join(process.env['RELIEF_E2E_TMP'] as string, name);
       process.env['RELIEF_E2E_REPO'] = repo;
       const options = (caps as unknown as Record<string, { args: string[] }>)['tauri:options'];
+      const welcome = opensWithoutPath(specs[0] as string);
+      // Welcome specs start without argument; the fixture is their only recent repository.
+      writeFileSync(
+        join(process.env['RELIEF_E2E_TMP'] as string, 'config', 'recents.json'),
+        JSON.stringify({ entries: welcome ? [{ kind: 'repo', path: repo }] : [] }),
+      );
       if (options)
-        options.args =
-          name === defaultFixture && !opensWithoutRange(specs[0] as string)
+        options.args = welcome
+          ? []
+          : name === defaultFixture && !opensWithoutRange(specs[0] as string)
             ? [repo, range]
             : [repo];
     },

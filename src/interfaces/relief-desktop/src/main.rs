@@ -1,6 +1,6 @@
 //! `relief [path] [range]`: opens the session, then the window.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::sync::Arc;
 
@@ -14,18 +14,16 @@ use relief_lang_ts::TsAdapter;
 #[derive(Parser)]
 #[command(name = "relief", version)]
 struct Cli {
-    /// Repository to open.
-    #[arg(default_value = ".")]
-    path: PathBuf,
+    /// Repository to open; without it, relief starts on the welcome screen.
+    path: Option<PathBuf>,
     /// Range shown by default (`A...B`); HEAD against the working tree when absent.
     range: Option<String>,
 }
 
 /// Composition root: the session with the default detectors and the TypeScript adapter.
-fn open_session(cli: &Cli) -> Result<Session, relief_app::AppError> {
-    let range = cli.range.as_deref().map(RangeSpec::parse).transpose()?;
+fn open_session(path: &Path, range: Option<RangeSpec>) -> Result<Session, relief_app::AppError> {
     Session::open(
-        &cli.path,
+        path,
         SessionOptions {
             data_dir: Some(DataDirEnv::from_process()),
             range,
@@ -36,20 +34,39 @@ fn open_session(cli: &Cli) -> Result<Session, relief_app::AppError> {
 }
 
 fn main() -> ExitCode {
-    let mut cli = Cli::parse();
-    // Under an AppImage, `relief .` must mean the folder of the terminal, not `$APPDIR/usr`.
-    cli.path = relief_desktop::repo_path(&cli.path, std::env::var_os("OWD"));
-    // Before any window: a failure here starts nothing of Tauri.
-    let session = match open_session(&cli) {
-        Ok(session) => Arc::new(session),
-        Err(err) => {
-            eprintln!("relief: {err}");
-            return ExitCode::from(2);
+    let cli = Cli::parse();
+    let builder = tauri::Builder::<tauri::Wry>::default().plugin(tauri_plugin_dialog::init());
+    let config = relief_desktop::config_dir(
+        std::env::var_os("RELIEF_CONFIG_DIR"),
+        std::env::var_os("XDG_CONFIG_HOME"),
+        std::env::var_os("HOME"),
+    );
+    let opener: relief_desktop::SessionOpener = Arc::new(|path: &Path| open_session(path, None));
+    let builder = match &cli.path {
+        // Under an AppImage, `relief .` must mean the folder of the terminal, not `$APPDIR/usr`.
+        Some(path) => {
+            let path = relief_desktop::repo_path(path, std::env::var_os("OWD"));
+            let range = match cli.range.as_deref().map(RangeSpec::parse).transpose() {
+                Ok(range) => range,
+                Err(err) => {
+                    eprintln!("relief: {err}");
+                    return ExitCode::from(2);
+                }
+            };
+            // Before any window: a failure here starts nothing of Tauri.
+            match open_session(&path, range) {
+                Ok(session) => {
+                    relief_desktop::register_session(builder, Arc::new(session), config, opener)
+                }
+                Err(err) => {
+                    eprintln!("relief: {err}");
+                    return ExitCode::from(2);
+                }
+            }
         }
+        None => relief_desktop::register_welcome(builder, config, opener),
     };
-    let result = relief_desktop::register(tauri::Builder::<tauri::Wry>::default(), session)
-        .run(tauri::generate_context!());
-    match result {
+    match builder.run(tauri::generate_context!()) {
         Ok(()) => ExitCode::SUCCESS,
         Err(err) => {
             eprintln!("relief: {err}");

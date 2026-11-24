@@ -22,6 +22,7 @@
       (shortcuts)="map.openHelp()"
       (reload)="reloader.reload()"
       (docs)="docs.open()"
+      (openRepo)="onOpenRepo()"
     />
     <div class="search-box">
       <span class="mag" data-testid="search-icon" aria-hidden="true">⌕</span>
@@ -69,419 +70,435 @@
     </div>
   </header>
 
-  <main class="main" [style.--lw.px]="panels.widths().left" [style.--rw.px]="panels.widths().right">
-    <aside class="panel left" data-testid="left-panel">
-      <div class="ws-head" data-testid="workspace-header">
-        @if (repo.repoName(); as name) {
-          <div class="repo">
-            <span data-testid="repo-name"
-              ><b>{{ name }}</b></span
+  @if (openError(); as error) {
+    @if (!repo.noSession()) {
+      <p class="state error" data-testid="open-error">{{ error }}</p>
+    }
+  }
+  @if (repo.noSession()) {
+    <app-welcome (opened)="start()" />
+  } @else {
+    <main
+      class="main"
+      [style.--lw.px]="panels.widths().left"
+      [style.--rw.px]="panels.widths().right"
+    >
+      <aside class="panel left" data-testid="left-panel">
+        <div class="ws-head" data-testid="workspace-header">
+          @if (repo.repoName(); as name) {
+            <div class="repo">
+              <span data-testid="repo-name"
+                ><b>{{ name }}</b></span
+              >
+              @if (repoMeta(); as line) {
+                <span class="sep">·</span> <span data-testid="repo-meta">{{ line }}</span>
+              }
+            </div>
+          }
+          @if (repo.ref(); as ref) {
+            <span class="ref" data-testid="ref">{{ ref }}</span>
+          }
+        </div>
+        <div class="sec">
+          <div class="seg">
+            <button
+              type="button"
+              data-testid="review-toggle"
+              [class.on]="review.reviewMode()"
+              [attr.aria-pressed]="review.reviewMode()"
+              (click)="review.setReviewMode(!review.reviewMode())"
             >
-            @if (repoMeta(); as line) {
-              <span class="sep">·</span> <span data-testid="repo-meta">{{ line }}</span>
-            }
+              {{ 'review.toggle' | translate }}
+            </button>
+            <button
+              type="button"
+              data-testid="explore-toggle"
+              [class.on]="!review.reviewMode()"
+              [attr.aria-pressed]="!review.reviewMode()"
+              (click)="review.setReviewMode(false)"
+            >
+              {{ 'explore.toggle' | translate }}
+            </button>
+          </div>
+        </div>
+        @if (review.reviewMode() && repo.meta()) {
+          <div class="sec" data-testid="compare-section">
+            <app-range-picker />
           </div>
         }
-        @if (repo.ref(); as ref) {
-          <span class="ref" data-testid="ref">{{ ref }}</span>
-        }
-      </div>
-      <div class="sec">
-        <div class="seg">
-          <button
-            type="button"
-            data-testid="review-toggle"
-            [class.on]="review.reviewMode()"
-            [attr.aria-pressed]="review.reviewMode()"
-            (click)="review.setReviewMode(!review.reviewMode())"
-          >
-            {{ 'review.toggle' | translate }}
-          </button>
-          <button
-            type="button"
-            data-testid="explore-toggle"
-            [class.on]="!review.reviewMode()"
-            [attr.aria-pressed]="!review.reviewMode()"
-            (click)="review.setReviewMode(false)"
-          >
-            {{ 'explore.toggle' | translate }}
-          </button>
-        </div>
-      </div>
-      @if (review.reviewMode() && repo.meta()) {
-        <div class="sec" data-testid="compare-section">
-          <app-range-picker />
-        </div>
-      }
-      <div data-testid="tools-section">
-        <div class="ptitle">
-          {{ 'map.panel.tools' | translate }}
-          <span class="sub">{{
-            (review.reviewMode() ? 'map.panel.modePr' : 'map.panel.modeExplore') | translate
-          }}</span>
-        </div>
-        @if (review.reviewMode() && review.status() !== 'loading') {
-          <section class="sec pr-card" data-testid="pr-card">
-            <div class="range" data-testid="pr-range">{{ review.range() }}</div>
-            @if (review.stats(); as stats) {
-              <div
-                class="stats"
-                data-testid="pr-stats"
-                [attr.data-files]="stats.files"
-                [attr.data-lines-added]="stats.linesAdded"
-                [attr.data-lines-removed]="stats.linesRemoved"
-                [attr.data-symbols-added]="stats.symbols.added"
-                [attr.data-symbols-removed]="stats.symbols.removed"
-                [attr.data-symbols-modified]="stats.symbols.modified"
-                [attr.data-symbols-moved]="stats.symbols.moved"
-                [attr.data-signatures]="stats.signatures"
-              >
-                <span>
-                  {{ plural('review.card.files', stats.files) }}
-                  <span class="plus">+{{ stats.linesAdded }}</span>
-                  <span class="minus">−{{ stats.linesRemoved }}</span>
-                </span>
-                @if (stats.symbols.added > 0) {
-                  <span><i class="dot add"></i>{{ stats.symbols.added }}</span>
-                  <span class="sr-only">{{
-                    plural('review.card.added', stats.symbols.added)
-                  }}</span>
-                }
-                @if (stats.symbols.modified > 0) {
-                  <span><i class="dot mod"></i>{{ stats.symbols.modified }}</span>
-                  <span class="sr-only">{{
-                    plural('review.card.modified', stats.symbols.modified)
-                  }}</span>
-                }
-                @if (stats.symbols.removed > 0) {
-                  <span><i class="dot del"></i>{{ stats.symbols.removed }}</span>
-                  <span class="sr-only">{{
-                    plural('review.card.removed', stats.symbols.removed)
-                  }}</span>
-                }
-                @if (stats.symbols.moved > 0) {
-                  <span><i class="dot mov"></i>{{ stats.symbols.moved }}</span>
-                  <span class="sr-only">{{
-                    plural('review.card.moved', stats.symbols.moved)
-                  }}</span>
-                }
-                <span class="hint">
-                  {{ plural('review.card.signatures', stats.signatures) }}
-                  ·
-                  {{ plural('review.card.filesMoved', stats.filesMoved) }}
-                  ·
-                  {{ plural('review.card.formatOnly', stats.formatOnlyFiles) }}
-                </span>
-              </div>
-            } @else {
-              <p class="state error" data-testid="diff-error">{{ review.error() }}</p>
-            }
-            @if (reading.progress(); as progress) {
-              @if (progress.total > 0) {
+        <div data-testid="tools-section">
+          <div class="ptitle">
+            {{ 'map.panel.tools' | translate }}
+            <span class="sub">{{
+              (review.reviewMode() ? 'map.panel.modePr' : 'map.panel.modeExplore') | translate
+            }}</span>
+          </div>
+          @if (review.reviewMode() && review.status() !== 'loading') {
+            <section class="sec pr-card" data-testid="pr-card">
+              <div class="range" data-testid="pr-range">{{ review.range() }}</div>
+              @if (review.stats(); as stats) {
                 <div
-                  class="prog"
-                  role="progressbar"
-                  data-testid="pr-progress"
-                  aria-valuemin="0"
-                  [attr.aria-valuenow]="progress.seen"
-                  [attr.aria-valuemax]="progress.total"
+                  class="stats"
+                  data-testid="pr-stats"
+                  [attr.data-files]="stats.files"
+                  [attr.data-lines-added]="stats.linesAdded"
+                  [attr.data-lines-removed]="stats.linesRemoved"
+                  [attr.data-symbols-added]="stats.symbols.added"
+                  [attr.data-symbols-removed]="stats.symbols.removed"
+                  [attr.data-symbols-modified]="stats.symbols.modified"
+                  [attr.data-symbols-moved]="stats.symbols.moved"
+                  [attr.data-signatures]="stats.signatures"
                 >
-                  <i [style.width.%]="(progress.seen / progress.total) * 100"></i>
+                  <span>
+                    {{ plural('review.card.files', stats.files) }}
+                    <span class="plus">+{{ stats.linesAdded }}</span>
+                    <span class="minus">−{{ stats.linesRemoved }}</span>
+                  </span>
+                  @if (stats.symbols.added > 0) {
+                    <span><i class="dot add"></i>{{ stats.symbols.added }}</span>
+                    <span class="sr-only">{{
+                      plural('review.card.added', stats.symbols.added)
+                    }}</span>
+                  }
+                  @if (stats.symbols.modified > 0) {
+                    <span><i class="dot mod"></i>{{ stats.symbols.modified }}</span>
+                    <span class="sr-only">{{
+                      plural('review.card.modified', stats.symbols.modified)
+                    }}</span>
+                  }
+                  @if (stats.symbols.removed > 0) {
+                    <span><i class="dot del"></i>{{ stats.symbols.removed }}</span>
+                    <span class="sr-only">{{
+                      plural('review.card.removed', stats.symbols.removed)
+                    }}</span>
+                  }
+                  @if (stats.symbols.moved > 0) {
+                    <span><i class="dot mov"></i>{{ stats.symbols.moved }}</span>
+                    <span class="sr-only">{{
+                      plural('review.card.moved', stats.symbols.moved)
+                    }}</span>
+                  }
+                  <span class="hint">
+                    {{ plural('review.card.signatures', stats.signatures) }}
+                    ·
+                    {{ plural('review.card.filesMoved', stats.filesMoved) }}
+                    ·
+                    {{ plural('review.card.formatOnly', stats.formatOnlyFiles) }}
+                  </span>
                 </div>
-                <p class="hint">
-                  {{
-                    'review.reading.counts'
-                      | translate: { seen: progress.seen, total: progress.total }
-                  }}
-                </p>
+              } @else {
+                <p class="state error" data-testid="diff-error">{{ review.error() }}</p>
+              }
+              @if (reading.progress(); as progress) {
+                @if (progress.total > 0) {
+                  <div
+                    class="prog"
+                    role="progressbar"
+                    data-testid="pr-progress"
+                    aria-valuemin="0"
+                    [attr.aria-valuenow]="progress.seen"
+                    [attr.aria-valuemax]="progress.total"
+                  >
+                    <i [style.width.%]="(progress.seen / progress.total) * 100"></i>
+                  </div>
+                  <p class="hint">
+                    {{
+                      'review.reading.counts'
+                        | translate: { seen: progress.seen, total: progress.total }
+                    }}
+                  </p>
+                }
+              }
+            </section>
+          }
+          @if (review.reviewMode() && reading.items().length > 0) {
+            <app-reading-order-section
+              [items]="reading.items()"
+              [mode]="reading.mode()"
+              [selected]="map.selectedNodeId()"
+              [seenIds]="seenIds()"
+              [progress]="reading.progress()"
+              [persisted]="reading.persisted()"
+              [repeated]="repeated()"
+              [commits]="reading.commitRows()"
+              [selectedCommit]="reading.selectedCommit()"
+              [stepByStep]="reading.stepByStep()"
+              [current]="reading.current()"
+              (stepChange)="reading.setStepByStep($event)"
+              (move)="onReading($event)"
+              (commitSelect)="reading.selectCommit($event)"
+              (showAll)="reading.selectCommit(null)"
+              (modeChange)="reading.setMode($event)"
+              (nodeSelect)="map.selectResult($event)"
+              (toggle)="reading.toggle($event)"
+              (groupMark)="reading.markGroup($event)"
+              (markNext)="markSeenAndNext()"
+            />
+          }
+          @if (review.reviewMode() && overview.summary(); as summary) {
+            <app-signals-section [summary]="summary" (nodeSelect)="map.selectResult($event)" />
+          }
+          @if (!review.reviewMode() && map.status() === 'ready') {
+            <app-explore-section
+              [groups]="entryGroups()"
+              [overview]="exploreOverview()"
+              [label]="labelOf"
+              (nodeSelect)="traceEntryPoint($event)"
+            />
+            <app-hotspots-section
+              [hotspots]="hotspotRows()"
+              [label]="labelOf"
+              (nodeSelect)="map.selectResult($event)"
+            />
+          }
+          @if (ruleState.rules().length > 0) {
+            <app-rules-section
+              [rules]="ruleState.rules()"
+              [violations]="violations()"
+              [source]="ruleState.source()"
+              (ruleSelect)="selectRule($event)"
+            />
+          }
+        </div>
+        @if (map.status() === 'ready') {
+          <div data-testid="display-section">
+            <div class="ptitle">{{ 'map.panel.display' | translate }}</div>
+            <app-layers-section
+              [diff]="review.showDiffLayer()"
+              [unchangedEdges]="map.showUnchangedEdges()"
+              [focus]="review.focusLayer()"
+              [impact]="impactState.layer()"
+              [hasTestEdges]="true"
+              [testEdges]="map.showTestEdges()"
+              (testEdgesChange)="map.setShowTestEdges($event)"
+              [hasHideExternal]="true"
+              [hasDiff]="review.reviewMode()"
+              [hasFocus]="review.reviewMode()"
+              [hideExternal]="map.hideExternal()"
+              (hideExternalChange)="map.setHideExternal($event)"
+              [hasEdgeLabels]="true"
+              [edgeLabelsAlways]="map.edgeLabelsAlways()"
+              (edgeLabelsAlwaysChange)="map.setEdgeLabelsAlways($event)"
+              (diffChange)="review.setShowDiffLayer($event)"
+              (unchangedEdgesChange)="map.setShowUnchangedEdges($event)"
+              (focusChange)="review.setFocusLayer($event)"
+              (impactChange)="setImpactLayer($event)"
+              [rules]="ruleState.layer()"
+              [hasRules]="ruleState.rules().length > 0"
+              (rulesChange)="ruleState.setLayer($event)"
+              [risk]="riskState.layer()"
+              [hasRisk]="!review.reviewMode() && hasMetrics()"
+              (riskChange)="riskState.setLayer($event)"
+              [hasCoChange]="!review.reviewMode()"
+              [coChange]="coChangeState.layer()"
+              (coChangeChange)="coChangeState.setLayer($event)"
+            />
+            <section class="sec" data-testid="layout-section">
+              <h3>{{ 'map.layout.title' | translate }}</h3>
+              <div class="seg">
+                <button
+                  type="button"
+                  data-testid="layout-fewer-crossings"
+                  [class.on]="map.layoutMode() === 'fewer-crossings'"
+                  [attr.aria-pressed]="map.layoutMode() === 'fewer-crossings'"
+                  (click)="map.setLayoutMode('fewer-crossings')"
+                >
+                  {{ 'map.layout.fewerCrossings' | translate }}
+                </button>
+                <button
+                  type="button"
+                  data-testid="layout-raw-grid"
+                  [class.on]="map.layoutMode() === 'raw-grid'"
+                  [attr.aria-pressed]="map.layoutMode() === 'raw-grid'"
+                  (click)="map.setLayoutMode('raw-grid')"
+                >
+                  {{ 'map.layout.rawGrid' | translate }}
+                </button>
+              </div>
+            </section>
+          </div>
+        }
+      </aside>
+      <section class="center">
+        @switch (repo.status()) {
+          @case ('loading') {
+            <p class="state">{{ 'map.loading' | translate }}</p>
+          }
+          @case ('error') {
+            <p class="state error" data-testid="error">{{ repo.error() }}</p>
+          }
+          @default {
+            @if (repo.isEmpty()) {
+              <p class="state" data-testid="empty">{{ 'map.empty' | translate }}</p>
+            } @else if (graph(); as graph) {
+              <app-map-canvas
+                [graph]="graph"
+                [repoName]="repo.repoName() ?? ''"
+                [diff]="mapDiff()"
+                [impact]="impactMarks()"
+                [reading]="reviewReading()"
+                [focus]="focusIds()"
+                [stepEdges]="stepEdges()"
+                [stepElements]="stepElements()"
+                [violations]="mapViolations()"
+                [archi]="archiIds()"
+                [risk]="riskLevels()"
+                [loading]="repo.loading()"
+                [repeated]="repeated()"
+              />
+            }
+          }
+        }
+      </section>
+      <aside class="panel right" data-testid="right-panel">
+        <button
+          type="button"
+          class="expand iconbtn"
+          data-testid="expand-right"
+          [attr.aria-label]="'map.expand' | translate"
+          (click)="toggleRightWide()"
+        >
+          {{ panels.rightWide() ? '»' : '«' }}
+        </button>
+        <app-inspector-header
+          [kind]="inspectorKind()"
+          [subtitle]="inspectorSubtitle()"
+          (close)="clearSelection()"
+        />
+        @if (inspectorKind() === 'none' && !review.reviewMode()) {
+          <p class="hint inspector-hint">{{ 'map.inspector.hint' | translate }}</p>
+        }
+        @if (map.selectedBundle(); as bundle) {
+          <section class="edge-panel bundle-panel" data-testid="bundle-panel">
+            <h3>{{ bundleTitle(bundle) }}</h3>
+            @if (bundle.added > 0) {
+              <p class="hint">{{ 'map.bundle.added' | translate: { count: bundle.added } }}</p>
+            }
+            <ul>
+              @for (branch of bundle.branches; track branch.from + branch.to) {
+                <li>
+                  <button
+                    type="button"
+                    data-testid="bundle-edge"
+                    (click)="map.selectEdge(branch.from, branch.to)"
+                  >
+                    {{ map.label(branch.from) }} → {{ map.label(branch.to) }}
+                  </button>
+                </li>
+              }
+            </ul>
+          </section>
+        }
+        @if (map.selectedEdge(); as edge) {
+          <section class="edge-panel" data-testid="edge-panel">
+            <app-edge-head
+              [from]="edge.from"
+              [to]="edge.to"
+              [fromLabel]="map.label(edge.from)"
+              [toLabel]="map.label(edge.to)"
+              [kinds]="edge.kinds.join(', ')"
+              [heuristic]="edgeHeuristic()"
+              [count]="edge.links.length"
+              [added]="edgeAdded()"
+              (nodeSelect)="map.selectResult($event)"
+            />
+            <h3>{{ edgeTitle(edge) }}</h3>
+            <ul>
+              @for (link of edge.links; track $index) {
+                <li>
+                  <button type="button" data-testid="edge-link" (click)="map.selectLink(link)">
+                    {{ map.label(link.from) }} → {{ map.label(link.to) }}
+                    <span class="kind">{{ link.kind }}</span>
+                  </button>
+                </li>
+              }
+            </ul>
+            @if (usages.visible()) {
+              <app-edge-usages
+                [status]="usages.status()"
+                [response]="usages.response()"
+                [label]="labelOf"
+                (openUsage)="openUsage($event)"
+              />
+            }
+            <app-rule-box
+              [violations]="edgeRules()"
+              [rules]="ruleState.rules()"
+              [base]="rangeBase()"
+            />
+          </section>
+        }
+        @if (
+          !map.selectedNodeId() &&
+          !map.selectedEdge() &&
+          !map.selectedBundle() &&
+          review.reviewMode()
+        ) {
+          @if (overview.summary(); as summary) {
+            <app-structural-overview [summary]="summary" (nodeSelect)="map.selectResult($event)" />
+          }
+        }
+        @if (!map.selectedEdge() && map.selectedNodeId(); as nodeId) {
+          <section class="selected-node" data-testid="selected-node" [attr.data-node-id]="nodeId">
+            @if (repo.snapshot(); as snapshot) {
+              <app-node-panel
+                [graph]="snapshot.graph"
+                [nodeId]="nodeId"
+                [metrics]="selectedMetrics()"
+                [focusLine]="usageFocus()?.file === nodeId ? (usageFocus()?.line ?? null) : null"
+                (selectNode)="map.selectResult($event)"
+              />
+            }
+            <app-node-edges
+              [edges]="map.selectedNodeEdges()"
+              [label]="labelOf"
+              (edgeSelect)="map.selectListedEdge($event)"
+            />
+            <app-rule-box
+              [violations]="nodeRules()"
+              [rules]="ruleState.rules()"
+              [base]="rangeBase()"
+            />
+            @if (impactState.impact(); as impact) {
+              <app-impact-section
+                [impact]="impact"
+                [direction]="impactState.direction()"
+                [followHttp]="impactState.followHttp()"
+                (directionChange)="impactState.setDirection($event)"
+                (followHttpChange)="impactState.setFollowHttp($event)"
+                (nodeSelect)="map.selectResult($event)"
+              />
+            }
+            @if (review.reviewMode() && panelView(); as view) {
+              @if (view.has(nodeId)) {
+                <app-diff-panel
+                  [nodeId]="nodeId"
+                  [diff]="view.diff"
+                  [range]="view.range"
+                  [baseGraph]="view.base"
+                  [headGraph]="view.head"
+                  [wide]="panels.rightWide()"
+                  (toggleWide)="toggleRightWide()"
+                />
               }
             }
           </section>
         }
-        @if (review.reviewMode() && reading.items().length > 0) {
-          <app-reading-order-section
-            [items]="reading.items()"
-            [mode]="reading.mode()"
-            [selected]="map.selectedNodeId()"
-            [seenIds]="seenIds()"
-            [progress]="reading.progress()"
-            [persisted]="reading.persisted()"
-            [repeated]="repeated()"
-            [commits]="reading.commitRows()"
-            [selectedCommit]="reading.selectedCommit()"
-            [stepByStep]="reading.stepByStep()"
-            [current]="reading.current()"
-            (stepChange)="reading.setStepByStep($event)"
-            (move)="onReading($event)"
-            (commitSelect)="reading.selectCommit($event)"
-            (showAll)="reading.selectCommit(null)"
-            (modeChange)="reading.setMode($event)"
-            (nodeSelect)="map.selectResult($event)"
-            (toggle)="reading.toggle($event)"
-            (groupMark)="reading.markGroup($event)"
-            (markNext)="markSeenAndNext()"
-          />
-        }
-        @if (review.reviewMode() && overview.summary(); as summary) {
-          <app-signals-section [summary]="summary" (nodeSelect)="map.selectResult($event)" />
-        }
-        @if (!review.reviewMode() && map.status() === 'ready') {
-          <app-explore-section
-            [groups]="entryGroups()"
-            [overview]="exploreOverview()"
-            [label]="labelOf"
-            (nodeSelect)="traceEntryPoint($event)"
-          />
-          <app-hotspots-section
-            [hotspots]="hotspotRows()"
-            [label]="labelOf"
-            (nodeSelect)="map.selectResult($event)"
-          />
-        }
-        @if (ruleState.rules().length > 0) {
-          <app-rules-section
-            [rules]="ruleState.rules()"
-            [violations]="violations()"
-            [source]="ruleState.source()"
-            (ruleSelect)="selectRule($event)"
-          />
-        }
-      </div>
-      @if (map.status() === 'ready') {
-        <div data-testid="display-section">
-          <div class="ptitle">{{ 'map.panel.display' | translate }}</div>
-          <app-layers-section
-            [diff]="review.showDiffLayer()"
-            [unchangedEdges]="map.showUnchangedEdges()"
-            [focus]="review.focusLayer()"
-            [impact]="impactState.layer()"
-            [hasTestEdges]="true"
-            [testEdges]="map.showTestEdges()"
-            (testEdgesChange)="map.setShowTestEdges($event)"
-            [hasHideExternal]="true"
-            [hasDiff]="review.reviewMode()"
-            [hasFocus]="review.reviewMode()"
-            [hideExternal]="map.hideExternal()"
-            (hideExternalChange)="map.setHideExternal($event)"
-            [hasEdgeLabels]="true"
-            [edgeLabelsAlways]="map.edgeLabelsAlways()"
-            (edgeLabelsAlwaysChange)="map.setEdgeLabelsAlways($event)"
-            (diffChange)="review.setShowDiffLayer($event)"
-            (unchangedEdgesChange)="map.setShowUnchangedEdges($event)"
-            (focusChange)="review.setFocusLayer($event)"
-            (impactChange)="setImpactLayer($event)"
-            [rules]="ruleState.layer()"
-            [hasRules]="ruleState.rules().length > 0"
-            (rulesChange)="ruleState.setLayer($event)"
-            [risk]="riskState.layer()"
-            [hasRisk]="!review.reviewMode() && hasMetrics()"
-            (riskChange)="riskState.setLayer($event)"
-            [hasCoChange]="!review.reviewMode()"
-            [coChange]="coChangeState.layer()"
-            (coChangeChange)="coChangeState.setLayer($event)"
-          />
-          <section class="sec" data-testid="layout-section">
-            <h3>{{ 'map.layout.title' | translate }}</h3>
-            <div class="seg">
-              <button
-                type="button"
-                data-testid="layout-fewer-crossings"
-                [class.on]="map.layoutMode() === 'fewer-crossings'"
-                [attr.aria-pressed]="map.layoutMode() === 'fewer-crossings'"
-                (click)="map.setLayoutMode('fewer-crossings')"
-              >
-                {{ 'map.layout.fewerCrossings' | translate }}
-              </button>
-              <button
-                type="button"
-                data-testid="layout-raw-grid"
-                [class.on]="map.layoutMode() === 'raw-grid'"
-                [attr.aria-pressed]="map.layoutMode() === 'raw-grid'"
-                (click)="map.setLayoutMode('raw-grid')"
-              >
-                {{ 'map.layout.rawGrid' | translate }}
-              </button>
-            </div>
-          </section>
-        </div>
-      }
-    </aside>
-    <section class="center">
-      @switch (repo.status()) {
-        @case ('loading') {
-          <p class="state">{{ 'map.loading' | translate }}</p>
-        }
-        @case ('error') {
-          <p class="state error" data-testid="error">{{ repo.error() }}</p>
-        }
-        @default {
-          @if (repo.isEmpty()) {
-            <p class="state" data-testid="empty">{{ 'map.empty' | translate }}</p>
-          } @else if (graph(); as graph) {
-            <app-map-canvas
-              [graph]="graph"
-              [repoName]="repo.repoName() ?? ''"
-              [diff]="mapDiff()"
-              [impact]="impactMarks()"
-              [reading]="reviewReading()"
-              [focus]="focusIds()"
-              [stepEdges]="stepEdges()"
-              [stepElements]="stepElements()"
-              [violations]="mapViolations()"
-              [archi]="archiIds()"
-              [risk]="riskLevels()"
-              [loading]="repo.loading()"
-              [repeated]="repeated()"
-            />
-          }
-        }
-      }
-    </section>
-    <aside class="panel right" data-testid="right-panel">
-      <button
-        type="button"
-        class="expand iconbtn"
-        data-testid="expand-right"
-        [attr.aria-label]="'map.expand' | translate"
-        (click)="toggleRightWide()"
-      >
-        {{ panels.rightWide() ? '»' : '«' }}
-      </button>
-      <app-inspector-header
-        [kind]="inspectorKind()"
-        [subtitle]="inspectorSubtitle()"
-        (close)="clearSelection()"
-      />
-      @if (inspectorKind() === 'none' && !review.reviewMode()) {
-        <p class="hint inspector-hint">{{ 'map.inspector.hint' | translate }}</p>
-      }
-      @if (map.selectedBundle(); as bundle) {
-        <section class="edge-panel bundle-panel" data-testid="bundle-panel">
-          <h3>{{ bundleTitle(bundle) }}</h3>
-          @if (bundle.added > 0) {
-            <p class="hint">{{ 'map.bundle.added' | translate: { count: bundle.added } }}</p>
-          }
-          <ul>
-            @for (branch of bundle.branches; track branch.from + branch.to) {
-              <li>
-                <button
-                  type="button"
-                  data-testid="bundle-edge"
-                  (click)="map.selectEdge(branch.from, branch.to)"
-                >
-                  {{ map.label(branch.from) }} → {{ map.label(branch.to) }}
-                </button>
-              </li>
-            }
-          </ul>
-        </section>
-      }
-      @if (map.selectedEdge(); as edge) {
-        <section class="edge-panel" data-testid="edge-panel">
-          <app-edge-head
-            [from]="edge.from"
-            [to]="edge.to"
-            [fromLabel]="map.label(edge.from)"
-            [toLabel]="map.label(edge.to)"
-            [kinds]="edge.kinds.join(', ')"
-            [heuristic]="edgeHeuristic()"
-            [count]="edge.links.length"
-            [added]="edgeAdded()"
-            (nodeSelect)="map.selectResult($event)"
-          />
-          <h3>{{ edgeTitle(edge) }}</h3>
-          <ul>
-            @for (link of edge.links; track $index) {
-              <li>
-                <button type="button" data-testid="edge-link" (click)="map.selectLink(link)">
-                  {{ map.label(link.from) }} → {{ map.label(link.to) }}
-                  <span class="kind">{{ link.kind }}</span>
-                </button>
-              </li>
-            }
-          </ul>
-          @if (usages.visible()) {
-            <app-edge-usages
-              [status]="usages.status()"
-              [response]="usages.response()"
-              [label]="labelOf"
-              (openUsage)="openUsage($event)"
-            />
-          }
-          <app-rule-box
-            [violations]="edgeRules()"
-            [rules]="ruleState.rules()"
-            [base]="rangeBase()"
-          />
-        </section>
-      }
-      @if (
-        !map.selectedNodeId() && !map.selectedEdge() && !map.selectedBundle() && review.reviewMode()
-      ) {
-        @if (overview.summary(); as summary) {
-          <app-structural-overview [summary]="summary" (nodeSelect)="map.selectResult($event)" />
-        }
-      }
-      @if (!map.selectedEdge() && map.selectedNodeId(); as nodeId) {
-        <section class="selected-node" data-testid="selected-node" [attr.data-node-id]="nodeId">
-          @if (repo.snapshot(); as snapshot) {
-            <app-node-panel
-              [graph]="snapshot.graph"
-              [nodeId]="nodeId"
-              [metrics]="selectedMetrics()"
-              [focusLine]="usageFocus()?.file === nodeId ? (usageFocus()?.line ?? null) : null"
-              (selectNode)="map.selectResult($event)"
-            />
-          }
-          <app-node-edges
-            [edges]="map.selectedNodeEdges()"
-            [label]="labelOf"
-            (edgeSelect)="map.selectListedEdge($event)"
-          />
-          <app-rule-box
-            [violations]="nodeRules()"
-            [rules]="ruleState.rules()"
-            [base]="rangeBase()"
-          />
-          @if (impactState.impact(); as impact) {
-            <app-impact-section
-              [impact]="impact"
-              [direction]="impactState.direction()"
-              [followHttp]="impactState.followHttp()"
-              (directionChange)="impactState.setDirection($event)"
-              (followHttpChange)="impactState.setFollowHttp($event)"
-              (nodeSelect)="map.selectResult($event)"
-            />
-          }
-          @if (review.reviewMode() && panelView(); as view) {
-            @if (view.has(nodeId)) {
-              <app-diff-panel
-                [nodeId]="nodeId"
-                [diff]="view.diff"
-                [range]="view.range"
-                [baseGraph]="view.base"
-                [headGraph]="view.head"
-                [wide]="panels.rightWide()"
-                (toggleWide)="toggleRightWide()"
-              />
-            }
-          }
-        </section>
-      }
-    </aside>
-    <div
-      class="handle left"
-      data-testid="resize-left"
-      (pointerdown)="startDrag('left', $event)"
-      (dblclick)="resetPanel('left')"
-    ></div>
-    <div
-      class="handle right"
-      data-testid="resize-right"
-      (pointerdown)="startDrag('right', $event)"
-      (dblclick)="resetPanel('right')"
-    ></div>
-  </main>
+      </aside>
+      <div
+        class="handle left"
+        data-testid="resize-left"
+        (pointerdown)="startDrag('left', $event)"
+        (dblclick)="resetPanel('left')"
+      ></div>
+      <div
+        class="handle right"
+        data-testid="resize-right"
+        (pointerdown)="startDrag('right', $event)"
+        (dblclick)="resetPanel('right')"
+      ></div>
+    </main>
+  }
 </div>
 @if (map.helpOpen()) {
   <div class="help" data-testid="shortcuts-help-backdrop" (click)="map.escape()">

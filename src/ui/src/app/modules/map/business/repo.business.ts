@@ -1,12 +1,19 @@
 import { computed, inject, Injectable, PendingTasks, signal } from '@angular/core';
 
 import type { MetaResponse, SnapshotResponse } from '../../../core/models/contract';
-import { ReliefApiService } from '../../../core/services/relief-api.service';
+import { ApiRequestError, ReliefApiService } from '../../../core/services/relief-api.service';
 import { headRef, settingsRange } from '../helpers/repo.logic';
 import { ancestorIds, mergeExpanded } from '../helpers/subgraph.logic';
 
 /** Most nodes the map asks for: the core closes the containers below. */
 export const DISPLAY_BUDGET = 2000;
+
+/** The code of the API error while no repository is opened (the message is the fallback). */
+function isNoSession(error: unknown, message: string): boolean {
+  return error instanceof ApiRequestError && error.code !== null
+    ? error.code === 'no_session'
+    : message === 'no session';
+}
 
 export type RepoStatus = 'loading' | 'error' | 'ready';
 
@@ -18,6 +25,7 @@ export class RepoBusiness {
 
   private readonly _status = signal<RepoStatus>('loading');
   private readonly _error = signal<string | null>(null);
+  private readonly _noSession = signal(false);
   private readonly _meta = signal<MetaResponse | null>(null);
   private readonly _snapshot = signal<SnapshotResponse | null>(null);
   private readonly _ref = signal<string | null>(null);
@@ -27,6 +35,8 @@ export class RepoBusiness {
 
   readonly status = this._status.asReadonly();
   readonly error = this._error.asReadonly();
+  /** relief started without a path: the welcome screen is shown instead of the map. */
+  readonly noSession = this._noSession.asReadonly();
   readonly meta = this._meta.asReadonly();
   readonly snapshot = this._snapshot.asReadonly();
   /** Ids of the nodes whose content is being loaded. */
@@ -41,6 +51,7 @@ export class RepoBusiness {
   async load(): Promise<void> {
     this._status.set('loading');
     this._error.set(null);
+    this._noSession.set(false);
     this.expanded = [];
     try {
       let meta = await this.api.meta();
@@ -54,7 +65,9 @@ export class RepoBusiness {
       this._ref.set(ref);
       this._status.set('ready');
     } catch (error) {
-      this._error.set(error instanceof Error ? error.message : String(error));
+      const message = error instanceof Error ? error.message : String(error);
+      this._noSession.set(isNoSession(error, message));
+      this._error.set(message);
       this._status.set('error');
     }
   }

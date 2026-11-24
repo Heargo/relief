@@ -7,7 +7,7 @@ relief est une application de bureau : on la lance sur un dépôt et elle ouvre 
 
 ## relief [chemin] [plage]
 
-`relief [CHEMIN] [PLAGE]` ouvre la carte du dépôt `CHEMIN` (le dossier courant par défaut). Sans plage, la carte montre `HEAD` jusqu'à l'arbre de travail. Une plage s'écrit `A...B` (contre le merge-base) ou `A..B`.
+`relief [CHEMIN] [PLAGE]` ouvre la carte du dépôt `CHEMIN` ; sans `CHEMIN`, `relief` ouvre l'écran d'accueil (dépôts récents, sélecteur de dossier), pas le dossier courant (`relief .`). Sans plage, la carte montre `HEAD` jusqu'à l'arbre de travail. Une plage s'écrit `A...B` (contre le merge-base) ou `A..B`.
 
 ## Options et environnement
 

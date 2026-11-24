@@ -82,9 +82,10 @@ Placez-vous dans un dépôt git et lancez :
 relief [path] [range]
 ```
 
-La fenêtre de relief s'ouvre sur le dépôt courant. Rien n'est écrit dans votre dépôt.
+La fenêtre de relief s'ouvre sur le dépôt `path`. Rien n'est écrit dans votre dépôt.
 
-- Sans argument, la plage affichée va de `HEAD` à l'arbre de travail. Pour une autre plage (`range`), donnez-la : `relief . main...ma-branche` (contre le merge-base) ou `relief . A..B`.
+- Sans argument, `relief` n'ouvre aucun dépôt : il affiche l'écran d'accueil, où vous ouvrez un dépôt avec le sélecteur de dossier ou choisissez un dépôt récent (la liste est gardée dans votre dossier de configuration). Pour ouvrir le dossier courant, lancez `relief .`. L'ouverture d'un espace de travail multidépôt n'est pas encore disponible.
+- Sans plage, la plage affichée va de `HEAD` à l'arbre de travail. Pour une autre plage (`range`), donnez-la : `relief . main...ma-branche` (contre le merge-base) ou `relief . A..B`.
 - Le premier argument (`path`) est le dossier à analyser : `relief ~/code/mon-depot`.
 
 ## Premier regard

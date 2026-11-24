@@ -21,6 +21,14 @@
     },
     "multiRepoSoon": "Available soon: multi-repository workspaces are not implemented yet"
   },
+  "welcome": {
+    "title": "Welcome to relief",
+    "subtitle": "Open a repository to see its map.",
+    "openRepo": "Open a repository…",
+    "openWorkspace": "Open a workspace…",
+    "recents": "Recent",
+    "noRecents": "Nothing opened yet."
+  },
   "map": {
     "search": "Go to a symbol, file, module…",
     "help": "Help",

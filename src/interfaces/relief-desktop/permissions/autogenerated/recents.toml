@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-recents"
+description = "Enables the recents command without any pre-configured scope."
+commands.allow = ["recents"]
+
+[[permission]]
+identifier = "deny-recents"
+description = "Denies the recents command without any pre-configured scope."
+commands.deny = ["recents"]

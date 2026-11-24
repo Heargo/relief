@@ -35,6 +35,27 @@ describe('ReliefApiService', () => {
     expect(calls.map((c) => c.cmd)).toEqual(['meta']);
   });
 
+  it('recents invokes the recents command', async () => {
+    const list = [{ kind: 'repo', path: '/work/acme', name: 'acme' }];
+    const calls = mockTauri(() => list);
+    expect(await service.recents()).toEqual(list);
+    expect(calls).toEqual([{ cmd: 'recents', args: {} }]);
+  });
+
+  it('openRepo invokes open_repo with the path and returns the meta of the new session', async () => {
+    const meta = { repo: 'acme', range: null, branches: ['main'], tags: [] };
+    const calls = mockTauri(() => meta);
+    expect(await service.openRepo('/work/acme')).toEqual(meta);
+    expect(calls).toEqual([{ cmd: 'open_repo', args: { path: '/work/acme' } }]);
+  });
+
+  it('openRepo rejects with the API message', async () => {
+    mockTauri(() => {
+      throw { code: 'not_a_repository', message: 'not a git repository: /tmp/x' };
+    });
+    await expect(service.openRepo('/tmp/x')).rejects.toThrow('not a git repository: /tmp/x');
+  });
+
   it('openDocs invokes open_docs with the language', async () => {
     const calls = mockTauri(() => null);
     await service.openDocs('fr');

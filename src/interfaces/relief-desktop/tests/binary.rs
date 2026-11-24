@@ -51,3 +51,26 @@ fn an_unknown_ref_on_acme_shop_exits_with_code_2() {
         .code(2)
         .stderr(predicate::str::is_empty().not());
 }
+
+/// K06: without a path, relief no longer opens `.`: no repository is read, so a folder that is
+/// not a repository is not an error (exit code 2). The folder of the configuration is a
+/// temporary one.
+#[test]
+fn without_an_argument_no_session_is_opened() {
+    let dir = TempDir::new().unwrap();
+    let config = TempDir::new().unwrap();
+    let output = desktop()
+        .current_dir(dir.path())
+        .env("RELIEF_CONFIG_DIR", config.path())
+        .env_remove("OWD")
+        .timeout(std::time::Duration::from_secs(20))
+        .output()
+        .unwrap();
+    // Without a display the window cannot open (exit 1 or a signal), but never the "not a
+    // repository" failure of opening `.`.
+    assert_ne!(output.status.code(), Some(2), "{output:?}");
+    assert!(
+        !String::from_utf8_lossy(&output.stderr).contains("repository"),
+        "{output:?}"
+    );
+}

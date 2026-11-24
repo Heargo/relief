@@ -84,7 +84,8 @@ relief [path] [range]
 
 The relief window opens on the current repository. Nothing is written to your repository.
 
-- With no argument, the range shown goes from `HEAD` to the working tree. For another range (`range`), pass it: `relief . main...my-branch` (against the merge-base) or `relief . A..B`.
+- With no argument, `relief` opens no repository: it shows the welcome screen, where you open a repository with the folder picker or choose a recent one (the list is kept in your configuration folder). To open the current folder, run `relief .`. Opening a multi-repository workspace is not available yet.
+- With no range, the range shown goes from `HEAD` to the working tree. For another range (`range`), pass it: `relief . main...my-branch` (against the merge-base) or `relief . A..B`.
 - The first argument (`path`) is the folder to analyse: `relief ~/code/my-repo`.
 
 ## First look

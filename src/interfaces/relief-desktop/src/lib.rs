@@ -3,7 +3,9 @@
 //! [`register`] is generic over the runtime so the tests drive the same
 //! commands with the mock runtime; `main` uses the real one.
 
-use std::sync::Arc;
+use std::ffi::OsString;
+use std::path::{Path, PathBuf};
+use std::sync::{Arc, RwLock};
 
 use relief_app::{
     AppError, CoChangeRequest, CodeRequest, CommitReadingRequest, DiffRequest, EdgeUsagesRequest,
@@ -17,7 +19,40 @@ use relief_model::{
 };
 use tauri::{AppHandle, Builder, Manager, Runtime, State, WebviewUrl, WebviewWindowBuilder};
 
-type Shared<'a> = State<'a, Arc<Session>>;
+mod recents;
+
+/// The session of the window: absent until a repository is opened (welcome screen).
+struct Slot(RwLock<Option<Arc<Session>>>);
+
+type Shared<'a> = State<'a, Slot>;
+
+/// Builds the session of a repository path (the composition root provides the extractors).
+pub type SessionOpener = Arc<dyn Fn(&Path) -> Result<Session, AppError> + Send + Sync>;
+
+/// What `open_repo` and `recents` need: the user's configuration folder and the opener.
+struct Welcome {
+    config_dir: PathBuf,
+    opener: SessionOpener,
+}
+
+/// The user's configuration folder: `RELIEF_CONFIG_DIR`, else `$XDG_CONFIG_HOME/relief`, else
+/// `~/.config/relief`.
+pub fn config_dir(
+    relief_config_dir: Option<OsString>,
+    xdg_config_home: Option<OsString>,
+    home: Option<OsString>,
+) -> PathBuf {
+    let set = |v: Option<OsString>| v.filter(|v| !v.is_empty());
+    if let Some(dir) = set(relief_config_dir) {
+        return PathBuf::from(dir);
+    }
+    if let Some(dir) = set(xdg_config_home) {
+        return PathBuf::from(dir).join("relief");
+    }
+    PathBuf::from(set(home).unwrap_or_default())
+        .join(".config")
+        .join("relief")
+}
 
 /// The repository path given on the command line, read from the folder the user started from.
 /// Under an AppImage, `AppRun` moves to `$APPDIR/usr` (the bundled webkit finds its helper
@@ -32,29 +67,62 @@ pub fn repo_path(path: &std::path::Path, owd: Option<std::ffi::OsString>) -> std
 
 /// Registers the session as state and the commands on a tauri builder.
 pub fn register<R: Runtime>(builder: Builder<R>, session: Arc<Session>) -> Builder<R> {
-    builder
-        .manage(session)
-        .invoke_handler(tauri::generate_handler![
-            meta,
-            snapshot,
-            diff,
-            search,
-            review_summary,
-            rules,
-            impact,
-            code,
-            edge_usages,
-            review_state,
-            set_review_state,
-            settings,
-            set_settings,
-            reading_order,
-            commit_reading,
-            log,
-            metrics,
-            co_change,
-            open_docs
-        ])
+    handlers(builder.manage(Slot(RwLock::new(Some(session)))))
+}
+
+/// Like [`register`], and `open_repo` / `recents` work too: the menu can open another repository
+/// on a map already open. The recents live in `config_dir`.
+pub fn register_session<R: Runtime>(
+    builder: Builder<R>,
+    session: Arc<Session>,
+    config_dir: PathBuf,
+    opener: SessionOpener,
+) -> Builder<R> {
+    handlers(
+        builder
+            .manage(Slot(RwLock::new(Some(session))))
+            .manage(Welcome { config_dir, opener }),
+    )
+}
+
+/// Registers the commands with no session: the window shows the welcome screen, and `open_repo`
+/// creates the session with `opener`. The recents live in `config_dir`.
+pub fn register_welcome<R: Runtime>(
+    builder: Builder<R>,
+    config_dir: PathBuf,
+    opener: SessionOpener,
+) -> Builder<R> {
+    handlers(
+        builder
+            .manage(Slot(RwLock::new(None)))
+            .manage(Welcome { config_dir, opener }),
+    )
+}
+
+fn handlers<R: Runtime>(builder: Builder<R>) -> Builder<R> {
+    builder.invoke_handler(tauri::generate_handler![
+        meta,
+        snapshot,
+        diff,
+        search,
+        review_summary,
+        rules,
+        impact,
+        code,
+        edge_usages,
+        review_state,
+        set_review_state,
+        settings,
+        set_settings,
+        reading_order,
+        commit_reading,
+        log,
+        metrics,
+        co_change,
+        open_docs,
+        open_repo,
+        recents
+    ])
 }
 
 fn api_error(err: AppError) -> ApiError {
@@ -89,7 +157,15 @@ where
     T: Send + 'static,
     F: FnOnce(&Session) -> Result<T, ApiError> + Send + 'static,
 {
-    let session = Arc::clone(&session);
+    let session = session
+        .0
+        .read()
+        .ok()
+        .and_then(|slot| slot.clone())
+        .ok_or_else(|| ApiError {
+            code: "no_session".to_owned(),
+            message: "no session".to_owned(),
+        })?;
     tauri::async_runtime::spawn_blocking(move || work(&session))
         .await
         .map_err(|e| ApiError {
@@ -456,4 +532,43 @@ async fn pause() {
         std::thread::sleep(std::time::Duration::from_millis(20));
     })
     .await;
+}
+
+fn welcome<R: Runtime>(app: &AppHandle<R>) -> Result<State<'_, Welcome>, ApiError> {
+    app.try_state::<Welcome>().ok_or_else(|| ApiError {
+        code: "bad_request".to_owned(),
+        message: "this window opens a repository from the command line".to_owned(),
+    })
+}
+
+/// Starts the session on a repository (welcome screen), remembers it in the recents, and answers
+/// the `meta` of the new session.
+#[tauri::command]
+async fn open_repo<R: Runtime>(app: AppHandle<R>, path: String) -> Result<MetaResponse, ApiError> {
+    let (config_dir, opener) = {
+        let welcome = welcome(&app)?;
+        (welcome.config_dir.clone(), Arc::clone(&welcome.opener))
+    };
+    // One entry per repository in the recents, whatever the way the path was written.
+    let path = std::fs::canonicalize(&path).unwrap_or_else(|_| PathBuf::from(path));
+    let opened = path.clone();
+    let session = tauri::async_runtime::spawn_blocking(move || opener(&opened))
+        .await
+        .map_err(|e| ApiError {
+            code: "index".to_owned(),
+            message: e.to_string(),
+        })?
+        .map_err(api_error)?;
+    let meta = session.meta();
+    if let Ok(mut slot) = app.state::<Slot>().0.write() {
+        *slot = Some(Arc::new(session));
+    }
+    recents::remember(&config_dir, "repo", &path);
+    Ok(meta)
+}
+
+/// The repositories and workspaces opened before, most recent first.
+#[tauri::command]
+fn recents<R: Runtime>(app: AppHandle<R>) -> Result<Vec<recents::Recent>, ApiError> {
+    Ok(recents::list(&welcome(&app)?.config_dir))
 }

@@ -20,6 +20,9 @@ import { InputText } from '@openng/optimus-ui/inputtext';
 import { DocsBusiness } from '../../../../core/business/docs.business';
 import { LanguageBusiness } from '../../../../core/business/language.business';
 import { ThemeBusiness } from '../../../../core/business/theme.business';
+import { PAGE_RELOAD } from '../../../../core/services/page-reload';
+import { WelcomeBusiness } from '../../../welcome/business/welcome.business';
+import { WelcomeComponent } from '../../../welcome/components/welcome/welcome.component';
 import { MenuBarComponent } from '../menu-bar/menu-bar.component';
 import { LanguageCode } from '../../../../core/constants/languages';
 import { type AggregatedEdge, edgeTooltip } from '../../helpers/edges.logic';
@@ -100,6 +103,7 @@ const CHANGED_FILES_LEVEL = 2;
     InspectorHeaderComponent,
     EdgeHeadComponent,
     MenuBarComponent,
+    WelcomeComponent,
     NodeEdgesComponent,
     DiffPanelComponent,
     SignalsSectionComponent,
@@ -114,6 +118,7 @@ const CHANGED_FILES_LEVEL = 2;
   ],
   providers: [
     RepoBusiness,
+    WelcomeBusiness,
     SubgraphBusiness,
     PanelsBusiness,
     MapBusiness,
@@ -444,6 +449,10 @@ export class MapPageComponent implements OnInit {
   }
 
   private readonly pending = inject(PendingTasks);
+  private readonly welcomeState = inject(WelcomeBusiness);
+  private readonly reloadPage = inject(PAGE_RELOAD);
+  /** Why the menu could not open a repository (the welcome screen shows its own). */
+  protected readonly openError = this.welcomeState.error;
 
   private readonly groupsToReading = effect(() => {
     const groups = this.repeated();
@@ -451,7 +460,13 @@ export class MapPageComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    void this.repo.load().then(() => {
+    void this.start();
+  }
+
+  /** Reads the repository, then its diff; nothing more while no repository is opened. */
+  protected start(): Promise<void> {
+    return this.repo.load().then(() => {
+      if (this.repo.noSession()) return;
       // The page is stable once the map is drawn, not as soon as the diff is read.
       const done = this.pending.add();
       return this.review
@@ -466,6 +481,15 @@ export class MapPageComponent implements OnInit {
         })
         .finally(done);
     });
+  }
+
+  /** The menu entry "Open a repository": folder picker, then the map of the chosen one. */
+  protected async onOpenRepo(): Promise<void> {
+    const wasOpen = !this.repo.noSession();
+    if (!(await this.welcomeState.pickAndOpen())) return;
+    // A map already shown holds the state of the previous repository: start the page again.
+    if (wasOpen) this.reloadPage();
+    else await this.start();
   }
 
   @HostListener('window:keydown', ['$event'])

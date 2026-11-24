@@ -1,0 +1,42 @@
+<section class="welcome" data-testid="welcome">
+  <h1>{{ 'welcome.title' | translate }}</h1>
+  <p class="sub">{{ 'welcome.subtitle' | translate }}</p>
+  <div class="actions">
+    <button type="button" class="primary" data-testid="welcome-open-repo" (click)="pick()">
+      {{ 'welcome.openRepo' | translate }}
+    </button>
+    <button
+      type="button"
+      data-testid="welcome-open-workspace"
+      disabled
+      [attr.title]="'menu.multiRepoSoon' | translate"
+    >
+      {{ 'welcome.openWorkspace' | translate }}
+    </button>
+  </div>
+  @if (welcome.error(); as error) {
+    <p class="error" data-testid="welcome-error">{{ error }}</p>
+  }
+  <h2>{{ 'welcome.recents' | translate }}</h2>
+  @if (welcome.recents().length === 0) {
+    <p class="none" data-testid="welcome-no-recents">{{ 'welcome.noRecents' | translate }}</p>
+  } @else {
+    <ul class="recents">
+      @for (entry of welcome.recents(); track entry.path) {
+        <li>
+          <button
+            type="button"
+            class="recent"
+            data-testid="welcome-recent"
+            [disabled]="entry.kind === 'workspace'"
+            [attr.title]="entry.kind === 'workspace' ? ('menu.multiRepoSoon' | translate) : null"
+            (click)="openRecent(entry.path)"
+          >
+            <span class="name">{{ entry.name }}</span>
+            <span class="path">{{ entry.path }}</span>
+          </button>
+        </li>
+      }
+    </ul>
+  }
+</section>

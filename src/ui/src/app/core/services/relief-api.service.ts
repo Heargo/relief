@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { invoke } from '@tauri-apps/api/core';
+import { open } from '@tauri-apps/plugin-dialog';
 
 import type {
   ApiError,
@@ -19,6 +20,23 @@ import type {
   SearchResponse,
   SnapshotResponse,
 } from '../models/contract';
+
+/** An error of the API: its message, and its `code` (`no_session`, `not_a_repository`…). */
+export class ApiRequestError extends Error {
+  constructor(
+    message: string,
+    readonly code: string | null,
+  ) {
+    super(message);
+  }
+}
+
+/** A repository or workspace opened before. */
+export interface RecentEntry {
+  kind: 'repo' | 'workspace';
+  path: string;
+  name: string;
+}
 
 /**
  * The only place that calls the relief API: the Tauri commands of the desktop app.
@@ -150,13 +168,41 @@ export class ReliefApiService {
     return this.command<void>('open_docs', { lang });
   }
 
-  private async command<T>(name: string, args?: Record<string, unknown>): Promise<T> {
+  /** The repositories and workspaces opened before, most recent first. */
+  recents(): Promise<RecentEntry[]> {
+    return this.command<RecentEntry[]>('recents');
+  }
+
+  /** Starts the session on a repository (welcome screen); answers its meta. */
+  openRepo(path: string): Promise<MetaResponse> {
+    return this.command<MetaResponse>('open_repo', { path });
+  }
+
+  /** The native folder picker; null when cancelled. */
+  async pickRepoFolder(): Promise<string | null> {
     try {
-      return await invoke<T>(name, args);
+      const chosen = await open({ directory: true, multiple: false });
+      return typeof chosen === 'string' ? chosen : null;
     } catch (error) {
       throw new Error(messageOf(error));
     }
   }
+
+  private async command<T>(name: string, args?: Record<string, unknown>): Promise<T> {
+    try {
+      return await invoke<T>(name, args);
+    } catch (error) {
+      throw new ApiRequestError(messageOf(error), codeOf(error));
+    }
+  }
+}
+
+function codeOf(error: unknown): string | null {
+  if (typeof error === 'object' && error !== null && 'code' in error) {
+    const { code } = error as Partial<ApiError>;
+    if (typeof code === 'string') return code;
+  }
+  return null;
 }
 
 function messageOf(error: unknown): string {

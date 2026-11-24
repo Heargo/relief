@@ -21,6 +21,8 @@ fn main() {
         "metrics",
         "co_change",
         "open_docs",
+        "open_repo",
+        "recents",
     ]);
     tauri_build::try_build(tauri_build::Attributes::new().app_manifest(manifest))
         .expect("failed to run the tauri build script");

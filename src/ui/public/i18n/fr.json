@@ -21,6 +21,14 @@
     },
     "multiRepoSoon": "Bientôt disponible : les espaces multidépôt ne sont pas encore implémentés"
   },
+  "welcome": {
+    "title": "Bienvenue dans relief",
+    "subtitle": "Ouvrez un dépôt pour voir sa carte.",
+    "openRepo": "Ouvrir un dépôt…",
+    "openWorkspace": "Ouvrir un espace de travail…",
+    "recents": "Récents",
+    "noRecents": "Rien d'ouvert pour l'instant."
+  },
   "map": {
     "search": "Aller à un symbole, fichier, module…",
     "help": "Aide",
