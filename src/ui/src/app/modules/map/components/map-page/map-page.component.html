@@ -12,6 +12,17 @@
       </svg>
       relief
     </div>
+    <app-menu-bar
+      [theme]="theme.mode()"
+      [language]="language.current()"
+      [languages]="language.languages"
+      [canReload]="reloader.canReload()"
+      (themeChange)="theme.setMode($event)"
+      (languageChange)="onLanguageChange($any($event))"
+      (shortcuts)="map.openHelp()"
+      (reload)="reloader.reload()"
+      (docs)="docs.open()"
+    />
     @if (repo.repoName(); as name) {
       <div class="repo">
         <span data-testid="repo-name"
@@ -72,66 +83,6 @@
     @if (repo.meta()) {
       <app-range-picker />
     }
-    @if (reloader.canReload()) {
-      <button type="button" class="iconbtn" data-testid="reload-button" (click)="reloader.reload()">
-        {{ 'review.reload' | translate }}
-      </button>
-    }
-    <span class="spacer"></span>
-    <div class="settings">
-      <button
-        type="button"
-        class="iconbtn"
-        data-testid="settings-button"
-        aria-haspopup="true"
-        [attr.aria-expanded]="settingsOpen()"
-        [attr.aria-label]="'map.settings.title' | translate"
-        (click)="settingsOpen.set(!settingsOpen())"
-      >
-        ⚙
-      </button>
-      @if (settingsOpen()) {
-        <div class="settings-menu" data-testid="settings-menu" role="menu">
-          <div class="row">
-            <span>{{ 'map.settings.theme' | translate }}</span>
-            <div class="seg" data-testid="theme-toggle">
-              @for (mode of themeModes; track mode) {
-                <button
-                  type="button"
-                  [class.on]="theme.mode() === mode"
-                  [attr.aria-pressed]="theme.mode() === mode"
-                  (click)="theme.setMode(mode)"
-                >
-                  {{ 'map.theme.' + mode | translate }}
-                </button>
-              }
-            </div>
-          </div>
-          <div class="row">
-            <span>{{ 'map.settings.language' | translate }}</span>
-            <div class="seg" data-testid="language-select">
-              @for (lang of language.languages; track lang.code) {
-                <button
-                  type="button"
-                  [class.on]="language.current() === lang.code"
-                  [attr.aria-pressed]="language.current() === lang.code"
-                  (click)="onLanguageChange(lang.code)"
-                >
-                  {{ lang.label }}
-                </button>
-              }
-            </div>
-          </div>
-          <button type="button" class="item" data-testid="help-button" (click)="openHelp()">
-            <span>{{ 'map.shortcuts' | translate }}</span>
-            <kbd>?</kbd>
-          </button>
-          <button type="button" class="item" data-testid="docs-button" (click)="openDocs()">
-            {{ 'map.settings.docs' | translate }}
-          </button>
-        </div>
-      }
-    </div>
   </header>
 
   <main class="main" [style.--lw.px]="panels.widths().left" [style.--rw.px]="panels.widths().right">

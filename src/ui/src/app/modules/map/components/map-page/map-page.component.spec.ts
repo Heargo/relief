@@ -67,21 +67,9 @@ async function openSettings(
   fixture: { whenStable: () => Promise<unknown> },
   el: HTMLElement,
 ): Promise<void> {
-  byTestId(el, 'settings-button')?.click();
+  byTestId(el, 'menu-trigger-settings')?.click();
   await fixture.whenStable();
-  expect(byTestId(el, 'settings-menu'), 'menu opens').not.toBeNull();
-}
-
-function segButton(el: HTMLElement, testId: string, label: string): HTMLElement | undefined {
-  return Array.from(byTestId(el, testId)?.querySelectorAll<HTMLElement>('button') ?? []).find(
-    (b) => b.textContent?.trim() === label,
-  );
-}
-
-function segLabels(el: HTMLElement, testId: string): string[] {
-  return Array.from(byTestId(el, testId)?.querySelectorAll('button') ?? []).map(
-    (b) => b.textContent?.trim() ?? '',
-  );
+  expect(byTestId(el, 'menu-panel'), 'menu opens').not.toBeNull();
 }
 
 describe('MapPageComponent', () => {
@@ -153,66 +141,12 @@ describe('MapPageComponent', () => {
     expect(byTestId(el, 'range-head')?.textContent?.trim()).toBe('Arbre de travail');
   });
 
-  it('styles the reload button as an icon button', async () => {
-    api.meta.mockResolvedValue({ ...META, range: null });
+  it('the top bar has the menu bar and no settings button, the range picker stays', async () => {
     const { el } = await render();
-    expect(byTestId(el, 'reload-button')?.classList.contains('iconbtn')).toBe(true);
-  });
-
-  it('the top bar keeps only the search and the settings button on the right', async () => {
-    const { el } = await render();
-    const settings = byTestId(el, 'settings-button');
-    expect(settings?.classList.contains('iconbtn')).toBe(true);
-    expect(settings?.getAttribute('aria-label')).toBe('Settings');
-    const bar = el.querySelector('header.topbar') as HTMLElement;
-    for (const id of ['theme-toggle', 'help-button', 'language-select']) {
-      expect(bar.querySelector(`[data-testid="${id}"]`), id).toBeNull();
-    }
-    expect(bar.querySelector('a[href="/docs/"]')).toBeNull();
-    expect(byTestId(el, 'settings-menu')).toBeNull();
-  });
-
-  it('labels the settings button in French', async () => {
-    const { el } = await render('fr');
-    expect(byTestId(el, 'settings-button')?.getAttribute('aria-label')).toBe('Paramètres');
-  });
-
-  it('the open menu holds theme, language, shortcuts and documentation', async () => {
-    const { fixture, el } = await render();
-    await openSettings(fixture, el);
-    const menu = byTestId(el, 'settings-menu') as HTMLElement;
-    expect(menu).not.toBeNull();
-    expect(byTestId(menu, 'theme-toggle')?.classList.contains('seg')).toBe(true);
-    expect(segLabels(menu, 'theme-toggle')).toEqual(['Light', 'Dark', 'System']);
-    expect(byTestId(menu, 'language-select')?.classList.contains('seg')).toBe(true);
-    expect(segLabels(menu, 'language-select')).toEqual(['English', 'Français']);
-    expect(byTestId(menu, 'help-button')?.textContent).toContain('Shortcuts');
-    expect(byTestId(menu, 'help-button')?.textContent).toContain('?');
-    expect(byTestId(menu, 'docs-button')?.textContent).toContain('Documentation');
-  });
-
-  it('Escape closes the menu', async () => {
-    const { fixture, el } = await render();
-    await openSettings(fixture, el);
-    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-    await fixture.whenStable();
-    expect(byTestId(el, 'settings-menu')).toBeNull();
-  });
-
-  it('a click outside closes the menu', async () => {
-    const { fixture, el } = await render();
-    await openSettings(fixture, el);
-    byTestId(el, 'repo-name')?.click();
-    await fixture.whenStable();
-    expect(byTestId(el, 'settings-menu')).toBeNull();
-  });
-
-  it('the settings button toggles the menu', async () => {
-    const { fixture, el } = await render();
-    await openSettings(fixture, el);
-    byTestId(el, 'settings-button')?.click();
-    await fixture.whenStable();
-    expect(byTestId(el, 'settings-menu')).toBeNull();
+    expect(byTestId(el, 'menu-trigger-workspace')).not.toBeNull();
+    expect(byTestId(el, 'settings-button')).toBeNull();
+    expect(byTestId(el, 'reload-button')).toBeNull();
+    expect(byTestId(el, 'range-base')).not.toBeNull();
   });
 
   it('shows the API message when the API answers 500, not a blank page', async () => {
@@ -301,35 +235,29 @@ describe('MapPageComponent', () => {
     });
   });
 
-  it('shows the French labels in the menu when the language is French', async () => {
-    const { fixture, el } = await render('fr');
-    await openSettings(fixture, el);
-    const menu = byTestId(el, 'settings-menu') as HTMLElement;
-    expect(segLabels(menu, 'theme-toggle')).toEqual(['Clair', 'Sombre', 'Système']);
-    expect(byTestId(menu, 'help-button')?.textContent).toContain('Raccourcis');
-    expect(byTestId(menu, 'docs-button')?.textContent).toContain('Documentation');
-  });
-
   it('switches language from the menu without reloading', async () => {
     const { fixture, el } = await render();
     await openSettings(fixture, el);
-    segButton(el, 'language-select', 'Français')?.click();
+    byTestId(el, 'menu-item-language-fr')?.click();
     await fixture.whenStable();
-    expect(byTestId(el, 'settings-button')?.getAttribute('aria-label')).toBe('Paramètres');
+    expect(byTestId(el, 'menu-trigger-settings')?.textContent?.trim()).toBe('Paramètres');
     expect(byTestId(el, 'repo-name')?.textContent?.trim()).toBe('acme-shop');
     expect(api.meta).toHaveBeenCalledTimes(1);
   });
 
   it('switches the theme from the menu: Dark, Light, then System', async () => {
     const { fixture, el } = await render();
+    for (const [id, dark] of [
+      ['dark', true],
+      ['light', false],
+    ] as const) {
+      await openSettings(fixture, el);
+      byTestId(el, `menu-item-theme-${id}`)?.click();
+      await fixture.whenStable();
+      expect(document.documentElement.classList.contains('dark')).toBe(dark);
+    }
     await openSettings(fixture, el);
-    segButton(el, 'theme-toggle', 'Dark')?.click();
-    await fixture.whenStable();
-    expect(document.documentElement.classList.contains('dark')).toBe(true);
-    segButton(el, 'theme-toggle', 'Light')?.click();
-    await fixture.whenStable();
-    expect(document.documentElement.classList.contains('dark')).toBe(false);
-    segButton(el, 'theme-toggle', 'System')?.click();
+    byTestId(el, 'menu-item-theme-system')?.click();
     await fixture.whenStable();
     expect(localStorage.getItem('theme')).toBeNull();
   });
@@ -337,25 +265,27 @@ describe('MapPageComponent', () => {
   it('Shortcuts opens the help and closes the menu', async () => {
     const { fixture, el } = await render();
     await openSettings(fixture, el);
-    byTestId(el, 'help-button')?.click();
+    byTestId(el, 'menu-item-shortcuts')?.click();
     await fixture.whenStable();
     expect(byTestId(el, 'shortcuts-help')).not.toBeNull();
-    expect(byTestId(el, 'settings-menu')).toBeNull();
+    expect(byTestId(el, 'menu-panel')).toBeNull();
   });
 
   it('Documentation opens the docs in the UI language (English) and closes the menu', async () => {
     const { fixture, el } = await render('en');
-    await openSettings(fixture, el);
-    byTestId(el, 'docs-button')?.click();
+    byTestId(el, 'menu-trigger-help')?.click();
+    await fixture.whenStable();
+    byTestId(el, 'menu-item-docs')?.click();
     await fixture.whenStable();
     expect(api.openDocs).toHaveBeenCalledExactlyOnceWith('en');
-    expect(byTestId(el, 'settings-menu')).toBeNull();
+    expect(byTestId(el, 'menu-panel')).toBeNull();
   });
 
   it('Documentation opens the docs in the UI language (French)', async () => {
     const { fixture, el } = await render('fr');
-    await openSettings(fixture, el);
-    byTestId(el, 'docs-button')?.click();
+    byTestId(el, 'menu-trigger-help')?.click();
+    await fixture.whenStable();
+    byTestId(el, 'menu-item-docs')?.click();
     expect(api.openDocs).toHaveBeenCalledExactlyOnceWith('fr');
   });
 });

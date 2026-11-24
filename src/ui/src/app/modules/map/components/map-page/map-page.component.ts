@@ -19,7 +19,8 @@ import { InputText } from '@openng/optimus-ui/inputtext';
 
 import { DocsBusiness } from '../../../../core/business/docs.business';
 import { LanguageBusiness } from '../../../../core/business/language.business';
-import { ThemeBusiness, type ThemeMode } from '../../../../core/business/theme.business';
+import { ThemeBusiness } from '../../../../core/business/theme.business';
+import { MenuBarComponent } from '../menu-bar/menu-bar.component';
 import { LanguageCode } from '../../../../core/constants/languages';
 import { type AggregatedEdge, edgeTooltip } from '../../helpers/edges.logic';
 import { DiffPanelComponent } from '../../../review/components/diff-panel/diff-panel.component';
@@ -98,6 +99,7 @@ const CHANGED_FILES_LEVEL = 2;
     EdgeUsagesComponent,
     InspectorHeaderComponent,
     EdgeHeadComponent,
+    MenuBarComponent,
     NodeEdgesComponent,
     DiffPanelComponent,
     SignalsSectionComponent,
@@ -466,33 +468,10 @@ export class MapPageComponent implements OnInit {
     });
   }
 
-  protected readonly settingsOpen = signal(false);
-  protected readonly themeModes: readonly ThemeMode[] = ['light', 'dark', 'system'];
-
-  protected openHelp(): void {
-    this.settingsOpen.set(false);
-    this.map.openHelp();
-  }
-
-  protected openDocs(): void {
-    this.settingsOpen.set(false);
-    void this.docs.open();
-  }
-
-  @HostListener('document:click', ['$event'])
-  protected onDocumentClick(event: MouseEvent): void {
-    const target = event.target instanceof Element ? event.target : null;
-    if (this.settingsOpen() && !target?.closest('.settings')) this.settingsOpen.set(false);
-  }
-
   @HostListener('window:keydown', ['$event'])
   protected onKey(event: KeyboardEvent): void {
     if (event.key === 'Escape' && this.rangePicker.open()) {
       this.rangePicker.close();
-      return;
-    }
-    if (event.key === 'Escape' && this.settingsOpen()) {
-      this.settingsOpen.set(false);
       return;
     }
     if (event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey) {

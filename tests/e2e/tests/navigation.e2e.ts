@@ -7,7 +7,7 @@ import { press, tid, tids, typeText } from '../helpers/ui';
 //  - the search field is `data-testid="search"`, its results `search-results` with one
 //    `search-result` per hit (the active one has `aria-selected="true"`);
 //  - the breadcrumbs are `data-testid="breadcrumbs"`, one `breadcrumb` per crumb;
-//  - the help window is `data-testid="shortcuts-help"`; the Shortcuts row of the settings menu is `help-button`;
+//  - the help window is `data-testid="shortcuts-help"`; the Shortcuts row of the settings menu is `menu-item-shortcuts`;
 //  - the selected node shows in `selected-node` with `data-node-id`.
 const CRUMBS = 'acme-shop › apps/api › auth/ › session.ts › SessionStore.refresh';
 const REFRESH_ID = expect.stringMatching(/sym:SessionStore\.refresh$/);
@@ -113,9 +113,9 @@ it('? opens the shortcuts help, Escape closes it', async () => {
   }
   await press('Escape');
   await expect(help).not.toBeDisplayed();
-  await tid('settings-button').click();
-  await tid('help-button').click();
-  await expect(tid('settings-menu')).not.toBeDisplayed();
+  await tid('menu-trigger-settings').click();
+  await tid('menu-item-shortcuts').click();
+  await expect(tid('menu-panel')).not.toBeDisplayed();
   await expect(help).toBeDisplayed();
 });
 

@@ -15,12 +15,12 @@ it('opens on acme-shop and shows the repo name and the ref', async () => {
 it('changes language without reloading the page', async () => {
   await openRelief();
   await browser.execute(() => ((window as unknown as { marker: number }).marker = 42));
-  await expect(tid('settings-button')).toHaveAttribute('aria-label', 'Settings');
+  await expect(tid('menu-trigger-settings')).toHaveText('Settings');
 
-  await tid('settings-button').click();
-  await tid('language-select').$('button=Français').click();
+  await tid('menu-trigger-settings').click();
+  await tid('menu-item-language-fr').click();
 
-  await expect(tid('settings-button')).toHaveAttribute('aria-label', 'Paramètres');
+  await expect(tid('menu-trigger-settings')).toHaveText('Paramètres');
   await expect(tid('repo-name')).toHaveText('acme-shop');
   expect(await browser.execute(() => (window as unknown as { marker?: number }).marker)).toBe(42);
 });

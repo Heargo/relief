@@ -4,6 +4,23 @@
     "tagline": "Zoomable map of a git repository"
   },
   "optimus": {},
+  "menu": {
+    "workspace": "Workspace",
+    "settings": "Settings",
+    "help": "Help",
+    "access": {
+      "workspace": "W",
+      "settings": "S",
+      "help": "H"
+    },
+    "items": {
+      "openRepo": "Open a repository…",
+      "openWorkspace": "Open a workspace…",
+      "addRepo": "Add a repository to the workspace…",
+      "openAsWorkspace": "Open this repository as a workspace"
+    },
+    "multiRepoSoon": "Available soon: multi-repository workspaces are not implemented yet"
+  },
   "map": {
     "search": "Go to a symbol, file, module…",
     "help": "Help",

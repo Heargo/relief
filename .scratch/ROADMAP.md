@@ -184,7 +184,7 @@ Brainstorm du 2026-11-20 : la carte rame sur un gros écran et les budgets de S0
 | ✓ | # | Ticket | Pourquoi maintenant | Bloqué par |
 | - | - | --- | --- | --- |
 | ✓ | 54 | **K01** Cadrer le multirepo | Un changement full stack sur plusieurs dépôts ; un niveau « dépôt » au-dessus du système. Spec `.scratch/multi-repo/spec.md`. | aucun |
-| ☐ | 54a | **K03** Barre du haut en barre de menus | Espace de travail, Paramètres, Aide ; remplace le bouton de U15. | aucun |
+| ✓ | 54a | **K03** Barre du haut en barre de menus | Espace de travail, Paramètres, Aide ; remplace le bouton de U15. | aucun |
 | ☐ | 54b | **K04** Panneau gauche : espace, mode, comparaison | Infos du dépôt en tête, comparaison sous le mode en relecture. | K03 |
 | ☐ | 54c | **K05** Comparaison façon PR : source → destination | Défaut working tree → `main`, configurable. | K04 |
 | ☐ | 54d | **K06** Écran d'accueil sans chemin | `relief` sans argument : ouvrir un dépôt, un espace, récents. | K03 |

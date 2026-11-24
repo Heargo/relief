@@ -51,7 +51,7 @@ Le binaire est lié à la glibc de la machine qui l'a construit : le `.deb` et l
 
 Si `relief` affiche encore des sous-commandes (`show`, `diff`, `serve`), c'est une ancienne version installée par `cargo install` dans `~/.cargo/bin`, qui passe avant `/usr/bin` dans le `PATH` : `which -a relief` les liste, `cargo uninstall relief-cli` retire l'ancienne.
 
-Dans les trois cas, la commande s'appelle `relief` (l'AppImage se lance par son nom de fichier, ou renommée en `relief`) et cette documentation est embarquée : l'entrée Documentation du menu Paramètres marche sans réseau.
+Dans les trois cas, la commande s'appelle `relief` (l'AppImage se lance par son nom de fichier, ou renommée en `relief`) et cette documentation est embarquée : l'entrée Documentation du menu Aide marche sans réseau.
 
 ## Prérequis pour compiler
 

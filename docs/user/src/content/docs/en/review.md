@@ -28,7 +28,7 @@ Picking a side reloads the diff.
 
 ## Review changes in progress
 
-Without a range (`relief .`), relief compares `HEAD` with the working tree: that is how to review what an AI agent just wrote, before committing. When the range touches the working tree or the index, the **Reload** button in the top bar reads the repository again, and relief also reloads by itself when its window gets the focus back. The selection, the zoom level and the "seen" state are kept; a node that disappeared is simply deselected. Ranges between two commits do not change and do not reload.
+Without a range (`relief .`), relief compares `HEAD` with the working tree: that is how to review what an AI agent just wrote, before committing. When the range touches the working tree or the index, the **Reload** entry of the Settings menu reads the repository again, and relief also reloads by itself when its window gets the focus back. The selection, the zoom level and the "seen" state are kept; a node that disappeared is simply deselected. Ranges between two commits do not change and do not reload.
 
 ## Read the diff layer
 

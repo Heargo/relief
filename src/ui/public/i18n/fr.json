@@ -4,6 +4,23 @@
     "tagline": "Carte zoomable d'un dépôt git"
   },
   "optimus": {},
+  "menu": {
+    "workspace": "Espace de travail",
+    "settings": "Paramètres",
+    "help": "Aide",
+    "access": {
+      "workspace": "E",
+      "settings": "P",
+      "help": "A"
+    },
+    "items": {
+      "openRepo": "Ouvrir un dépôt…",
+      "openWorkspace": "Ouvrir un espace de travail…",
+      "addRepo": "Ajouter un dépôt à l'espace…",
+      "openAsWorkspace": "Ouvrir ce dépôt comme espace de travail"
+    },
+    "multiRepoSoon": "Bientôt disponible : les espaces multidépôt ne sont pas encore implémentés"
+  },
   "map": {
     "search": "Aller à un symbole, fichier, module…",
     "help": "Aide",

@@ -28,7 +28,7 @@ Choisir un côté recharge le diff.
 
 ## Relire des changements en cours
 
-Sans plage (`relief .`), relief compare `HEAD` à l'arbre de travail : c'est le moyen de relire ce qu'un agent IA vient d'écrire, avant de committer. Quand la plage touche l'arbre de travail ou l'index, le bouton **Recharger** de la barre du haut relit le dépôt, et relief recharge aussi tout seul quand sa fenêtre reprend le focus. La sélection, le niveau de zoom et l'état « vu » sont gardés ; un nœud qui a disparu est simplement désélectionné. Les plages entre deux commits ne changent pas et ne se rechargent pas.
+Sans plage (`relief .`), relief compare `HEAD` à l'arbre de travail : c'est le moyen de relire ce qu'un agent IA vient d'écrire, avant de committer. Quand la plage touche l'arbre de travail ou l'index, l'entrée **Recharger** du menu Paramètres relit le dépôt, et relief recharge aussi tout seul quand sa fenêtre reprend le focus. La sélection, le niveau de zoom et l'état « vu » sont gardés ; un nœud qui a disparu est simplement désélectionné. Les plages entre deux commits ne changent pas et ne se rechargent pas.
 
 ## Lire le calque de diff
 

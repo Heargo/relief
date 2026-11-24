@@ -49,8 +49,9 @@ describe('reload when the working tree changes', () => {
   it('the Reload button shows a symbol added to a file since the page was opened', async () => {
     expect(await searchFinds(NEW_SYMBOL)).toBe(false);
     appendFileSync(repoFile(), `\nexport function ${NEW_SYMBOL}(): number {\n  return 1;\n}\n`);
-    await expect(tid('reload-button')).toBeDisplayed();
-    await tid('reload-button').click();
+    await tid('menu-trigger-settings').click();
+    await expect(tid('menu-item-reload')).toBeDisplayed();
+    await tid('menu-item-reload').click();
     await browser.waitUntil(async () => searchFinds(NEW_SYMBOL), {
       timeout: 15000,
       interval: 1000,

@@ -26,15 +26,3 @@ it('the open range popover has an opaque background and a border', async () => {
   expect(style.borderStyle).not.toBe('none');
   expect(parseFloat(style.border)).toBeGreaterThan(0);
 });
-
-it('Reload is as tall as the settings button', async () => {
-  await openRelief({ size: { width: 1280, height: 800 } });
-  await expect(tid('reload-button')).toBeDisplayed();
-  const heights = await browser.execute(() => {
-    const h = (id: string) =>
-      (document.querySelector(`[data-testid="${id}"]`) as HTMLElement).getBoundingClientRect()
-        .height;
-    return { reload: h('reload-button'), theme: h('settings-button') };
-  });
-  expect(Math.abs(heights.reload - heights.theme)).toBeLessThanOrEqual(1);
-});

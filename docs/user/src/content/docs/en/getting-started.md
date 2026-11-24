@@ -51,7 +51,7 @@ The binary is linked against the glibc of the machine that built it: the `.deb` 
 
 If `relief` still shows subcommands (`show`, `diff`, `serve`), it is an old version installed by `cargo install` in `~/.cargo/bin`, which comes before `/usr/bin` in the `PATH`: `which -a relief` lists them, `cargo uninstall relief-cli` removes the old one.
 
-In all three cases the command is `relief` (the AppImage runs by its file name, or renamed to `relief`) and this documentation is embedded: the Documentation entry of the Settings menu works offline.
+In all three cases the command is `relief` (the AppImage runs by its file name, or renamed to `relief`) and this documentation is embedded: the Documentation entry of the Help menu works offline.
 
 ## Requirements to build
 
