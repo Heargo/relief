@@ -35,6 +35,7 @@ impl SegmentKind {
 /// never produces a spurious separator.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct NodeId {
+    repo: Option<String>,
     segments: Vec<(SegmentKind, String)>,
 }
 
@@ -53,7 +54,46 @@ impl NodeId {
 
     pub fn package(name: &str) -> Self {
         Self {
+            repo: None,
             segments: vec![(SegmentKind::Package, name.to_owned())],
+        }
+    }
+
+    /// Id of the repo node itself in a workspace: `repo:<name>`.
+    pub fn repo_root(name: &str) -> Result<Self, NodeIdParseError> {
+        Self::empty().in_repo(name)
+    }
+
+    /// Prefixes the id with its repo (`repo:<name>/`), for workspaces.
+    pub fn in_repo(mut self, name: &str) -> Result<Self, NodeIdParseError> {
+        let reason = if self.repo.is_some() {
+            Some("id already has a repo")
+        } else if name.is_empty() || name.contains('/') {
+            Some("invalid repo name")
+        } else {
+            None
+        };
+        if let Some(reason) = reason {
+            return Err(NodeIdParseError {
+                input: name.to_owned(),
+                reason,
+            });
+        }
+        self.repo = Some(name.to_owned());
+        Ok(self)
+    }
+
+    /// Repo this id belongs to; `None` for an unprefixed (single-repo) id.
+    pub fn repo(&self) -> Option<&str> {
+        self.repo.as_deref()
+    }
+
+    /// The same id without its repo prefix.
+    #[must_use]
+    pub fn without_repo(&self) -> Self {
+        Self {
+            repo: None,
+            segments: self.segments.clone(),
         }
     }
 
@@ -79,6 +119,7 @@ impl NodeId {
             .position(|(k, _)| *k == SegmentKind::File)
             .map_or(self.segments.len(), |i| i + 1);
         Self {
+            repo: self.repo.clone(),
             segments: self.segments[..end].to_vec(),
         }
     }
@@ -102,6 +143,12 @@ impl NodeId {
 
 impl fmt::Display for NodeId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if let Some(repo) = &self.repo {
+            write!(f, "repo:{repo}")?;
+            if !self.segments.is_empty() {
+                f.write_str("/")?;
+            }
+        }
         for (i, (kind, name)) in self.segments.iter().enumerate() {
             if i > 0 {
                 f.write_str("::")?;
@@ -122,6 +169,35 @@ impl FromStr for NodeId {
     type Err = NodeIdParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let Some(rest) = s.strip_prefix("repo:") else {
+            return Self::parse_local(s);
+        };
+        let err = |reason| NodeIdParseError {
+            input: s.to_owned(),
+            reason,
+        };
+        let Some((name, local)) = rest.split_once('/') else {
+            return Self::repo_root(rest);
+        };
+        if local.is_empty() {
+            return Err(err("empty id after repo prefix"));
+        }
+        Self::parse_local(local)
+            .map_err(|_| err("invalid id after repo prefix"))?
+            .in_repo(name)
+    }
+}
+
+impl NodeId {
+    fn empty() -> Self {
+        Self {
+            repo: None,
+            segments: Vec::new(),
+        }
+    }
+
+    /// Parses an id without repo prefix.
+    fn parse_local(s: &str) -> Result<Self, NodeIdParseError> {
         let err = |reason| NodeIdParseError {
             input: s.to_owned(),
             reason,
@@ -165,7 +241,10 @@ impl FromStr for NodeId {
             }
             segments.push((kind, name));
         }
-        Ok(Self { segments })
+        Ok(Self {
+            repo: None,
+            segments,
+        })
     }
 }
 
