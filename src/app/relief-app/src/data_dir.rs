@@ -81,6 +81,19 @@ impl DataDir {
         })
     }
 
+    /// Prepares the data folder of the workspace `name`: `$RELIEF_CACHE_DIR`, else `<dir>/.relief/`.
+    pub fn open_workspace(dir: &Path, name: &str, env: &DataDirEnv) -> Result<Self, AppError> {
+        let root = env
+            .relief_cache_dir
+            .clone()
+            .unwrap_or_else(|| dir.join(".relief"));
+        Self::prepare(&root, &format!("workspace:{name}"))?;
+        Ok(Self {
+            root,
+            fallback: false,
+        })
+    }
+
     pub fn root(&self) -> &Path {
         &self.root
     }

@@ -23,13 +23,14 @@ use relief_model::{
     EdgeKind, FileChange, FileRename, GraphDiff, GraphSnapshot, ImpactDirection, ImpactResponse,
     ImpactedNode, MetaResponse, Metrics, MetricsResponse, NodeId, NodeKind, NodeStatus,
     ReadingItem, ReadingOrderResponse, ReadingReason, ReviewState, ReviewSummary, SearchHit,
-    SearchResponse, SnapshotResponse,
+    SearchResponse, SnapshotResponse, WorkspaceMeta, WorkspaceRepoMeta,
 };
 use relief_rules::{Config, ConfigError, Rule, parse_config};
 
 mod data_dir;
 mod error;
 mod range;
+mod workspace;
 
 pub use data_dir::{DataDir, DataDirEnv};
 pub use error::AppError;
@@ -40,6 +41,7 @@ pub use range::{
 };
 pub use relief_diff::Granularity;
 pub use relief_model::{EdgeUsagesResponse, FileUsages, LogEntry, LogResponse, Settings};
+pub use workspace::{Workspace, WorkspaceRepo};
 
 /// What the import edges of one source file ask `edge_usages` to look for.
 struct Wanted {
@@ -167,6 +169,7 @@ pub struct Session {
     range: Option<RangeSpec>,
     indexer: Indexer,
     data_dir: Option<DataDir>,
+    workspace: Option<Workspace>,
     memory: Mutex<HashMap<String, IndexedSnapshot>>,
     indexed: AtomicUsize,
 }
@@ -236,11 +239,64 @@ impl Session {
             range: options.range,
             indexer,
             data_dir,
+            workspace: None,
             memory: Mutex::new(HashMap::new()),
             indexed: AtomicUsize::new(0),
         };
         session.sides(&source, None)?;
         Ok(session)
+    }
+
+    /// Opens the workspace at `path` (its `.relief.json` file or its folder). The data folder is
+    /// the `.relief/` next to the file; the repositories are checked but never written.
+    pub fn open_workspace(path: &Path, options: SessionOptions) -> Result<Self, AppError> {
+        let workspace = Workspace::open(path)?;
+        for repo in &workspace.repos {
+            let path = workspace.path_of(repo);
+            GitSource::open(&path)?;
+            Workspace::check_outside(workspace.dir(), &path)?;
+        }
+        let mut indexer = Indexer::new(&workspace.name).with_detectors(options.detectors);
+        for adapter in options.adapters {
+            indexer = indexer.with_adapter(adapter);
+        }
+        let data_dir = match &options.data_dir {
+            Some(env) => Some(DataDir::open_workspace(
+                workspace.dir(),
+                &workspace.name,
+                env,
+            )?),
+            None => None,
+        };
+        if let Some(data) = &data_dir {
+            indexer = indexer.with_cache(data.cache_dir());
+        }
+        Ok(Self {
+            path: workspace.dir().to_path_buf(),
+            name: workspace.name.clone(),
+            range: options.range,
+            indexer,
+            data_dir,
+            workspace: Some(workspace),
+            memory: Mutex::new(HashMap::new()),
+            indexed: AtomicUsize::new(0),
+        })
+    }
+
+    /// The workspace file, when the session is a workspace.
+    pub fn workspace_file(&self) -> Option<&Path> {
+        self.workspace.as_ref().map(Workspace::file)
+    }
+
+    /// The git source of the repository; a workspace has none until the multi-repository
+    /// snapshot exists.
+    fn git(&self) -> Result<GitSource, AppError> {
+        if self.workspace.is_some() {
+            return Err(AppError::Workspace(
+                "this operation is not available on a workspace yet".to_owned(),
+            ));
+        }
+        Ok(GitSource::open(&self.path)?)
     }
 
     /// The data folder, when the session writes one.
@@ -255,7 +311,11 @@ impl Session {
 
     /// Repository name, opening range, branches and tags.
     pub fn meta(&self) -> MetaResponse {
-        let source = GitSource::open(&self.path).ok();
+        let source = if self.workspace.is_some() {
+            None
+        } else {
+            GitSource::open(&self.path).ok()
+        };
         MetaResponse {
             repo: self.name.clone(),
             range: self.range.as_ref().map(|r| r.text().to_owned()),
@@ -267,12 +327,22 @@ impl Session {
                 .as_ref()
                 .and_then(|s| s.tags().ok())
                 .unwrap_or_default(),
+            workspace: self.workspace.as_ref().map(|w| WorkspaceMeta {
+                repos: w
+                    .repos
+                    .iter()
+                    .map(|r| WorkspaceRepoMeta {
+                        name: r.name.clone(),
+                        labels: r.labels.clone(),
+                    })
+                    .collect(),
+            }),
         }
     }
 
     /// The architecture rules of the head side of `range`, with the source text of the file.
     pub fn rules(&self, range: &RangeSpec) -> Result<RulesResponse, AppError> {
-        let source = GitSource::open(&self.path)?;
+        let source = self.git()?;
         let head = self.sides(&source, Some(range))?.new;
         match self.read_config(&source, &head)? {
             None => Ok(RulesResponse {
@@ -304,7 +374,7 @@ impl Session {
 
     /// The graph of a ref (or `WORKTREE` / `INDEX`).
     pub fn snapshot(&self, request: &SnapshotRequest) -> Result<SnapshotResponse, AppError> {
-        let source = GitSource::open(&self.path)?;
+        let source = self.git()?;
         let commit = self.resolve(&source, &request.rev)?;
         let indexed = self.indexed_snapshot(&source, &commit)?;
         let graph = match request.budget {
@@ -337,7 +407,7 @@ impl Session {
 
     /// The nodes of the head snapshot of a range whose name matches `query`, best match first.
     pub fn search(&self, request: &SearchRequest) -> Result<SearchResponse, AppError> {
-        let source = GitSource::open(&self.path)?;
+        let source = self.git()?;
         let head = self.sides(&source, request.range.as_ref())?.new;
         let graph = self.indexed_snapshot(&source, &head)?.graph;
         let hits = relief_diff::rank_search(&graph, &request.query, request.limit)
@@ -352,7 +422,7 @@ impl Session {
 
     /// The diff of a range with the snapshots it compares and the cache warnings.
     pub fn analyse(&self, request: &DiffRequest) -> Result<DiffAnalysis, AppError> {
-        let source = GitSource::open(&self.path)?;
+        let source = self.git()?;
         let sides = self.sides(&source, request.range.as_ref())?;
         self.analyse_sides(&source, &sides)
     }
@@ -362,7 +432,7 @@ impl Session {
         &self,
         request: &ReviewSummaryRequest,
     ) -> Result<ReviewSummary, AppError> {
-        let source = GitSource::open(&self.path)?;
+        let source = self.git()?;
         let sides = self.sides(&source, request.range.as_ref())?;
         let analysed = self.analyse_sides(&source, &sides)?;
         let mut summary = relief_diff::review_summary(
@@ -385,7 +455,7 @@ impl Session {
         &self,
         request: &ReadingOrderRequest,
     ) -> Result<ReadingOrderResponse, AppError> {
-        let source = GitSource::open(&self.path)?;
+        let source = self.git()?;
         let sides = self.sides(&source, request.range.as_ref())?;
         let analysed = self.analyse_sides(&source, &sides)?;
         let items = relief_diff::reading_order(&analysed.diff, &analysed.head, request.granularity)
@@ -406,7 +476,7 @@ impl Session {
         limit: usize,
         query: Option<&str>,
     ) -> Result<Vec<LogEntry>, AppError> {
-        let source = GitSource::open(&self.path)?;
+        let source = self.git()?;
         let head = source.resolve(rev)?;
         let query = query.map(str::trim).filter(|q| !q.is_empty());
         let needle = query.map(str::to_lowercase);
@@ -434,7 +504,7 @@ impl Session {
         &self,
         request: &CommitReadingRequest,
     ) -> Result<CommitReadingResponse, AppError> {
-        let source = GitSource::open(&self.path)?;
+        let source = self.git()?;
         let sides = self.sides(&source, request.range.as_ref())?;
         let log = source.log(&sides)?;
         let mut steps = Vec::new();
@@ -524,7 +594,7 @@ impl Session {
                 return Ok(saved);
             }
         }
-        let source = GitSource::open(&self.path)?;
+        let source = self.git()?;
         let branches = source.branches()?;
         let destination = if branches.iter().any(|b| b == "main") {
             "main".to_owned()
@@ -566,7 +636,7 @@ impl Session {
     /// The symbols reached from the seeds in the head of a range, with their
     /// path, whether a test reaches them and whether the range left them untouched.
     pub fn impact(&self, request: &ImpactRequest) -> Result<ImpactResponse, AppError> {
-        let source = GitSource::open(&self.path)?;
+        let source = self.git()?;
         let sides = self.sides(&source, request.range.as_ref())?;
         let analysed = self.analyse_sides(&source, &sides)?;
         let direction = match request.direction {
@@ -601,7 +671,7 @@ impl Session {
     /// snapshot: the churn depends on the window, counted back from the date of the commit.
     /// The answer is kept in the cache folder, keyed by commit and window.
     pub fn metrics(&self, request: &MetricsRequest) -> Result<MetricsResponse, AppError> {
-        let source = GitSource::open(&self.path)?;
+        let source = self.git()?;
         let commit = self.resolve(&source, &request.rev)?;
         let since_days = request.since_days.unwrap_or(DEFAULT_CHURN_DAYS);
         let cache = self.metrics_cache_file(&commit, since_days);
@@ -748,7 +818,7 @@ impl Session {
     /// Pairs of files changed in the same commits over a period before a ref. Kept apart from the
     /// snapshot (it depends on the history); the answer is kept in the cache folder.
     pub fn co_change(&self, request: &CoChangeRequest) -> Result<CoChangeResponse, AppError> {
-        let source = GitSource::open(&self.path)?;
+        let source = self.git()?;
         let commit = self.resolve(&source, &request.rev)?;
         let since_days = request.since_days.unwrap_or(DEFAULT_CHURN_DAYS);
         let min_commits = match request.min_commits {
@@ -839,7 +909,7 @@ impl Session {
 
     /// The text of a node (a file, or the declaration of a symbol) at one side of a range.
     pub fn code(&self, request: &CodeRequest) -> Result<String, AppError> {
-        let source = GitSource::open(&self.path)?;
+        let source = self.git()?;
         let sides = self.sides(&source, request.range.as_ref())?;
         let head = request.side == Side::Head;
         let commit = if head { &sides.new } else { &sides.old };
@@ -890,7 +960,7 @@ impl Session {
     /// Where the source files of an edge use the symbols they import from its target, read in
     /// the blobs of one side of a range. At most [`EDGE_USAGES_CAP`] usages are listed.
     pub fn edge_usages(&self, request: &EdgeUsagesRequest) -> Result<EdgeUsagesResponse, AppError> {
-        let source = GitSource::open(&self.path)?;
+        let source = self.git()?;
         let sides = self.sides(&source, request.range.as_ref())?;
         let commit = if request.side == Side::Head {
             &sides.new

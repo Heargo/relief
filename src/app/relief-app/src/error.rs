@@ -38,6 +38,9 @@ pub enum AppError {
     /// `relief.config.yaml` is invalid.
     #[error("{0}")]
     Config(String),
+    /// A workspace file or an operation on a workspace failed or is not available.
+    #[error("{0}")]
+    Workspace(String),
     /// Indexing, the cache or the git backend failed.
     #[error("{0}")]
     Index(String),
@@ -45,7 +48,7 @@ pub enum AppError {
 
 impl AppError {
     /// Stable code: `invalid_range`, `unknown_ref`, `unknown_node`,
-    /// `not_a_repository`, `no_data_dir`, `data_dir` or `index`.
+    /// `not_a_repository`, `no_data_dir`, `data_dir`, `workspace` or `index`.
     pub fn code(&self) -> &'static str {
         match self {
             Self::InvalidRange(_) | Self::AmbiguousRef(_) => "invalid_range",
@@ -53,6 +56,7 @@ impl AppError {
             Self::UnknownNode(_) => "unknown_node",
             Self::NotARepository(_) => "not_a_repository",
             Self::NoDataDir => "no_data_dir",
+            Self::Workspace(_) => "workspace",
             Self::DataDir(_) | Self::DataDirFormat { .. } => "data_dir",
             Self::NoCommits | Self::Index(_) | Self::Config(_) => "index",
         }

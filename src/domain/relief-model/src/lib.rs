@@ -17,7 +17,7 @@ pub use api::{
     MetaResponse, MetricsResponse, ModuleCoupling, MovedFile, OutOfDiffCaller, ReadingItem,
     ReadingOrderResponse, ReadingReason, RepeatedChange, RepeatedChangeItem, ReviewState,
     ReviewSummary, SearchHit, SearchResponse, Settings, SignatureSummary, SnapshotMeta,
-    SnapshotResponse, Usage, Violation, ViolationEdge,
+    SnapshotResponse, Usage, Violation, ViolationEdge, WorkspaceMeta, WorkspaceRepoMeta,
 };
 pub use diff::{
     EdgeChange, EdgeStatus, FileChange, GraphDiff, NodeChange, NodeStatus, SignatureChange,

@@ -5,7 +5,7 @@ use std::process::ExitCode;
 use std::sync::Arc;
 
 use clap::Parser;
-use relief_app::{DataDirEnv, RangeSpec, Session, SessionOptions};
+use relief_app::{DataDirEnv, RangeSpec, Session, SessionOptions, Workspace};
 use relief_detect::default_detectors;
 use relief_lang_python::PythonAdapter;
 use relief_lang_ts::TsAdapter;
@@ -14,7 +14,7 @@ use relief_lang_ts::TsAdapter;
 #[derive(Parser)]
 #[command(name = "relief", version)]
 struct Cli {
-    /// Repository to open; without it, relief starts on the welcome screen.
+    /// Repository, or workspace (`<name>.relief.json` or its folder), to open; without it, relief starts on the welcome screen.
     path: Option<PathBuf>,
     /// Range shown by default (`A...B`); HEAD against the working tree when absent.
     range: Option<String>,
@@ -22,15 +22,18 @@ struct Cli {
 
 /// Composition root: the session with the default detectors and the TypeScript adapter.
 fn open_session(path: &Path, range: Option<RangeSpec>) -> Result<Session, relief_app::AppError> {
-    Session::open(
-        path,
-        SessionOptions {
-            data_dir: Some(DataDirEnv::from_process()),
-            range,
-            detectors: default_detectors(),
-            adapters: vec![Box::new(TsAdapter::new()), Box::new(PythonAdapter::new())],
-        },
-    )
+    let options = SessionOptions {
+        data_dir: Some(DataDirEnv::from_process()),
+        range,
+        detectors: default_detectors(),
+        adapters: vec![Box::new(TsAdapter::new()), Box::new(PythonAdapter::new())],
+    };
+    // A `.relief.json` file, or a folder that holds one, is a workspace.
+    if Workspace::locate(path).is_some() {
+        Session::open_workspace(path, options)
+    } else {
+        Session::open(path, options)
+    }
 }
 
 fn main() -> ExitCode {

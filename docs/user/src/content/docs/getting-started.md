@@ -84,9 +84,46 @@ relief [path] [range]
 
 La fenêtre de relief s'ouvre sur le dépôt `path`. Rien n'est écrit dans votre dépôt.
 
-- Sans argument, `relief` n'ouvre aucun dépôt : il affiche l'écran d'accueil, où vous ouvrez un dépôt avec le sélecteur de dossier ou choisissez un dépôt récent (la liste est gardée dans votre dossier de configuration). Pour ouvrir le dossier courant, lancez `relief .`. L'ouverture d'un espace de travail multidépôt n'est pas encore disponible.
+- Sans argument, `relief` n'ouvre aucun dépôt : il affiche l'écran d'accueil, où vous ouvrez un dépôt avec le sélecteur de dossier ou choisissez un dépôt récent (la liste est gardée dans votre dossier de configuration). Pour ouvrir le dossier courant, lancez `relief .`. Les entrées de menu pour créer ou ouvrir un espace de travail multidépôt ne sont pas encore actives ; en ligne de commande, voir « Espace de travail » ci-dessous.
 - Sans plage, la plage affichée va de `HEAD` à l'arbre de travail. Pour une autre plage (`range`), donnez-la : `relief . main...ma-branche` (contre le merge-base) ou `relief . A..B`.
 - Le premier argument (`path`) est le dossier à analyser : `relief ~/code/mon-depot`.
+
+## Espace de travail
+
+Un espace de travail regroupe plusieurs dépôts (un front, une API, une bibliothèque partagée) pour les lire ensemble. C'est un dossier de votre choix qui contient :
+
+- `<nom>.relief.json`, la configuration, que vous pouvez versionner ou écrire à la main ;
+- `.relief/`, les données locales de l'espace (cache, état de relecture), au même format que le `.relief/` d'un dépôt.
+
+Les dépôts membres restent intacts : en mode espace, relief n'écrit rien dedans et ignore leur propre `.relief/`.
+
+```json
+{
+  "repos": [
+    {
+      "name": "api",
+      "path": "../api",
+      "labels": ["back"],
+      "source": "WORKTREE",
+      "destination": "main"
+    }
+  ]
+}
+```
+
+- `name` : le nom du dépôt dans l'espace, unique, non vide, sans `/` (par défaut, le nom de son dossier) ;
+- `path` : le dossier du dépôt, relatif au fichier (ou absolu) ;
+- `labels` : des étiquettes libres (`front`, `back`, `ops`, `tools`…), facultatif ;
+- `source` et `destination` : la comparaison par défaut du dépôt (`WORKTREE` et `main` si absents).
+
+Pour ouvrir l'espace, donnez le fichier ou son dossier :
+
+```sh
+relief ~/code/boutique/boutique.relief.json
+relief ~/code/boutique
+```
+
+Pour l'instant, relief ouvre l'espace et connaît ses dépôts, mais la carte multidépôt n'est pas encore disponible : elle arrive avec la prochaine étape.
 
 ## Premier regard
 

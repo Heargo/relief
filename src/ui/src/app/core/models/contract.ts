@@ -386,6 +386,23 @@ export interface MetaResponse {
    */
   repo: string;
   tags: string[];
+  /**
+   * The repositories of the workspace, when the session is a workspace (ADR 0010).
+   */
+  workspace?: WorkspaceMeta | null;
+}
+/**
+ * The repositories of an open workspace, in file order.
+ */
+export interface WorkspaceMeta {
+  repos: WorkspaceRepoMeta[];
+}
+/**
+ * A repository of a workspace.
+ */
+export interface WorkspaceRepoMeta {
+  labels: string[];
+  name: string;
 }
 /**
  * Body of every error of the HTTP API.

@@ -89,6 +89,21 @@ pub struct MetaResponse {
     pub range: Option<String>,
     pub branches: Vec<String>,
     pub tags: Vec<String>,
+    /// The repositories of the workspace, when the session is a workspace (ADR 0010).
+    pub workspace: Option<WorkspaceMeta>,
+}
+
+/// The repositories of an open workspace, in file order.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct WorkspaceMeta {
+    pub repos: Vec<WorkspaceRepoMeta>,
+}
+
+/// A repository of a workspace.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct WorkspaceRepoMeta {
+    pub name: String,
+    pub labels: Vec<String>,
 }
 
 /// A symbol whose signature changed, with the callers it reaches in the head.

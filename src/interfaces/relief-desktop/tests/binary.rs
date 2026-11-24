@@ -74,3 +74,53 @@ fn without_an_argument_no_session_is_opened() {
         "{output:?}"
     );
 }
+
+/// K07: `relief <file>.relief.json` and `relief <folder>` open the workspace: the session is built
+/// before any window, so neither the "not a repository" failure (exit code 2) nor a message about
+/// a repository can happen. Without a display the window itself cannot open.
+fn workspace() -> (TempDir, std::path::PathBuf) {
+    let dir = TempDir::new().unwrap();
+    let acme = dir.path().join("acme");
+    let space = dir.path().join("space");
+    Fixture::load("acme-shop").unwrap().build(&acme).unwrap();
+    std::fs::create_dir(&space).unwrap();
+    std::fs::write(
+        space.join("shop.relief.json"),
+        r#"{ "repos": [{ "name": "acme", "path": "../acme", "labels": ["back"],
+            "source": "WORKTREE", "destination": "main" }] }"#,
+    )
+    .unwrap();
+    (dir, space)
+}
+
+fn opens_the_workspace(arg: &std::path::Path) {
+    let config = TempDir::new().unwrap();
+    let output = desktop()
+        .arg(arg)
+        .env("RELIEF_CONFIG_DIR", config.path())
+        .env_remove("OWD")
+        .timeout(std::time::Duration::from_secs(20))
+        .output()
+        .unwrap();
+    assert_ne!(output.status.code(), Some(2), "{output:?}");
+    assert!(
+        !String::from_utf8_lossy(&output.stderr).contains("repository"),
+        "{output:?}"
+    );
+}
+
+#[test]
+fn a_workspace_file_is_opened_as_a_workspace() {
+    let (_dir, space) = workspace();
+    opens_the_workspace(&space.join("shop.relief.json"));
+    // The data of the workspace, not of its repositories.
+    assert!(space.join(".relief").is_dir());
+}
+
+#[test]
+fn a_workspace_folder_is_opened_as_a_workspace() {
+    let (dir, space) = workspace();
+    opens_the_workspace(&space);
+    assert!(space.join(".relief").is_dir());
+    assert!(!dir.path().join("acme/.relief").exists());
+}

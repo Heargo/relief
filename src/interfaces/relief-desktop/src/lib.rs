@@ -10,7 +10,7 @@ use std::sync::{Arc, RwLock};
 use relief_app::{
     AppError, CoChangeRequest, CodeRequest, CommitReadingRequest, DiffRequest, EdgeUsagesRequest,
     ImpactRequest, MetricsRequest, RangeSpec, ReadingOrderRequest, ReviewSummaryRequest,
-    RulesResponse, SearchRequest, Session, Side, SnapshotRequest,
+    RulesResponse, SearchRequest, Session, Side, SnapshotRequest, Workspace,
 };
 use relief_model::{
     ApiError, CoChangeResponse, CommitReadingResponse, DiffResponse, EdgeUsagesResponse,
@@ -121,6 +121,11 @@ fn handlers<R: Runtime>(builder: Builder<R>) -> Builder<R> {
         co_change,
         open_docs,
         open_repo,
+        create_workspace,
+        open_workspace,
+        open_repo_as_workspace,
+        add_workspace_repo,
+        remove_workspace_repo,
         recents
     ])
 }
@@ -565,6 +570,118 @@ async fn open_repo<R: Runtime>(app: AppHandle<R>, path: String) -> Result<MetaRe
     }
     recents::remember(&config_dir, "repo", &path);
     Ok(meta)
+}
+
+/// Starts the session of the workspace `file` in the window, and answers its `meta`.
+async fn start_workspace<R: Runtime>(
+    app: &AppHandle<R>,
+    file: PathBuf,
+    remember: bool,
+) -> Result<MetaResponse, ApiError> {
+    let (config_dir, opener) = {
+        let welcome = welcome(app)?;
+        (welcome.config_dir.clone(), Arc::clone(&welcome.opener))
+    };
+    let opened = file.clone();
+    let session = tauri::async_runtime::spawn_blocking(move || opener(&opened))
+        .await
+        .map_err(|e| ApiError {
+            code: "index".to_owned(),
+            message: e.to_string(),
+        })?
+        .map_err(api_error)?;
+    let meta = session.meta();
+    if let Ok(mut slot) = app.state::<Slot>().0.write() {
+        *slot = Some(Arc::new(session));
+    }
+    if remember {
+        recents::remember(&config_dir, "workspace", &file);
+    }
+    Ok(meta)
+}
+
+/// Creates `<dir>/<name>.relief.json`, empty, and opens it in the window.
+#[tauri::command]
+async fn create_workspace<R: Runtime>(
+    app: AppHandle<R>,
+    dir: String,
+    name: String,
+) -> Result<MetaResponse, ApiError> {
+    welcome(&app)?;
+    let workspace = Workspace::create(Path::new(&dir), &name).map_err(api_error)?;
+    let file = std::fs::canonicalize(workspace.file()).unwrap_or_else(|_| workspace.file().into());
+    start_workspace(&app, file, true).await
+}
+
+/// Opens the workspace of a `.relief.json` file or of the folder that contains it.
+#[tauri::command]
+async fn open_workspace<R: Runtime>(
+    app: AppHandle<R>,
+    path: String,
+) -> Result<MetaResponse, ApiError> {
+    welcome(&app)?;
+    let path = std::fs::canonicalize(&path).unwrap_or_else(|_| PathBuf::from(path));
+    let workspace = Workspace::open(&path).map_err(api_error)?;
+    start_workspace(&app, workspace.file().to_path_buf(), true).await
+}
+
+/// Makes a workspace named after the repository in `dir`, and opens it.
+#[tauri::command]
+async fn open_repo_as_workspace<R: Runtime>(
+    app: AppHandle<R>,
+    repo: String,
+    dir: String,
+) -> Result<MetaResponse, ApiError> {
+    welcome(&app)?;
+    let workspace = Workspace::from_repo(Path::new(&repo), Path::new(&dir)).map_err(api_error)?;
+    let file = std::fs::canonicalize(workspace.file()).unwrap_or_else(|_| workspace.file().into());
+    start_workspace(&app, file, true).await
+}
+
+/// The workspace file of the session of the window, when it shows a workspace.
+fn open_workspace_file<R: Runtime>(app: &AppHandle<R>) -> Result<PathBuf, ApiError> {
+    app.state::<Slot>()
+        .0
+        .read()
+        .ok()
+        .and_then(|slot| {
+            slot.as_ref()
+                .and_then(|s| s.workspace_file().map(Path::to_path_buf))
+        })
+        .ok_or_else(|| ApiError {
+            code: "bad_request".to_owned(),
+            message: "no workspace is open in this window".to_owned(),
+        })
+}
+
+/// Adds a repository to the open workspace and reopens it.
+#[tauri::command]
+async fn add_workspace_repo<R: Runtime>(
+    app: AppHandle<R>,
+    repo: String,
+    labels: Vec<String>,
+) -> Result<MetaResponse, ApiError> {
+    welcome(&app)?;
+    let file = open_workspace_file(&app)?;
+    let mut workspace = Workspace::open(&file).map_err(api_error)?;
+    let labels: Vec<&str> = labels.iter().map(String::as_str).collect();
+    workspace
+        .add_repo(Path::new(&repo), &labels)
+        .map_err(api_error)?;
+    start_workspace(&app, file, false).await
+}
+
+/// Removes a repository from the open workspace and reopens it.
+#[tauri::command]
+async fn remove_workspace_repo<R: Runtime>(
+    app: AppHandle<R>,
+    name: String,
+) -> Result<MetaResponse, ApiError> {
+    welcome(&app)?;
+    let file = open_workspace_file(&app)?;
+    let mut workspace = Workspace::open(&file).map_err(api_error)?;
+    workspace.remove_repo(&name).map_err(api_error)?;
+    start_workspace(&app, file, false).await
 }
 
 /// The repositories and workspaces opened before, most recent first.

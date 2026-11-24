@@ -84,9 +84,46 @@ relief [path] [range]
 
 The relief window opens on the current repository. Nothing is written to your repository.
 
-- With no argument, `relief` opens no repository: it shows the welcome screen, where you open a repository with the folder picker or choose a recent one (the list is kept in your configuration folder). To open the current folder, run `relief .`. Opening a multi-repository workspace is not available yet.
+- With no argument, `relief` opens no repository: it shows the welcome screen, where you open a repository with the folder picker or choose a recent one (the list is kept in your configuration folder). To open the current folder, run `relief .`. The menu entries to create or open a multi-repository workspace are not active yet; on the command line, see "Workspace" below.
 - With no range, the range shown goes from `HEAD` to the working tree. For another range (`range`), pass it: `relief . main...my-branch` (against the merge-base) or `relief . A..B`.
 - The first argument (`path`) is the folder to analyse: `relief ~/code/my-repo`.
+
+## Workspace
+
+A workspace groups several repositories (a front end, an API, a shared library) so you can read them together. It is a folder of your choice that holds:
+
+- `<name>.relief.json`, the configuration, which you can version or write by hand;
+- `.relief/`, the local data of the workspace (cache, review state), in the same format as the `.relief/` of a repository.
+
+The member repositories stay untouched: in workspace mode relief writes nothing in them and ignores their own `.relief/`.
+
+```json
+{
+  "repos": [
+    {
+      "name": "api",
+      "path": "../api",
+      "labels": ["back"],
+      "source": "WORKTREE",
+      "destination": "main"
+    }
+  ]
+}
+```
+
+- `name`: the name of the repository in the workspace, unique, non-empty, without `/` (by default, its folder name);
+- `path`: the repository folder, relative to the file (or absolute);
+- `labels`: free labels (`front`, `back`, `ops`, `tools`…), optional;
+- `source` and `destination`: the default comparison of the repository (`WORKTREE` and `main` when absent).
+
+To open the workspace, give the file or its folder:
+
+```sh
+relief ~/code/shop/shop.relief.json
+relief ~/code/shop
+```
+
+For now relief opens the workspace and knows its repositories, but the multi-repository map is not available yet: it comes with the next step.
 
 ## First look
 

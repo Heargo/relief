@@ -189,7 +189,7 @@ Brainstorm du 2026-11-20 : la carte rame sur un gros écran et les budgets de S0
 | ✓ | 54c | **K05** Comparaison façon PR : source → destination | Défaut working tree → `main`, configurable. | K04 |
 | ✓ | 54d | **K06** Écran d'accueil sans chemin | `relief` sans argument : ouvrir un dépôt, un espace, récents. | K03 |
 | ✓ | 54e | **K02** ADR : espace de travail et ids de dépôt | Préfixe `repo:<nom>/` en multidépôt seulement. | K01 |
-| ☐ | 54f | **K07** Fichier d'espace et session multidépôt | `<nom>.relief.json` + `.relief/` de l'espace. | K02 |
+| ✓ | 54f | **K07** Fichier d'espace et session multidépôt | `<nom>.relief.json` + `.relief/` de l'espace. | K02 |
 | ☐ | 54g | **K08** Snapshot d'un espace : niveau dépôt | Union des dépôts, une plage par dépôt, niveau Dépôts. | K07 |
 | ☐ | 54h | **K09** Étiquettes de dépôt | front, back, ops, tools ; filtre. | K08 |
 | ☐ | 54i | **K10** Comparaison par dépôt | Menu du panneau gauche, une ligne par dépôt. | K05, K08 |

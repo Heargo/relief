@@ -9,6 +9,10 @@ relief est une application de bureau : on la lance sur un dépôt et elle ouvre 
 
 `relief [CHEMIN] [PLAGE]` ouvre la carte du dépôt `CHEMIN` ; sans `CHEMIN`, `relief` ouvre l'écran d'accueil (dépôts récents, sélecteur de dossier), pas le dossier courant (`relief .`). Sans plage, la carte montre `HEAD` jusqu'à l'arbre de travail. Une plage s'écrit `A...B` (contre le merge-base) ou `A..B`.
 
+## relief fichier.relief.json
+
+`relief <nom>.relief.json`, ou `relief DOSSIER` quand le dossier contient un fichier `.relief.json`, ouvre l'espace de travail multidépôt (voir [Commencer](../getting-started/#espace-de-travail)). Ses données sont dans le `.relief/` voisin du fichier.
+
 ## Options et environnement
 
 - `RELIEF_CACHE_DIR` : dossier des données de relief, à la place de `.relief/` à la racine du dépôt.
