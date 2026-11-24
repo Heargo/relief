@@ -14,9 +14,9 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use relief_adapter_api::{Detector, HttpCallSite, LanguageAdapter};
 use relief_diff::{
     DiffOptions, SignatureTexts, attribute_edge_commits, diff_graphs_with_options,
-    format_only_summary,
+    format_only_files, format_only_summary,
 };
-use relief_git::{CommitId, FileStatus, GitError, GitSource, ResolvedRange, RevSpec};
+use relief_git::{CommitId, FileStatus, GitError, GitSource, ResolvedRange, RevSpec, TreeEntry};
 use relief_index::{IndexedSnapshot, Indexer};
 use relief_model::{
     CoChangePair, CoChangeResponse, CommitReadingEntry, CommitReadingResponse, DiffResponse,
@@ -119,6 +119,10 @@ impl DiffAnalysis {
     pub fn into_response(self) -> DiffResponse {
         DiffResponse {
             format_only: format_only_summary(&self.diff),
+            format_only_paths: format_only_files(&self.diff)
+                .into_iter()
+                .map(|f| f.path)
+                .collect(),
             renames: self.renames,
             diff: self.diff,
             base_resolved: self.base_resolved,
@@ -1181,11 +1185,93 @@ impl Session {
         Ok(indexed)
     }
 
+    /// A file without structural change is only `format_only` when its text is the same once
+    /// the blanks are removed, unless an adapter reads it (rule E05: its comments are ignored).
+    /// Any other such file is marked as a modified file node, so that it is a real change.
+    fn mark_text_changes(
+        &self,
+        source: &GitSource,
+        trees: (&[TreeEntry], &[TreeEntry]),
+        base: &GraphSnapshot,
+        head: &GraphSnapshot,
+        renames: &[FileRename],
+        diff: &mut GraphDiff,
+    ) -> Result<(), AppError> {
+        let candidates = format_only_files(diff);
+        if candidates.is_empty() {
+            return Ok(());
+        }
+        let analysed = |lang: &Option<String>| {
+            lang.as_deref()
+                .is_some_and(|l| self.indexer.adapters().iter().any(|a| a.handles(l)))
+        };
+        let file_nodes = |graph: &GraphSnapshot| -> HashMap<String, (NodeId, bool)> {
+            graph
+                .nodes()
+                .iter()
+                .filter(|n| n.kind == NodeKind::File)
+                .filter_map(|n| {
+                    Some((
+                        n.id.file_path()?.to_owned(),
+                        (n.id.clone(), analysed(&n.lang)),
+                    ))
+                })
+                .collect()
+        };
+        let (head_files, base_files) = (file_nodes(head), file_nodes(base));
+        let from: HashMap<&str, &str> = renames
+            .iter()
+            .map(|r| (r.to.as_str(), r.from.as_str()))
+            .collect();
+        let mut wanted = Vec::new();
+        for file in &candidates {
+            let old = from.get(file.path.as_str()).copied().unwrap_or(&file.path);
+            let (Some((id, head_analysed)), base_node) =
+                (head_files.get(&file.path), base_files.get(old))
+            else {
+                continue;
+            };
+            if *head_analysed || base_node.is_some_and(|(_, a)| *a) {
+                continue;
+            }
+            wanted.push((file, old.to_owned(), id.clone()));
+        }
+        if wanted.is_empty() {
+            return Ok(());
+        }
+        let old_blobs: HashMap<&str, _> =
+            trees.0.iter().map(|e| (e.path.as_str(), &e.blob)).collect();
+        let new_blobs: HashMap<&str, _> =
+            trees.1.iter().map(|e| (e.path.as_str(), &e.blob)).collect();
+        for (file, old, id) in wanted {
+            let (Some(before), Some(after)) = (
+                old_blobs.get(old.as_str()),
+                new_blobs.get(file.path.as_str()),
+            ) else {
+                continue;
+            };
+            let (before, after) = (source.read_blob(before)?, source.read_blob(after)?);
+            let blank = |b: &&u8| !b.is_ascii_whitespace();
+            if !before.iter().filter(blank).eq(after.iter().filter(blank)) {
+                diff.nodes.push(relief_model::NodeChange {
+                    id,
+                    status: NodeStatus::Modified {
+                        body: true,
+                        signature: None,
+                    },
+                    lines_added: file.lines_added,
+                    lines_removed: file.lines_removed,
+                });
+            }
+        }
+        Ok(())
+    }
+
     /// Normalised signature text of the symbols of `paths`, at `commit`.
     fn signature_texts(
         &self,
         source: &GitSource,
-        commit: &CommitId,
+        tree: &[TreeEntry],
         graph: &GraphSnapshot,
         paths: &HashSet<&str>,
     ) -> Result<HashMap<NodeId, String>, GitError> {
@@ -1196,7 +1282,7 @@ impl Session {
             .filter_map(|n| Some((n.id.file_path()?, &n.id)))
             .collect();
         let mut texts = HashMap::new();
-        for entry in source.list_tree(commit)? {
+        for entry in tree {
             let Some(file) = files.get(entry.path.as_str()) else {
                 continue;
             };
@@ -1259,9 +1345,10 @@ impl Session {
             })
             .collect();
         let new_paths: HashSet<&str> = changes.iter().map(|c| c.path.as_str()).collect();
+        let (old_tree, new_tree) = (source.list_tree(&sides.old)?, source.list_tree(&sides.new)?);
         let signatures = SignatureTexts {
-            base: self.signature_texts(source, &sides.old, base, &old_paths)?,
-            head: self.signature_texts(source, &sides.new, &head, &new_paths)?,
+            base: self.signature_texts(source, &old_tree, base, &old_paths)?,
+            head: self.signature_texts(source, &new_tree, &head, &new_paths)?,
         };
         let files: Vec<FileChange> = changes
             .iter()
@@ -1287,6 +1374,14 @@ impl Session {
             ..DiffOptions::default()
         };
         let mut diff = diff_graphs_with_options(base, &head, &files, &options);
+        self.mark_text_changes(
+            source,
+            (&old_tree, &new_tree),
+            base,
+            &head,
+            &renames,
+            &mut diff,
+        )?;
         if !is_virtual(&sides.old) && !is_virtual(&sides.new) {
             let mut commits = Vec::new();
             for info in source.log(sides)? {

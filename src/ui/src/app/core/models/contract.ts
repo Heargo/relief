@@ -360,6 +360,10 @@ export interface DiffResponse {
   diff: GraphDiff;
   formatOnly: FormatOnlySummary;
   /**
+   * Paths of the `format_only` files (same paths as `diff.files`).
+   */
+  formatOnlyPaths?: string[];
+  /**
    * Head subgraph of the review (changed nodes, their neighbours and ancestors); only when a
    * budget was asked for.
    */

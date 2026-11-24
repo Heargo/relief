@@ -36,6 +36,7 @@ export function formatOnlyHiddenLines(id: string, response: DiffResponse): numbe
   if (id.includes(SYMBOL_MARK)) return null;
   if (fileSymbolChanges(id, response).length > 0) return null;
   const path = filePathOf(id);
+  if (!path || !(response.formatOnlyPaths ?? []).includes(path)) return null;
   const file = response.diff.files.find((f) => f.path === path);
   return file ? file.linesAdded + file.linesRemoved : null;
 }

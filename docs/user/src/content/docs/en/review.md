@@ -52,7 +52,7 @@ Each box (system, module, file, symbol) carries the state of what it contains.
 - **Intensity**: the bigger a change, the stronger the colour. Three degrees: up to 5 lines, up to 20 lines, beyond.
 - **Tinted containers**: a module or a system takes the tint of its descendants, so you can spot where the diff is from afar, before zooming in.
 - **Moved**: a moved file (renamed, for example `apps/web/utils/format.ts` to `packages/shared/money/format.ts`) shows once as moved, with its old location dashed. It is not counted as an addition plus a removal.
-- **Format only**: a file whose formatting alone changed (no symbol or link changed) carries the "format only" badge: no need to read it.
+- **Format only**: a file carries the "format only" badge when its text is the same on both sides once the blanks (spaces, tabs, line breaks) are removed, or when a language relief analyses sees no symbol or link changed in it (comments then count for nothing). A file in a language relief does not analyse whose text really changes, a comment included, is not "format only": it stays visible as changed, with its text diff.
 
 ### Signature badges
 
@@ -137,7 +137,7 @@ In "Review the PR" mode, selecting a changed symbol or file (click it on the map
 
 - **Unified diff**: the removed (−) and added (+) lines between the base and the head of the chosen range, with the file's line numbers on both sides. An added symbol only has added lines, a removed symbol only removed lines. For a moved file, the base is read at its old location.
 - **One block per symbol**: for a file, each symbol gets its own block, with its status (added, modified, removed, moved).
-- **Format only**: for a file where only the formatting changed, the text diff is hidden ("58 text diff lines hidden: only the formatting changes"). The **Show the text diff anyway** button shows it.
+- **Format only**: for a "format only" file, the text diff is hidden ("58 text diff lines hidden: only the formatting changes"). The **Show the text diff anyway** button shows it. A changed file with no changed symbol (a language relief does not analyse) shows the text diff of the whole file straight away.
 - **Signature**: when the signature changes, the panel shows the before and after, the **breaking** or **compatible** badge, the reason (for example "Return type widened (null possible)") and whether the symbol is part of the **public API** or **internal**.
 - **expand** / **collapse**: the header button widens the right panel to read long lines.
 

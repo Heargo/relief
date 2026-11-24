@@ -22,6 +22,7 @@ const RESPONSE: DiffResponse = {
     edges: [],
   },
   formatOnly: { files: 1, linesAdded: 7, linesRemoved: 2 },
+  formatOnlyPaths: ['repo:api/src/index.ts'],
   renames: [{ from: 'repo:api/src/old.ts', to: 'repo:api/src/moved.ts' }],
   baseResolved: 'abc',
 } as unknown as DiffResponse;
@@ -30,6 +31,7 @@ describe('the diff of a workspace', () => {
   it('tells the format-only file of one repository from the changed file of the other', () => {
     expect(formatOnlyFiles(RESPONSE)).toEqual(['repo:api/src/index.ts']);
     expect(formatOnlyHiddenLines(API_INDEX, RESPONSE)).toBe(9);
+    expect(formatOnlyHiddenLines(WEB_INDEX, RESPONSE)).toBeNull();
     expect(hasStructuralChange(API_INDEX, RESPONSE)).toBe(true);
     expect(hasStructuralChange(WEB_INDEX, RESPONSE)).toBe(true);
   });

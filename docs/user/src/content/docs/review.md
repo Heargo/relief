@@ -52,7 +52,7 @@ Chaque boîte (système, module, fichier, symbole) porte l'état de ce qu'elle c
 - **Intensité** : plus un changement est gros, plus la couleur est marquée. Trois degrés : jusqu'à 5 lignes, jusqu'à 20 lignes, au-delà.
 - **Conteneurs teintés** : un module ou un système prend la teinte de ses descendants, pour repérer de loin où se trouve le diff, avant de zoomer.
 - **Déplacés** : un fichier déplacé (renommé, par exemple `apps/web/utils/format.ts` vers `packages/shared/money/format.ts`) apparaît une seule fois comme déplacé, avec son ancien emplacement en pointillé. Il n'est pas compté comme un ajout plus une suppression.
-- **Format seul** : un fichier dont seul le formatage a changé (aucun symbole ni lien modifié) porte le badge « format seul » : inutile de le relire.
+- **Format seul** : un fichier porte le badge « format seul » quand son texte est identique des deux côtés une fois les blancs retirés (espaces, tabulations, retours à la ligne), ou quand un langage analysé par relief n'y voit aucun symbole ni lien modifié (les commentaires comptent alors pour rien). Un fichier d'un langage non analysé dont le texte change vraiment, commentaire compris, n'est pas en « format seul » : il reste visible comme changé, avec son diff texte.
 
 ### Badges de signature
 
@@ -137,7 +137,7 @@ En mode « Relire la PR », sélectionner un symbole ou un fichier changé (clic
 
 - **Diff unifié** : les lignes retirées (−) et ajoutées (+) entre la base et la tête de la plage choisie, avec les numéros de ligne du fichier des deux côtés. Un symbole ajouté n'a que des lignes ajoutées, un symbole supprimé que des lignes retirées. Pour un fichier déplacé, la base est lue à son ancien emplacement.
 - **Un bloc par symbole** : pour un fichier, chaque symbole a son bloc, avec son statut (ajouté, modifié, supprimé, déplacé).
-- **Format seul** : pour un fichier dont seul le formatage change, le diff texte est masqué (« 58 lignes de diff texte masquées : seul le formatage change »). Le bouton **Afficher quand même le diff texte** l'affiche.
+- **Format seul** : pour un fichier en « format seul », le diff texte est masqué (« 58 lignes de diff texte masquées : seul le formatage change »). Le bouton **Afficher quand même le diff texte** l'affiche. Un fichier modifié sans symbole changé (langage non analysé) montre directement le diff texte du fichier entier.
 - **Signature** : quand la signature change, le panneau montre l'avant et l'après, le badge **cassante** ou **compatible**, la raison (par exemple « Type de retour élargi (null possible) ») et si le symbole fait partie de l'**API publique** ou est **interne**.
 - **élargir** / **réduire** : le bouton de l'en-tête élargit le panneau de droite pour lire les longues lignes.
 

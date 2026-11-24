@@ -198,6 +198,7 @@ Brainstorm du 2026-11-20 : la carte rame sur un gros écran et les budgets de S0
 | ✓ | 54l | **K13** Parcours multidépôt de bout en bout | e2e de l'accueil à l'arête entre dépôts ; doc. | K09, K10, K11, K12 |
 | ☐ | 54m | **K14** Règles d'architecture dans un espace | Relevé à la review de K08 ; à trier. | K08 |
 | ☐ | 54n | **K15** Commit des arêtes HTTP entre dépôts | Relevé à la review de K12 ; à trier. | K12 |
+| ☐ | 54o | **E10** Code de haut niveau classé « format seul » | Relevé à la review du bug E09 ; à trier. | aucun |
 
 ## Phase 13 : confort de relecture (nouvelles fonctionnalités)
 

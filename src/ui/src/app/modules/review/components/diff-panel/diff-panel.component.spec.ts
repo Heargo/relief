@@ -13,6 +13,7 @@ const INVOICE = 'pkg:@acme/api/billing::file:apps/api/billing/invoice.ts';
 const TOTAL = `${INVOICE}::sym:computeTotal`;
 const RENDER = `${INVOICE}::sym:renderInvoice`;
 const CLIENT = 'pkg:@acme/shared/http::file:packages/shared/http/client.ts';
+const TOTAL_RS = 'pkg:tools::file:tools/total.rs';
 const RANGE = 'main...feat/promo-codes';
 
 /** A reason code as the API serializes it (the contract type is generated). */
@@ -25,11 +26,13 @@ const change = (c: Partial<NodeChange> & { id: string; status: NodeChange['statu
 function diffOf(
   nodes: NodeChange[],
   files: { path: string; linesAdded: number; linesRemoved: number }[] = [],
+  formatOnlyPaths: string[] = [],
 ): DiffResponse {
   return {
     diff: { base: 'a'.repeat(40), head: 'b'.repeat(40), files, nodes, edges: [] },
     formatOnly: { files: 0, linesAdded: 0, linesRemoved: 0 },
     renames: [],
+    ...({ formatOnlyPaths } as object),
   };
 }
 
@@ -59,6 +62,8 @@ const TEXTS: Record<string, string> = {
   [`${RENDER}|head`]: 'function renderInvoice() {\n  return 1;\n}',
   [`${CLIENT}|base`]: 'const a = {b:1};\nconst c = 2;',
   [`${CLIENT}|head`]: 'const a = { b: 1 };\nconst c = 2;',
+  [`${TOTAL_RS}|base`]: 'fn total() -> u32 {\n    1 + 1\n}',
+  [`${TOTAL_RS}|head`]: 'fn total() -> u32 {\n    1 * 1\n}',
 };
 
 const api = { code: vi.fn() };
@@ -269,6 +274,7 @@ describe('DiffPanelComponent', () => {
       diffOf(
         [],
         [{ path: 'packages/shared/http/client.ts', linesAdded: added, linesRemoved: removed }],
+        ['packages/shared/http/client.ts'],
       );
 
     it('hides the text diff and says how many lines are hidden', async () => {
@@ -316,6 +322,36 @@ describe('DiffPanelComponent', () => {
         ['added', '', '1', 'const a = { b: 1 };'],
         ['context', '2', '2', 'const c = 2;'],
       ]);
+    });
+  });
+  describe('changed file without changed symbol, not format-only', () => {
+    const textChange = () =>
+      diffOf([], [{ path: 'tools/total.rs', linesAdded: 1, linesRemoved: 1 }], []);
+
+    it('shows the text diff of the whole file without any click', async () => {
+      const { el } = await render(textChange(), TOTAL_RS);
+      expect(q(el, 'diff-format-only')).toBeNull();
+      expect(q(el, 'diff-show-anyway')).toBeNull();
+      expect(lines(el)).toEqual([
+        ['context', '1', '1', 'fn total() -> u32 {'],
+        ['removed', '2', '', '1 + 1'],
+        ['added', '', '2', '1 * 1'],
+        ['context', '3', '3', '}'],
+      ]);
+    });
+
+    it('does not hide it when another file is the format-only one', async () => {
+      const diff = diffOf(
+        [],
+        [
+          { path: 'tools/total.rs', linesAdded: 1, linesRemoved: 1 },
+          { path: 'packages/shared/http/client.ts', linesAdded: 1, linesRemoved: 1 },
+        ],
+        ['packages/shared/http/client.ts'],
+      );
+      const { el } = await render(diff, TOTAL_RS);
+      expect(q(el, 'diff-format-only')).toBeNull();
+      expect(all(el, 'diff-line')).toHaveLength(4);
     });
   });
 });

@@ -73,5 +73,6 @@ expression: "serde_json::to_value(&response).unwrap()"
     "linesAdded": 0,
     "linesRemoved": 0
   },
+  "formatOnlyPaths": [],
   "renames": []
 }

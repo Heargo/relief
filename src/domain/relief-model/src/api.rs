@@ -57,6 +57,9 @@ pub struct DiffResponse {
     pub diff: GraphDiff,
     pub renames: Vec<FileRename>,
     pub format_only: FormatOnlySummary,
+    /// Paths of the `format_only` files (same paths as `diff.files`).
+    #[serde(default)]
+    pub format_only_paths: Vec<String>,
     /// Short SHA (7 characters) of the base really compared: the merge base for `...`, the base
     /// as is for `..`, HEAD for the working tree.
     #[serde(default)]
