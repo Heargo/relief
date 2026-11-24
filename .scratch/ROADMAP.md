@@ -2,7 +2,7 @@
 
 Status: proposed (2026-11-18)
 
-Tickets répartis en 17 features, chacune avec son code : `foundations/` (F), `graph-model/` (M), `git-source/` (G), `detectors/` (D), `lang-ts/` (T), `index/` (I), `diff-engine/` (E), `cli/` (C), `map-ui/` (U), `review-ui/` (R), `arch-rules/` (A), `explore/` (X), `scale/` (S), `languages/` (L), `native-app/` (N), `packaging/` (P), `multi-repo/` (K). `G02` = `.scratch/git-source/issues/02-*.md`.
+Tickets répartis en 18 features, chacune avec son code : `foundations/` (F), `graph-model/` (M), `git-source/` (G), `detectors/` (D), `lang-ts/` (T), `index/` (I), `diff-engine/` (E), `cli/` (C), `map-ui/` (U), `review-ui/` (R), `arch-rules/` (A), `explore/` (X), `scale/` (S), `languages/` (L), `native-app/` (N), `packaging/` (P), `multi-repo/` (K), `frameworks/` (H). `G02` = `.scratch/git-source/issues/02-*.md`.
 
 L'ordre suit les lignes `Blocked by:`, et à l'intérieur :
 
@@ -199,6 +199,10 @@ Brainstorm du 2026-11-20 : la carte rame sur un gros écran et les budgets de S0
 | ☐ | 54m | **K14** Règles d'architecture dans un espace | Relevé à la review de K08 ; à trier. | K08 |
 | ☐ | 54n | **K15** Commit des arêtes HTTP entre dépôts | Relevé à la review de K12 ; à trier. | K12 |
 | ☐ | 54o | **E10** Code de haut niveau classé « format seul » | Relevé à la review du bug E09 ; à trier. | aucun |
+| ☐ | 54p | **H01** Frameworks dans l'adapter TS, routes NestJS | Aucune arête HTTP sur un vrai espace NestJS + Angular ; ADR 0011. Spec `.scratch/frameworks/spec.md`. | K12 |
+| ☐ | 54q | **H02** Appels Angular HttpClient | `this.http.get(url)` n'est pas vu comme un appel. | H01 |
+| ☐ | 54r | **H03** URL de base dynamique | `environment.API_URL + '/x'`, `${this.baseUrl}/x`. | H02 |
+| ☐ | 54s | **H04** URL de base dans le fichier d'espace | Lever l'ambiguïté quand plusieurs API déclarent la même route. | H03 |
 
 ## Phase 13 : confort de relecture (nouvelles fonctionnalités)
 
