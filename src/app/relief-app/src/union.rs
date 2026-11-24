@@ -2,6 +2,9 @@
 //! under its `repo:<name>` node, with prefixed ids, each read at its own source and diffed on its
 //! own range (the workspace file's `source` into `destination`).
 
+use std::collections::{HashMap, HashSet};
+
+use relief_adapter_api::PublishedPackage;
 use relief_git::{CommitId, GitSource, ResolvedRange};
 use relief_model::{
     Edge, EdgeChange, FileChange, FileRename, GraphDiff, GraphSnapshot, Node, NodeChange, NodeId,
@@ -21,6 +24,75 @@ struct Part {
     root: Node,
     name: String,
     graph: GraphSnapshot,
+    /// The packages this repository publishes.
+    published: Vec<PublishedPackage>,
+}
+
+const EXTERNAL_PREFIX: &str = "pkg:external/";
+
+/// For each external node of a repository naming (by `import_name`) a package another
+/// repository publishes (prefixed ids), the file that package enters by.
+fn redirects(parts: &[Part]) -> HashMap<NodeId, NodeId> {
+    // File node by repository and repository path.
+    let files: HashMap<(&str, String), &NodeId> = parts
+        .iter()
+        .flat_map(|part| {
+            part.graph
+                .nodes()
+                .iter()
+                .filter(|n| n.kind == NodeKind::File)
+                .filter_map(move |n| {
+                    let id = n.id.to_string();
+                    let (_, path) = id.split_once("::file:")?;
+                    Some(((part.name.as_str(), path.to_owned()), &n.id))
+                })
+        })
+        .collect();
+    // Entry file by import name; the first repository publishing a name wins.
+    let mut entries: HashMap<&str, (&str, &NodeId)> = HashMap::new();
+    for part in parts {
+        for p in &part.published {
+            if let Some(file) = files.get(&(part.name.as_str(), p.entry.clone())) {
+                entries
+                    .entry(p.import_name.as_str())
+                    .or_insert((part.name.as_str(), file));
+            }
+        }
+    }
+    let mut map = HashMap::new();
+    for part in parts {
+        for node in part.graph.nodes() {
+            if node.kind != NodeKind::External {
+                continue;
+            }
+            let id = node.id.to_string();
+            let Some(name) = id.strip_prefix(EXTERNAL_PREFIX) else {
+                continue;
+            };
+            let Some((repo, file)) = entries.get(name) else {
+                continue;
+            };
+            if *repo == part.name {
+                continue;
+            }
+            if let (Ok(from), Ok(to)) = (prefixed(&node.id, &part.name), prefixed(file, repo)) {
+                map.insert(from, to);
+            }
+        }
+    }
+    map
+}
+
+/// Removes the external nodes replaced by a file, and the external groups left empty.
+fn prune_externals(nodes: &mut Vec<Node>, redirect: &HashMap<NodeId, NodeId>) {
+    nodes.retain(|n| !redirect.contains_key(&n.id));
+    let parents: HashSet<NodeId> = nodes.iter().filter_map(|n| n.parent.clone()).collect();
+    nodes.retain(|n| n.subkind != "external-group" || parents.contains(&n.id));
+}
+
+/// Whether `id` is the group of the external packages of a repository.
+fn is_external_group(id: &NodeId) -> bool {
+    id.to_string().ends_with("/pkg:external")
 }
 
 fn prefixed(id: &NodeId, repo: &str) -> Result<NodeId, AppError> {
@@ -81,6 +153,15 @@ fn repo_node(repo: &WorkspaceRepo, branch: String, commit: &str) -> Result<Node,
 
 /// The graphs of the repositories under their `repo:<name>` nodes.
 fn unite(parts: Vec<Part>) -> Result<GraphSnapshot, AppError> {
+    let redirect = redirects(&parts);
+    unite_with(parts, &redirect)
+}
+
+/// Like `unite`, with the redirections to apply (see `redirects`).
+fn unite_with(
+    parts: Vec<Part>,
+    redirect: &HashMap<NodeId, NodeId>,
+) -> Result<GraphSnapshot, AppError> {
     let commit = parts
         .iter()
         .map(|p| p.graph.commit())
@@ -95,9 +176,14 @@ fn unite(parts: Vec<Part>) -> Result<GraphSnapshot, AppError> {
             nodes.push(prefixed_node(node, &part.name, &root_id)?);
         }
         for edge in part.graph.edges() {
-            edges.push(prefixed_edge(edge, &part.name)?);
+            let mut edge = prefixed_edge(edge, &part.name)?;
+            if let Some(to) = redirect.get(&edge.to) {
+                edge.to = to.clone();
+            }
+            edges.push(edge);
         }
     }
+    prune_externals(&mut nodes, redirect);
     Ok(GraphSnapshot::new(commit, nodes, edges))
 }
 
@@ -262,6 +348,7 @@ impl Session {
                 root,
                 name: member.repo.name.clone(),
                 graph: indexed.graph,
+                published: self.indexer.published_packages(&member.source, &commit)?,
             });
             metas.push(indexed.meta);
         }
@@ -312,16 +399,23 @@ impl Session {
             let sides = self.member_sides(&member)?;
             let analysed = self.analyse_sides(&member.source, &sides)?;
             let name = member.repo.name.as_str();
-            let part = |root: Node, graph: &GraphSnapshot| Part {
+            let published_base = self
+                .indexer
+                .published_packages(&member.source, &sides.old)?;
+            let published_head = self
+                .indexer
+                .published_packages(&member.source, &sides.new)?;
+            let part = |root: Node, graph: &GraphSnapshot, published: Vec<PublishedPackage>| Part {
                 root,
                 name: name.to_owned(),
                 graph: graph.clone(),
+                published,
             };
             let branch = Self::member_branch(&member);
             let root =
                 |graph: &GraphSnapshot| repo_node(&member.repo, branch.clone(), graph.commit());
-            bases.push(part(root(&analysed.base)?, &analysed.base));
-            heads.push(part(root(&analysed.head)?, &analysed.head));
+            bases.push(part(root(&analysed.base)?, &analysed.base, published_base));
+            heads.push(part(root(&analysed.head)?, &analysed.head, published_head));
             bases_text.push(analysed.diff.base.clone());
             heads_text.push(analysed.diff.head.clone());
             for change in &analysed.diff.nodes {
@@ -346,11 +440,31 @@ impl Session {
             warnings.extend(analysed.warnings);
             resolved.push(analysed.base_resolved);
         }
+        // Edges to a package another repository publishes now go to its entry file.
+        // The heads win over the bases: a removed edge keeps the target it had.
+        let mut redirect = redirects(&bases);
+        redirect.extend(redirects(&heads));
+        for edge in &mut diff.edges {
+            if let Some(to) = redirect.get(&edge.to) {
+                edge.to = to.clone();
+            }
+        }
+        let (base, head) = (unite_with(bases, &redirect)?, unite_with(heads, &redirect)?);
+        // The external nodes replaced by a file, and the groups left empty, have no change.
+        let kept: HashSet<&NodeId> = base
+            .nodes()
+            .iter()
+            .chain(head.nodes())
+            .map(|n| &n.id)
+            .collect();
+        diff.nodes.retain(|c| {
+            !redirect.contains_key(&c.id) && (kept.contains(&c.id) || !is_external_group(&c.id))
+        });
         diff.base = bases_text.join("+");
         diff.head = heads_text.join("+");
         Ok(DiffAnalysis {
-            base: unite(bases)?,
-            head: unite(heads)?,
+            base,
+            head,
             diff,
             renames,
             base_resolved: resolved.join("+"),

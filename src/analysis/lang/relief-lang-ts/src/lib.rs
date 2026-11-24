@@ -4,7 +4,9 @@ use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 
-use relief_adapter_api::{EntryPoint, Extraction, LanguageAdapter, LinkContext, ResolveEnv, Usage};
+use relief_adapter_api::{
+    EntryPoint, Extraction, LanguageAdapter, LinkContext, PublishedPackage, ResolveEnv, Usage,
+};
 use relief_model::{
     Edge, EdgeKind, Node, NodeId, NodeKind, Precision, SignatureVerdict, Span, Visibility,
 };
@@ -219,6 +221,32 @@ impl TsAdapter {
 }
 
 impl LanguageAdapter for TsAdapter {
+    fn published_packages(
+        &self,
+        paths: &[&str],
+        read: &dyn Fn(&str) -> Option<Vec<u8>>,
+    ) -> Vec<PublishedPackage> {
+        paths
+            .iter()
+            .filter_map(|path| {
+                let dir = match path.rsplit_once('/') {
+                    Some((dir, "package.json")) => format!("{dir}/"),
+                    None if *path == "package.json" => String::new(),
+                    _ => return None,
+                };
+                let json: serde_json::Value = serde_json::from_slice(&read(path)?).ok()?;
+                let name = json.get("name")?.as_str()?;
+                let main = json.get("main")?.as_str()?;
+                let main = main.strip_prefix("./").unwrap_or(main);
+                Some(PublishedPackage {
+                    name: name.to_owned(),
+                    import_name: name.to_owned(),
+                    entry: format!("{dir}{main}"),
+                })
+            })
+            .collect()
+    }
+
     fn name(&self) -> &str {
         "typescript"
     }

@@ -2,7 +2,7 @@
 
 use std::collections::HashSet;
 
-use relief_adapter_api::{Extraction, LanguageAdapter, LinkContext};
+use relief_adapter_api::{Extraction, LanguageAdapter, LinkContext, PublishedPackage};
 use relief_model::{
     Edge, EdgeKind, Node, NodeId, NodeKind, Precision, SignatureVerdict, Span, Visibility,
 };
@@ -144,6 +144,35 @@ impl PythonAdapter {
 }
 
 impl LanguageAdapter for PythonAdapter {
+    fn published_packages(
+        &self,
+        paths: &[&str],
+        read: &dyn Fn(&str) -> Option<Vec<u8>>,
+    ) -> Vec<PublishedPackage> {
+        paths
+            .iter()
+            .filter_map(|path| {
+                let dir = match path.rsplit_once('/') {
+                    Some((dir, "pyproject.toml")) => format!("{dir}/"),
+                    None if *path == "pyproject.toml" => String::new(),
+                    _ => return None,
+                };
+                let text = String::from_utf8(read(path)?).ok()?;
+                let toml: toml::Table = toml::from_str(&text).ok()?;
+                let name = toml.get("project")?.get("name")?.as_str()?;
+                let module = name.replace(['-', '.'], "_").to_lowercase();
+                ["", "src/"].iter().find_map(|root| {
+                    let entry = format!("{dir}{root}{module}/__init__.py");
+                    paths.contains(&entry.as_str()).then(|| PublishedPackage {
+                        name: name.to_owned(),
+                        import_name: module.clone(),
+                        entry,
+                    })
+                })
+            })
+            .collect()
+    }
+
     fn name(&self) -> &str {
         "python"
     }

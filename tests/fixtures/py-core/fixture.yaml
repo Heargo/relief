@@ -1,0 +1,6 @@
+# The library repository of the `py-space` workspace: publishes `shop-core` (module `shop_core`),
+# consumed by py-app.
+commits:
+  - id: base
+    message: "chore: shop-core library"
+    date: "2024-06-01T09:00:00Z"

@@ -96,6 +96,15 @@ pub trait LanguageAdapter: Send + Sync {
     ) -> Option<Vec<Usage>> {
         None
     }
+    /// The packages this repository publishes (a name other repositories import it by, and the
+    /// repository path of its entry point). `paths` and `read` describe the tree.
+    fn published_packages(
+        &self,
+        _paths: &[&str],
+        _read: &dyn Fn(&str) -> Option<Vec<u8>>,
+    ) -> Vec<PublishedPackage> {
+        Vec::new()
+    }
     /// Judges a change between two normalised signature texts of this language.
     fn compare_signatures(&self, before: &str, after: &str) -> SignatureVerdict {
         SignatureVerdict {
@@ -104,6 +113,16 @@ pub trait LanguageAdapter: Send + Sync {
             equivalent: before == after,
         }
     }
+}
+
+/// A package a repository publishes: the name it is imported by and its entry point.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PublishedPackage {
+    pub name: String,
+    /// The name other repositories write in an import to reach it.
+    pub import_name: String,
+    /// Repository path of the entry point file.
+    pub entry: String,
 }
 
 /// What an adapter needs to resolve import specifiers outside of linking.

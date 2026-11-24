@@ -1,0 +1,5 @@
+# The application repository of the `py-space` workspace: imports `shop_core`, published by py-core.
+commits:
+  - id: base
+    message: "chore: shop app"
+    date: "2024-06-01T09:30:00Z"

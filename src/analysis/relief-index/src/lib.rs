@@ -203,6 +203,27 @@ impl Indexer {
             .unwrap_or_default())
     }
 
+    /// The packages published by the repository at `commit`, as declared by the adapters.
+    pub fn published_packages(
+        &self,
+        source: &GitSource,
+        commit: &CommitId,
+    ) -> Result<Vec<relief_adapter_api::PublishedPackage>, IndexError> {
+        let entries = source.list_tree(commit)?;
+        let paths: Vec<&str> = entries.iter().map(|e| e.path.as_str()).collect();
+        let by_path: HashMap<&str, usize> = entries
+            .iter()
+            .enumerate()
+            .map(|(i, e)| (e.path.as_str(), i))
+            .collect();
+        let read = |path: &str| source.read_blob(&entries[*by_path.get(path)?].blob).ok();
+        Ok(self
+            .adapters
+            .iter()
+            .flat_map(|a| a.published_packages(&paths, &read))
+            .collect())
+    }
+
     /// Builds the snapshot of `commit`.
     pub fn snapshot(
         &self,
