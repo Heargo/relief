@@ -9,14 +9,14 @@ Overlay the diff on the map: what is added, modified, removed or moved, and the 
 
 ## Review the PR
 
-The **Review the PR / Explore the repo** switch, at the top of the left sidebar, picks the mode: review or exploration. On, the map carries the diff of the chosen range. Off, it is the repository map alone, without any diff mark.
+At the top of the left sidebar, the repository name and the current branch say where you are. Below, the **Review the PR / Explore the repo** switch picks the mode: review or exploration. On, the map carries the diff of the chosen range. Off, it is the repository map alone, without any diff mark, and the comparison control is hidden.
 
 ## Pick a commit range
 
-In the top bar, the **base ···→ head ⇄** control picks what is compared, followed by the number of commits in the range. Each side shows its role: **Reference · base** is the starting point, **Changes · head** what you review. The map shows what head changes compared with base. Each side (keys `b` and `h`) opens a list with a filter field, shortcuts (base: `main`, `HEAD~1`, the latest tag; head: **Working tree**, `HEAD`) and three tabs, **Branches**, **Tags** and **Commits**. The Commits tab shows the history of head, with the commits of the range highlighted and the other end marked BASE or HEAD. Arrows, `Enter`, `Tab` (next tab) and `Esc` work from the keyboard.
+In **Review the PR** mode, in the left sidebar under the switch, the **base ···→ head ⇄** control picks what is compared, followed by the number of commits in the range. Each side shows its role: **Reference · base** is the starting point, **Changes · head** what you review. The map shows what head changes compared with base. Each side (keys `b` and `h`) opens a list with a filter field, shortcuts (base: `main`, `HEAD~1`, the latest tag; head: **Working tree**, `HEAD`) and three tabs, **Branches**, **Tags** and **Commits**. The Commits tab shows the history of head, with the commits of the range highlighted and the other end marked BASE or HEAD. Arrows, `Enter`, `Tab` (next tab) and `Esc` work from the keyboard.
 
 - **`···→` or `→`**: `base...head` (default, `···→`) compares from the common ancestor, like a PR; a click switches to `base..head` (`→`), the direct diff between the two.
-- **Reading line**: under the bar, a sentence says what the map shows and which commit really serves as the base, for example "what feat/promo-codes changes compared with main, since their common ancestor 4e1a9c2". It fades after a few seconds or on the first click on the map, and comes back when hovering the control.
+- **Reading line**: under the comparison, in the left panel, a sentence says what the map shows and which commit really serves as the base, for example "what feat/promo-codes changes compared with main, since their common ancestor 4e1a9c2". It fades after a few seconds or on the first click on the map, and comes back when hovering the control.
 - **⇄** swaps base and head. It is disabled when head is the working tree, which is always on the changes side.
 
 Picking a side reloads the diff.

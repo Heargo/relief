@@ -61,6 +61,24 @@
   white-space: nowrap;
 }
 
+.ws-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--relief-line);
+
+  .repo {
+    flex-wrap: wrap;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .ref {
+    min-width: 0;
+  }
+}
+
 .topbar button {
   white-space: nowrap;
 }

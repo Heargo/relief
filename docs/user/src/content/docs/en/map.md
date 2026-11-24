@@ -9,9 +9,9 @@ The repository as a zoomable map.
 
 ## The screen
 
-- **Top bar**: on the left, the menu bar **Workspace**, **Settings** and **Help** (from the keyboard: `Alt` + `W`, `S` or `H`, then the arrows, `Enter` to pick, `Esc` to close); then the repository name, followed by the languages read and the detector used (for example "TypeScript · workspaces"; hidden in a narrow window), the displayed ref, the commit range, the search field. The **Settings** menu holds the theme (Light, Dark or System, which follows the system setting), the language (English or Français), the **Shortcuts** (also on the `?` key) and **Reload**; the **Help** menu opens the **Documentation**. The **Workspace** menu offers "Open a repository…"; its multi-repository entries are greyed out, with a tooltip, until they arrive. A menu closes on `Esc` or a click outside.
+- **Top bar**: on the left, the menu bar **Workspace**, **Settings** and **Help** (from the keyboard: `Alt` + `W`, `S` or `H`, then the arrows, `Enter` to pick, `Esc` to close); then the search field. The **Settings** menu holds the theme (Light, Dark or System, which follows the system setting), the language (English or Français), the **Shortcuts** (also on the `?` key) and **Reload**; the **Help** menu opens the **Documentation**. The **Workspace** menu offers "Open a repository…"; its multi-repository entries are greyed out, with a tooltip, until they arrive. A menu closes on `Esc` or a click outside.
 - **Three columns**: the left sidebar, the map in the middle, and the right panel.
-- **Left sidebar**: at the top, the **Review the PR / Explore the repo** switch. Then the **Tools** block, specific to the mode: the PR card, reading order, signals and rules in review; entry points, hotspots and rules in exploration. Last, the **Display** block, shared by both modes: the layers that make sense in the mode (diff and focus in review, risk and logical coupling in exploration), "Hide external dependencies" and the layout.
+- **Left sidebar**: at the top, the repository name, followed by the languages read and the detector used (for example "TypeScript · workspaces"; hidden in a narrow window), and the current branch. Then the **Review the PR / Explore the repo** switch; in review, the comparison (commit range) shows below it. Then the **Tools** block, specific to the mode: the PR card, reading order, signals and rules in review; entry points, hotspots and rules in exploration. Last, the **Display** block, shared by both modes: the layers that make sense in the mode (diff and focus in review, risk and logical coupling in exploration), "Hide external dependencies" and the layout.
 - **Resize**: drag the handle on a column's edge. relief remembers the width for next time. Double-click the handle to restore the default width.
 - **Widen**: the button at the top of the right panel makes it larger for easier reading; click it again to restore its width.
 - Language and theme switch immediately, without reloading the page, and are remembered.
@@ -47,7 +47,7 @@ The map is nested: systems (packages, services, external dependencies when shown
 
 ## Keyboard shortcuts
 
-The `?` key (or the "?" button in the top bar) opens the shortcut list; Escape closes it.
+The `?` key (or Settings › Shortcuts) opens the shortcut list; Escape closes it.
 
 | Key               | Action                                                             |
 | ----------------- | ------------------------------------------------------------------ |

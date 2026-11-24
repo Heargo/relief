@@ -113,7 +113,7 @@ describe('MapPageComponent, left panel: mode tools, then display', () => {
   it('in PR mode, stacks the mode switch, the PR tools, then the display block', async () => {
     const { el } = await render();
     const panel = byId(el, 'left-panel')!;
-    expect(panel.firstElementChild?.contains(byId(el, 'review-toggle'))).toBe(true);
+    expect(panel.children[1]?.contains(byId(el, 'review-toggle'))).toBe(true);
     const tools = byId(el, 'tools-section')!;
     const display = byId(el, 'display-section')!;
     expect(tools.parentElement).toBe(panel);

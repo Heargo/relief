@@ -11,7 +11,7 @@
     }}</span>
     <button
       type="button"
-      class="side"
+      class="side iconbtn"
       data-testid="range-base"
       aria-haspopup="dialog"
       [attr.aria-expanded]="picker.open() === 'base'"
@@ -24,7 +24,7 @@
   </div>
   <button
     type="button"
-    class="mode"
+    class="mode iconbtn"
     data-testid="range-mode"
     [disabled]="picker.headIsWorktree()"
     [attr.aria-label]="
@@ -45,7 +45,7 @@
     }}</span>
     <button
       type="button"
-      class="side"
+      class="side iconbtn"
       data-testid="range-head"
       aria-haspopup="dialog"
       [attr.aria-expanded]="picker.open() === 'head'"
@@ -62,7 +62,7 @@
   </div>
   <button
     type="button"
-    class="swap"
+    class="swap iconbtn"
     data-testid="range-swap"
     [disabled]="picker.headIsWorktree()"
     [attr.aria-label]="'review.rangePicker.swap' | translate"
@@ -85,13 +85,7 @@
     </div>
   }
   @if (picker.open(); as side) {
-    <div
-      class="popover"
-      data-testid="range-popover"
-      role="dialog"
-      [class.right]="side === 'head'"
-      (keydown)="onKey($event)"
-    >
+    <div class="popover" data-testid="range-popover" role="dialog" (keydown)="onKey($event)">
       <input
         #filter
         pInputText
@@ -122,6 +116,7 @@
           <button
             type="button"
             role="tab"
+            class="iconbtn"
             [attr.data-testid]="'range-tab-' + tab"
             [class.on]="picker.tab() === tab"
             [attr.aria-selected]="picker.tab() === tab"

@@ -9,9 +9,9 @@ Le dépôt vu comme une carte zoomable.
 
 ## L'écran
 
-- **Barre du haut** : à gauche, la barre de menus **Espace de travail**, **Paramètres** et **Aide** (au clavier : `Alt` + `E`, `P` ou `A`, puis les flèches, `Entrée` pour choisir, `Échap` pour fermer) ; puis le nom du dépôt, suivi des langages lus et du detector utilisé (par exemple « TypeScript · workspaces » ; masqués sur une fenêtre étroite), la ref affichée, la plage de commits, le champ de recherche. Le menu **Paramètres** regroupe le thème (Clair, Sombre ou Système, qui suit le réglage du système), la langue (English ou Français), les **Raccourcis** (aussi par la touche `?`) et **Recharger** ; le menu **Aide** ouvre la **Documentation**. Le menu **Espace de travail** propose « Ouvrir un dépôt… » ; les entrées d'espace multidépôt y sont grisées, avec une infobulle, en attendant leur arrivée. Un menu se ferme sur `Échap` ou d'un clic à côté.
+- **Barre du haut** : à gauche, la barre de menus **Espace de travail**, **Paramètres** et **Aide** (au clavier : `Alt` + `E`, `P` ou `A`, puis les flèches, `Entrée` pour choisir, `Échap` pour fermer) ; puis le champ de recherche. Le menu **Paramètres** regroupe le thème (Clair, Sombre ou Système, qui suit le réglage du système), la langue (English ou Français), les **Raccourcis** (aussi par la touche `?`) et **Recharger** ; le menu **Aide** ouvre la **Documentation**. Le menu **Espace de travail** propose « Ouvrir un dépôt… » ; les entrées d'espace multidépôt y sont grisées, avec une infobulle, en attendant leur arrivée. Un menu se ferme sur `Échap` ou d'un clic à côté.
 - **Trois colonnes** : la barre de gauche, la carte au centre et le panneau de droite.
-- **Barre de gauche** : en haut, la bascule **Relire la PR / Explorer le repo**. Puis le bloc **Outils**, propre au mode : carte de la PR, ordre de lecture, signaux et règles en relecture ; points d'entrée, hotspots et règles en exploration. Enfin le bloc **Affichage**, commun aux deux modes : les calques utiles au mode (diff et focus en relecture, risque et couplage logique en exploration), « Masquer les dépendances externes » et la disposition.
+- **Barre de gauche** : en haut, le nom du dépôt, suivi des langages lus et du detector utilisé (par exemple « TypeScript · workspaces » ; masqués sur une fenêtre étroite), et la branche courante. Puis la bascule **Relire la PR / Explorer le repo** ; en relecture, la comparaison (plage de commits) s'affiche dessous. Puis le bloc **Outils**, propre au mode : carte de la PR, ordre de lecture, signaux et règles en relecture ; points d'entrée, hotspots et règles en exploration. Enfin le bloc **Affichage**, commun aux deux modes : les calques utiles au mode (diff et focus en relecture, risque et couplage logique en exploration), « Masquer les dépendances externes » et la disposition.
 - **Redimensionner** : faites glisser la poignée au bord d'une colonne. relief retient la largeur pour la prochaine ouverture. Un double-clic sur la poignée remet la largeur par défaut.
 - **Élargir** : le bouton en haut du panneau de droite l'agrandit pour lire plus confortablement, un second clic le remet à sa largeur.
 - La langue et le thème changent tout de suite, sans recharger la page, et sont retenus.
@@ -47,7 +47,7 @@ La carte est imbriquée : les systèmes (paquets, services, dépendances externe
 
 ## Raccourcis clavier
 
-La touche `?` (ou le bouton « ? » de la barre du haut) ouvre la liste des raccourcis ; Échap la ferme.
+La touche `?` (ou Paramètres › Raccourcis) ouvre la liste des raccourcis ; Échap la ferme.
 
 | Touche            | Action                                                                   |
 | ----------------- | ------------------------------------------------------------------------ |

@@ -9,14 +9,14 @@ Superposer le diff à la carte : ce qui est ajouté, modifié, supprimé ou dép
 
 ## Relire la PR
 
-La bascule **Relire la PR / Explorer le repo**, en haut de la barre de gauche, choisit le mode : relecture ou exploration. Activé, la carte porte le diff de la plage choisie. Coupé, c'est la carte du dépôt seule, sans aucune marque de diff.
+En tête de la barre de gauche, le nom du dépôt et la branche courante rappellent où l'on est. Dessous, la bascule **Relire la PR / Explorer le repo** choisit le mode : relecture ou exploration. Activé, la carte porte le diff de la plage choisie. Coupé, c'est la carte du dépôt seule, sans aucune marque de diff, et le contrôle de comparaison disparaît.
 
 ## Choisir une plage de commits
 
-Dans la barre du haut, le contrôle **base ···→ head ⇄** choisit ce qu'on compare, suivi du nombre de commits de la plage. Chaque côté porte son rôle : **Référence · base** est le point de départ, **Changements · head** ce qu'on relit. La carte montre ce que head change par rapport à base. Chaque côté (touches `b` et `h`) ouvre une liste avec un champ de filtre, des raccourcis (base : `main`, `HEAD~1`, le dernier tag ; head : **Arbre de travail**, `HEAD`) et trois onglets **Branches**, **Tags** et **Commits**. L'onglet Commits montre l'historique de head, les commits de la plage surlignés et l'autre extrémité marquée BASE ou HEAD. Les flèches, `Entrée`, `Tab` (onglet suivant) et `Échap` s'utilisent au clavier.
+En mode **Relire la PR**, dans la barre de gauche, sous la bascule, le contrôle **base ···→ head ⇄** choisit ce qu'on compare, suivi du nombre de commits de la plage. Chaque côté porte son rôle : **Référence · base** est le point de départ, **Changements · head** ce qu'on relit. La carte montre ce que head change par rapport à base. Chaque côté (touches `b` et `h`) ouvre une liste avec un champ de filtre, des raccourcis (base : `main`, `HEAD~1`, le dernier tag ; head : **Arbre de travail**, `HEAD`) et trois onglets **Branches**, **Tags** et **Commits**. L'onglet Commits montre l'historique de head, les commits de la plage surlignés et l'autre extrémité marquée BASE ou HEAD. Les flèches, `Entrée`, `Tab` (onglet suivant) et `Échap` s'utilisent au clavier.
 
 - **`···→` ou `→`** : `base...head` (défaut, `···→`) compare depuis l'ancêtre commun, comme une PR ; un clic passe à `base..head` (`→`), le diff direct entre les deux.
-- **Ligne de lecture** : sous la barre, une phrase dit ce que montre la carte et quel commit sert vraiment de base, par exemple « ce que feat/promo-codes change par rapport à main, depuis leur ancêtre commun 4e1a9c2 ». Elle s'efface après quelques secondes ou au premier clic sur la carte, et revient au survol du contrôle.
+- **Ligne de lecture** : sous la comparaison, dans le panneau gauche, une phrase dit ce que montre la carte et quel commit sert vraiment de base, par exemple « ce que feat/promo-codes change par rapport à main, depuis leur ancêtre commun 4e1a9c2 ». Elle s'efface après quelques secondes ou au premier clic sur la carte, et revient au survol du contrôle.
 - **⇄** inverse base et head. Il est désactivé quand head est l'arbre de travail, qui est toujours du côté des changements.
 
 Choisir un côté recharge le diff.

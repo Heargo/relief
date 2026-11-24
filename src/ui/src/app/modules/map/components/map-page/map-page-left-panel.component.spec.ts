@@ -95,7 +95,7 @@ describe('MapPageComponent, left panel like the mockup', () => {
   it('opens the panel with the mode switch, a segmented control out of the top bar', async () => {
     const { el } = await render();
     const panel = byId(el, 'left-panel')!;
-    const first = panel.firstElementChild as HTMLElement;
+    const first = panel.children[1] as HTMLElement;
     expect(first.classList.contains('sec')).toBe(true);
     const seg = first.querySelector('.seg');
     expect(seg).not.toBeNull();

@@ -39,7 +39,7 @@ it('the mode switch sits at the top of the left panel and switches the mode', as
     return {
       inPanel: panel.contains(review) && panel.contains(explore),
       inTopbar: !!document.querySelector('header.topbar [data-testid="review-toggle"]'),
-      first: panel.firstElementChild!.contains(review),
+      first: panel.children[1].contains(review),
     };
   });
   expect(placed).toEqual({ inPanel: true, inTopbar: false, first: true });

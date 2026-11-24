@@ -23,19 +23,6 @@
       (reload)="reloader.reload()"
       (docs)="docs.open()"
     />
-    @if (repo.repoName(); as name) {
-      <div class="repo">
-        <span data-testid="repo-name"
-          ><b>{{ name }}</b></span
-        >
-        @if (repoMeta(); as line) {
-          <span class="sep">·</span> <span data-testid="repo-meta">{{ line }}</span>
-        }
-      </div>
-    }
-    @if (repo.ref(); as ref) {
-      <span class="ref" data-testid="ref">{{ ref }}</span>
-    }
     <div class="search-box">
       <span class="mag" data-testid="search-icon" aria-hidden="true">⌕</span>
       <input
@@ -80,13 +67,25 @@
         </ul>
       }
     </div>
-    @if (repo.meta()) {
-      <app-range-picker />
-    }
   </header>
 
   <main class="main" [style.--lw.px]="panels.widths().left" [style.--rw.px]="panels.widths().right">
     <aside class="panel left" data-testid="left-panel">
+      <div class="ws-head" data-testid="workspace-header">
+        @if (repo.repoName(); as name) {
+          <div class="repo">
+            <span data-testid="repo-name"
+              ><b>{{ name }}</b></span
+            >
+            @if (repoMeta(); as line) {
+              <span class="sep">·</span> <span data-testid="repo-meta">{{ line }}</span>
+            }
+          </div>
+        }
+        @if (repo.ref(); as ref) {
+          <span class="ref" data-testid="ref">{{ ref }}</span>
+        }
+      </div>
       <div class="sec">
         <div class="seg">
           <button
@@ -109,6 +108,11 @@
           </button>
         </div>
       </div>
+      @if (review.reviewMode() && repo.meta()) {
+        <div class="sec" data-testid="compare-section">
+          <app-range-picker />
+        </div>
+      }
       <div data-testid="tools-section">
         <div class="ptitle">
           {{ 'map.panel.tools' | translate }}
