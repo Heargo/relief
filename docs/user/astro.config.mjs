@@ -22,6 +22,11 @@ export default defineConfig({
           slug: 'getting-started',
         },
         { label: 'La carte', translations: { en: 'The map' }, slug: 'map' },
+        {
+          label: 'Espace de travail',
+          translations: { en: 'Workspace' },
+          slug: 'workspace',
+        },
         { label: 'Relire une PR', translations: { en: 'Review a PR' }, slug: 'review' },
         {
           label: "Règles d'architecture",

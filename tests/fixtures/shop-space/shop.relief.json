@@ -1,0 +1,18 @@
+{
+  "repos": [
+    {
+      "name": "web",
+      "path": "../shop-web",
+      "labels": ["front"],
+      "source": "feat/order-badge",
+      "destination": "main"
+    },
+    {
+      "name": "api",
+      "path": "../shop-api",
+      "labels": ["back"],
+      "source": "feat/order-total",
+      "destination": "main"
+    }
+  ]
+}

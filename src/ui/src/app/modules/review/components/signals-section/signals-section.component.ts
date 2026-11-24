@@ -4,7 +4,7 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { LanguageBusiness } from '../../../../core/business/language.business';
 import type { ReviewSummary } from '../../../../core/models/contract';
 import { splitViolations } from '../../../rules/helpers/rules.logic';
-import { nodeLabel, signalCount } from '../../helpers/review-summary.logic';
+import { displayPath, nodeLabel, signalCount } from '../../helpers/review-summary.logic';
 
 /** The "Signals" section of the left bar: what a reviewer should look at first. */
 @Component({
@@ -21,6 +21,7 @@ export class SignalsSectionComponent {
   readonly nodeSelect = output<string>();
 
   protected readonly label = nodeLabel;
+  protected readonly path = displayPath;
   protected readonly count = computed(() => signalCount(this.summary()));
   protected readonly violations = computed(() => splitViolations(this.summary().violations));
   protected readonly breaking = computed(() => this.summary().signatures.filter((s) => s.breaking));

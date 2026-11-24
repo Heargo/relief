@@ -1,0 +1,5 @@
+# File names and folders that make a file a test (R17), and look-alikes that do not.
+commits:
+  - id: init
+    message: "chore: test files by name and by folder"
+    date: "2024-01-01T10:00:00Z"

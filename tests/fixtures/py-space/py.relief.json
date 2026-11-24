@@ -1,0 +1,6 @@
+{
+  "repos": [
+    { "name": "app", "path": "../py-app", "source": "main", "destination": "main" },
+    { "name": "core", "path": "../py-core", "source": "main", "destination": "main" }
+  ]
+}

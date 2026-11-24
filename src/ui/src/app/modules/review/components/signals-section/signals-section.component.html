@@ -65,7 +65,7 @@
           data-kind="format-only"
           (click)="nodeSelect.emit(file.node)"
         >
-          <span class="hint">{{ 'review.signals.ignored' | translate }}</span> {{ file.path }}
+          <span class="hint">{{ 'review.signals.ignored' | translate }}</span> {{ path(file.path) }}
         </button>
       </li>
     }

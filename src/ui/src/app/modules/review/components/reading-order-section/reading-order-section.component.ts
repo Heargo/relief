@@ -4,8 +4,9 @@ import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '@ngx-translate/core';
 import { Checkbox } from '@openng/optimus-ui/checkbox';
 
-import type { ReadingItem, ReadingReason } from '../../../../core/models/contract';
+import type { ReadingItem, ReadingReason, RepeatedChange } from '../../../../core/models/contract';
 import type { CommitRow, ReadingMode } from '../../business/reading-order.business';
+import { groupProposal } from '../../helpers/repeated-changes.logic';
 import { nodeLabel } from '../../helpers/review-summary.logic';
 
 /** The "reading order" section of the left panel: the numbered list, the seen boxes, the progress. */
@@ -23,6 +24,11 @@ export class ReadingOrderSectionComponent {
   readonly seenIds = input<ReadonlySet<string>>(new Set());
   readonly progress = input.required<{ seen: number; total: number }>();
   readonly persisted = input(true);
+  /** Groups of files that make the same change: the entry stands for the whole group. */
+  readonly repeated = input<RepeatedChange[]>([]);
+  readonly stepByStep = input(false);
+  /** The current element of the step-by-step reading, null while it is off. */
+  readonly current = input<string | null>(null);
   readonly commits = input<CommitRow[]>([]);
   readonly selectedCommit = input<string | null>(null);
   readonly modeChange = output<ReadingMode>();
@@ -31,6 +37,10 @@ export class ReadingOrderSectionComponent {
   readonly showAll = output<void>();
   readonly toggle = output<string>();
   readonly markNext = output<void>();
+  /** The representative of a group whose members the user asks to mark seen. */
+  readonly groupMark = output<string>();
+  readonly stepChange = output<boolean>();
+  readonly move = output<'next' | 'previous'>();
 
   protected readonly modes: ReadingMode[] = ['file', 'symbol', 'commit'];
   protected readonly label = nodeLabel;
@@ -38,6 +48,15 @@ export class ReadingOrderSectionComponent {
     const id = this.selected();
     return id !== null && this.items().some((i) => i.id === id);
   });
+
+  protected groupSize(id: string): number | null {
+    return this.repeated().find((g) => g.representative === id)?.members.length ?? null;
+  }
+
+  /** Whether the group of `id` is seen at its representative only. */
+  protected proposes(id: string): boolean {
+    return groupProposal(this.repeated(), this.seenIds(), id) !== null;
+  }
 
   protected reasonKey(reason: ReadingReason): string {
     return `review.reading.reasons.${reason.kind}`;

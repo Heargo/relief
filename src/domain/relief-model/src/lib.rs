@@ -15,8 +15,10 @@ pub use api::{
     DiffResponse, EdgeUsagesResponse, FileRef, FileRename, FileUsages, FormatOnlyFile,
     FormatOnlySummary, ImpactDirection, ImpactResponse, ImpactedNode, LogEntry, LogResponse,
     MetaResponse, MetricsResponse, ModuleCoupling, MovedFile, OutOfDiffCaller, ReadingItem,
-    ReadingOrderResponse, ReadingReason, ReviewState, ReviewSummary, SearchHit, SearchResponse,
-    SignatureSummary, SnapshotMeta, SnapshotResponse, Usage, Violation, ViolationEdge,
+    ReadingOrderResponse, ReadingReason, RepeatedChange, RepeatedChangeItem, RepoComparison,
+    ReviewState, ReviewSummary, SearchHit, SearchResponse, Settings, SignatureSummary,
+    SnapshotMeta, SnapshotResponse, Usage, Violation, ViolationEdge, WorkspaceMeta,
+    WorkspaceRepoMeta,
 };
 pub use diff::{
     EdgeChange, EdgeStatus, FileChange, GraphDiff, NodeChange, NodeStatus, SignatureChange,

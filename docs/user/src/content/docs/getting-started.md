@@ -51,7 +51,7 @@ Le binaire est lié à la glibc de la machine qui l'a construit : le `.deb` et l
 
 Si `relief` affiche encore des sous-commandes (`show`, `diff`, `serve`), c'est une ancienne version installée par `cargo install` dans `~/.cargo/bin`, qui passe avant `/usr/bin` dans le `PATH` : `which -a relief` les liste, `cargo uninstall relief-cli` retire l'ancienne.
 
-Dans les trois cas, la commande s'appelle `relief` (l'AppImage se lance par son nom de fichier, ou renommée en `relief`) et cette documentation est embarquée : l'entrée Documentation du menu Paramètres marche sans réseau.
+Dans les trois cas, la commande s'appelle `relief` (l'AppImage se lance par son nom de fichier, ou renommée en `relief`) et cette documentation est embarquée : l'entrée Documentation du menu Aide marche sans réseau.
 
 ## Prérequis pour compiler
 
@@ -82,16 +82,54 @@ Placez-vous dans un dépôt git et lancez :
 relief [path] [range]
 ```
 
-La fenêtre de relief s'ouvre sur le dépôt courant. Rien n'est écrit dans votre dépôt.
+La fenêtre de relief s'ouvre sur le dépôt `path`. Rien n'est écrit dans votre dépôt.
 
-- Sans argument, la plage affichée va de `HEAD` à l'arbre de travail. Pour une autre plage (`range`), donnez-la : `relief . main...ma-branche` (contre le merge-base) ou `relief . A..B`.
+- Sans argument, `relief` n'ouvre aucun dépôt : il affiche l'écran d'accueil, où vous ouvrez un dépôt avec le sélecteur de dossier ou choisissez un dépôt récent (la liste est gardée dans votre dossier de configuration). Pour ouvrir le dossier courant, lancez `relief .`. L'entrée « Ouvrir un espace de travail… » (écran d'accueil et menu **Espace de travail**) ouvre un espace existant depuis son dossier ; « Créer un espace de travail… » en crée un, vide, dans le dossier choisi. Tout le parcours est dans [Espace de travail](../workspace/).
+- Sans plage, relief ouvre la comparaison par défaut du dépôt : l'arbre de travail contre `main` (sinon `master`, sinon la branche courante), ou celle que vous avez enregistrée avec **Définir par défaut** (voir [Relire une PR](../review/#choisir-une-plage-de-commits)). Pour une autre plage (`range`), donnez-la : `relief . main...ma-branche` (contre le merge-base) ou `relief . A..B`.
 - Le premier argument (`path`) est le dossier à analyser : `relief ~/code/mon-depot`.
 
-## Premier regard
+## Espace de travail
 
-L'écran d'accueil affiche le nom et le slogan de relief ; la fenêtre porte le nom du dépôt ; le lien « Aide » ouvre cette documentation dans une seconde fenêtre, hors ligne, dans la langue de l'interface.
+Un espace de travail regroupe plusieurs dépôts (un front, une API, une bibliothèque partagée) pour les lire ensemble ; le parcours complet (créer, ajouter, étiqueter, comparer) est dans [Espace de travail](../workspace/). Voici son format de fichier. C'est un dossier de votre choix qui contient :
 
-![Écran d'accueil de relief](../../assets/screens/fr/home.png)
+- `<nom>.relief.json`, la configuration, que vous pouvez versionner ou écrire à la main ;
+- `.relief/`, les données locales de l'espace (cache, état de relecture), au même format que le `.relief/` d'un dépôt.
+
+Les dépôts membres restent intacts : en mode espace, relief n'écrit rien dedans et ignore leur propre `.relief/`.
+
+```json
+{
+  "repos": [
+    {
+      "name": "api",
+      "path": "../api",
+      "labels": ["back"],
+      "source": "WORKTREE",
+      "destination": "main"
+    }
+  ]
+}
+```
+
+- `name` : le nom du dépôt dans l'espace, unique, non vide, sans `/` (par défaut, le nom de son dossier) ;
+- `path` : le dossier du dépôt, relatif au fichier (ou absolu) ;
+- `labels` : les étiquettes du dépôt, facultatif. Elles se choisissent parmi `front`, `back`, `ops` et `tools`, plus celles que vous déclarez dans un champ `labels` de premier niveau du fichier (par exemple `"labels": ["qa"]`, à côté de `repos`) ; une étiquette inconnue est refusée quand on étiquette depuis la carte ;
+- `source` et `destination` : la comparaison par défaut du dépôt (`WORKTREE` et `main` si absents).
+
+Pour ouvrir l'espace, donnez le fichier ou son dossier :
+
+```sh
+relief ~/code/boutique/boutique.relief.json
+relief ~/code/boutique
+```
+
+La carte réunit les dépôts de l'espace : un niveau **Dépôts** s'ajoute au-dessus des systèmes, et chaque dépôt montre son diff sur sa propre plage (voir « La carte »).
+
+## L'écran d'accueil
+
+Lancé sans argument, relief affiche son écran d'accueil : trois boutons, **Ouvrir un dépôt…**, **Ouvrir un espace de travail…** et **Créer un espace de travail…**, puis la liste **Récents**, avec pour chaque entrée son nom, son chemin et une icône qui distingue un dépôt d'un espace. Un clic sur un récent l'ouvre dans la même fenêtre. Une fois un dépôt ouvert, la fenêtre porte son nom, et l'entrée **Documentation** du menu **Aide** ouvre cette documentation dans une seconde fenêtre, hors ligne, dans la langue de l'interface.
+
+![L'écran d'accueil de relief, avec un dépôt récent](../../assets/screens/fr/home.png)
 
 ## Lire la carte
 
@@ -100,7 +138,7 @@ La carte est imbriquée : systèmes, modules, fichiers, symboles.
 - **Molette** : zoome autour du curseur ; les boutons `+` et `−` zooment autour du centre, `⤢` recadre tout. Une boîte s'ouvre d'elle-même quand elle devient assez grande.
 - **Double-clic** sur une boîte : la cadre et l'ouvre.
 - **Glisser** : déplace la carte.
-- **Clic simple** : sans effet pour l'instant.
+- **Clic simple** : sélectionne la boîte ou la flèche et l'ouvre dans le panneau de droite.
 - Les boutons en bas à droite (ou les touches `0` à `3`) choisissent le niveau affiché.
 
 ![La carte au niveau des fichiers](../../assets/screens/fr/getting-started-files.png)

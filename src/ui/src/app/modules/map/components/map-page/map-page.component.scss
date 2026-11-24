@@ -18,10 +18,6 @@
   border-bottom: 1px solid var(--relief-line);
 }
 
-.spacer {
-  flex: 1;
-}
-
 .logo {
   display: flex;
   align-items: center;
@@ -63,6 +59,74 @@
   overflow: clip;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.ws-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--relief-line);
+
+  .repo {
+    flex-wrap: wrap;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .ref {
+    min-width: 0;
+  }
+
+  .repos {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+
+    li {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.4em 0.6em;
+      min-width: 0;
+    }
+
+    .chip,
+    .tag {
+      padding: 0 6px;
+      border: 1px solid var(--relief-line);
+      border-radius: 8px;
+      background: transparent;
+      color: var(--relief-muted);
+      font: inherit;
+      font-size: 0.85em;
+      cursor: pointer;
+
+      &.on {
+        border-color: var(--relief-fg);
+        color: var(--relief-fg);
+      }
+    }
+
+    .tag {
+      cursor: default;
+    }
+
+    .options {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      flex-basis: 100%;
+    }
+
+    b {
+      color: var(--relief-fg);
+      font-weight: 600;
+    }
+  }
 }
 
 .topbar button {

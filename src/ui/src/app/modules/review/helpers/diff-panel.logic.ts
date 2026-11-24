@@ -13,7 +13,10 @@ function filePathOf(id: string): string | null {
   if (at < 0) return null;
   const rest = id.slice(at + FILE_MARK.length);
   const symbol = rest.indexOf(SYMBOL_MARK);
-  return symbol < 0 ? rest : rest.slice(0, symbol);
+  const path = symbol < 0 ? rest : rest.slice(0, symbol);
+  // In a workspace the paths of the diff carry their repository (`repo:<name>/<path>`).
+  const repo = /^repo:([^/]+)\//.exec(id);
+  return repo ? `repo:${repo[1]}/${path}` : path;
 }
 
 /** The changed symbols of a file, in the order of the diff. */
@@ -33,6 +36,7 @@ export function formatOnlyHiddenLines(id: string, response: DiffResponse): numbe
   if (id.includes(SYMBOL_MARK)) return null;
   if (fileSymbolChanges(id, response).length > 0) return null;
   const path = filePathOf(id);
+  if (!path || !(response.formatOnlyPaths ?? []).includes(path)) return null;
   const file = response.diff.files.find((f) => f.path === path);
   return file ? file.linesAdded + file.linesRemoved : null;
 }

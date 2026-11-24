@@ -2,11 +2,11 @@
 import { expect } from '@wdio/globals';
 import { openRelief } from '../helpers/open-relief';
 import { sceneEdges, settledNodeCount, waitForScene } from '../helpers/map-scene';
-import { poll, tid } from '../helpers/ui';
+import { openLayersMenu, poll, press, tid, toggleLayer } from '../helpers/ui';
 
 // Contract with the UI, on the cochange fixture (its `.md` files have no adapter: the layer does not
 // depend on the language), exploration mode off or on:
-//  - the `layers-section` has `toggle-co-change-layer` ("Couplage logique" in French,
+//  - the Layers menu of the top bar (`layers-section`) has `toggle-co-change-layer` ("Couplage logique" in French,
 //    `aria-checked`), off by default;
 //  - while on, the map scene holds at least one edge with `coChange: true` (dashed, its own colour),
 //    one per pair of files changed together at least twice in the last 90 days (threshold of
@@ -27,19 +27,21 @@ describe('co-change layer', () => {
   });
 
   it('is off by default and draws no co-change edge', async () => {
+    await openLayersMenu();
     await expect(tid('toggle-co-change-layer')).toHaveText(
       expect.stringContaining('Couplage logique'),
     );
     await expect(tid('toggle-co-change-layer')).toHaveAttribute('aria-checked', 'false');
+    await press('Escape');
     expect(await edgeCount()).toBe(0);
   });
 
   it('shows at least one edge when the layer is on, and none when it is off again', async () => {
-    await tid('toggle-co-change-layer').click();
+    await toggleLayer('toggle-co-change-layer');
     await expect(tid('toggle-co-change-layer')).toHaveAttribute('aria-checked', 'true');
     await poll(edgeCount, (n) => n >= 1, 8000);
     await waitForScene((sc) => sc.edges.some((e) => e.coChange));
-    await tid('toggle-co-change-layer').click();
+    await toggleLayer('toggle-co-change-layer');
     await poll(edgeCount, (n) => n === 0);
   });
 });

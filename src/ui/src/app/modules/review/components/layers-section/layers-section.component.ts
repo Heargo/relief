@@ -11,7 +11,7 @@ interface LayerRow {
   toggle: () => void;
 }
 
-/** The "Layers" section of the left panel: the toggles of what the map paints. */
+/** The content of the "Layers" menu of the top bar: the toggles of what the map paints. */
 @Component({
   selector: 'app-layers-section',
   imports: [TranslatePipe],
@@ -39,6 +39,14 @@ export class LayersSectionComponent {
   readonly hideExternal = input(true);
   /** Offered by the map page, not by every host. */
   readonly hasHideExternal = input(false);
+  readonly edgeLabelsAlways = input(false);
+  /** Offered by the map page, not by every host. */
+  readonly hasEdgeLabels = input(false);
+  readonly testEdges = input(false);
+  /** Offered by the map page, not by every host. */
+  readonly hasTestEdges = input(false);
+  readonly testEdgesChange = output<boolean>();
+  readonly edgeLabelsAlwaysChange = output<boolean>();
   readonly hideExternalChange = output<boolean>();
   readonly diffChange = output<boolean>();
   readonly unchangedEdgesChange = output<boolean>();
@@ -53,6 +61,19 @@ export class LayersSectionComponent {
       (row) =>
         !(row.layer === 'diff' && !this.hasDiff()) && !(row.layer === 'focus' && !this.hasFocus()),
     ),
+    ...(this.hasTestEdges()
+      ? [
+          {
+            layer: 'tests',
+            testId: 'toggle-test-edges',
+            labelKey: 'map.edges.tests',
+            descriptionKey: 'review.layers.description.tests',
+            shortcut: null,
+            on: this.testEdges(),
+            toggle: () => this.testEdgesChange.emit(!this.testEdges()),
+          },
+        ]
+      : []),
     ...(this.hasHideExternal()
       ? [
           {
@@ -63,6 +84,19 @@ export class LayersSectionComponent {
             shortcut: null,
             on: this.hideExternal(),
             toggle: () => this.hideExternalChange.emit(!this.hideExternal()),
+          },
+        ]
+      : []),
+    ...(this.hasEdgeLabels()
+      ? [
+          {
+            layer: 'edge-labels-always',
+            testId: 'toggle-edge-labels-always',
+            labelKey: 'map.edges.labelsAlways',
+            descriptionKey: 'review.layers.description.edge-labels-always',
+            shortcut: null,
+            on: this.edgeLabelsAlways(),
+            toggle: () => this.edgeLabelsAlwaysChange.emit(!this.edgeLabelsAlways()),
           },
         ]
       : []),

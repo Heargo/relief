@@ -9,6 +9,8 @@ export interface NodeContent {
   label: string;
   /** Secondary text (subkind of a system or an external). */
   sub: string | null;
+  /** Labels of a repository box (front, back...), empty elsewhere. */
+  tags: string[];
   /** Counters, translated by the component (`map.counts.<unit>`). */
   counts: { unit: 'symbols' | 'files'; value: number }[];
 }
@@ -46,6 +48,7 @@ export function nodeContent(info: NodeInfo, mode: NodeMode, size: SizeClass): No
       icon: symbolIcon(info.subkind),
       label: size === 'small' ? '' : info.label,
       sub: null,
+      tags: [],
       counts: [],
     };
   }
@@ -54,6 +57,7 @@ export function nodeContent(info: NodeInfo, mode: NodeMode, size: SizeClass): No
       icon: null,
       label: info.label,
       sub: size === 'small' ? null : info.subkind,
+      tags: [],
       counts: [],
     };
   }
@@ -68,9 +72,19 @@ export function nodeContent(info: NodeInfo, mode: NodeMode, size: SizeClass): No
         counts.push({ unit: 'symbols', value: info.symbols });
     }
   }
+  if (info.kind === 'repo') {
+    return {
+      icon: null,
+      label: info.label,
+      sub: size === 'small' ? null : (info.branch ?? null),
+      tags: size === 'small' ? [] : (info.labels ?? []),
+      counts,
+    };
+  }
   return {
     icon: null,
     label: info.label,
+    tags: [],
     sub: SYSTEM_KINDS.includes(info.kind) && size === 'large' ? info.subkind : null,
     counts,
   };

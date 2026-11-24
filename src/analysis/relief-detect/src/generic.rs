@@ -1,6 +1,6 @@
 //! Generic detector: one system, folders as modules, files with a language.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
 use relief_model::{Node, NodeId, NodeKind, Visibility};
 
@@ -56,6 +56,77 @@ pub(crate) fn is_excluded_path(path: &str) -> bool {
         return true;
     }
     extension(path).is_some_and(|ext| BINARY_EXTENSIONS.contains(&ext.to_lowercase().as_str()))
+}
+
+const TEST_DIRS: &[&str] = &["test", "tests", "__tests__", "e2e", "spec"];
+const TEST_MARKERS: &[&str] = &["test", "spec", "e2e"];
+
+/// A file under a test folder, or named `*.test.*`, `*.spec.*` or `*.e2e.*`.
+pub(crate) fn is_test_path(path: &str) -> bool {
+    let mut parts = path.split('/');
+    let name = parts.next_back().unwrap_or(path);
+    if parts.any(|dir| TEST_DIRS.contains(&dir)) {
+        return true;
+    }
+    let pieces: Vec<&str> = name.split('.').collect();
+    pieces.len() >= 3
+        && pieces[1..pieces.len() - 1]
+            .iter()
+            .any(|p| TEST_MARKERS.contains(p))
+}
+
+/// Sets `is_test` on the test files, then on every container (not the repo) whose children are
+/// all tests.
+pub(crate) fn mark_tests(nodes: &mut [Node]) {
+    let mut test_ids: HashSet<NodeId> = HashSet::new();
+    for n in nodes.iter_mut() {
+        if n.kind == NodeKind::File && n.id.file_path().is_some_and(is_test_path) {
+            n.is_test = true;
+            test_ids.insert(n.id.clone());
+        }
+    }
+    let mut children: HashMap<NodeId, Vec<NodeId>> = HashMap::new();
+    for n in nodes.iter() {
+        if matches!(n.kind, NodeKind::File | NodeKind::Symbol) {
+            continue;
+        }
+        if let Some(parent) = &n.parent {
+            children
+                .entry(parent.clone())
+                .or_default()
+                .push(n.id.clone());
+        }
+    }
+    for n in nodes.iter() {
+        if n.kind == NodeKind::File
+            && let Some(parent) = &n.parent
+        {
+            children
+                .entry(parent.clone())
+                .or_default()
+                .push(n.id.clone());
+        }
+    }
+    // Containers are settled until nothing changes: a module of tests makes its parent eligible.
+    loop {
+        let mut changed = false;
+        for n in nodes.iter_mut() {
+            if matches!(n.kind, NodeKind::File | NodeKind::Symbol | NodeKind::Repo) || n.is_test {
+                continue;
+            }
+            let all = children
+                .get(&n.id)
+                .is_some_and(|c| !c.is_empty() && c.iter().all(|id| test_ids.contains(id)));
+            if all {
+                n.is_test = true;
+                test_ids.insert(n.id.clone());
+                changed = true;
+            }
+        }
+        if !changed {
+            break;
+        }
+    }
 }
 
 const FIXTURE_DIRS: &[&str] = &["fixtures", "__fixtures__", "testdata", "test-fixtures"];
@@ -203,6 +274,9 @@ fn node(
         entry: false,
         entry_type: None,
         child_count: None,
+        is_test: false,
+        branch: None,
+        labels: None,
     }
 }
 
@@ -319,6 +393,7 @@ impl GenericDetector {
                 hash.clone(),
             ));
         }
+        mark_tests(&mut nodes);
         nodes
     }
 }

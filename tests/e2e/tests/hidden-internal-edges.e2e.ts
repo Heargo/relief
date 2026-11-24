@@ -17,7 +17,7 @@ const emphasisOf = async () => (await sceneEdge(PAYMENT, INVOICE))?.emphasis;
 
 describe('internal edges of the selected node', () => {
   it('are hidden once the module is selected, and come back on Escape', async () => {
-    await openRelief({ size: { width: 3200, height: 2000 } });
+    await openRelief({ size: { width: 3200, height: 2000 }, unchangedEdges: true });
     await tid('level-2').click();
     await waitForScene((s) => s.edges.some((e) => e.from === PAYMENT && e.to === INVOICE), 15000);
     expect(await emphasisOf()).not.toBe('hidden');

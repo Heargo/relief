@@ -309,56 +309,6 @@ body.resizing {
   white-space: nowrap;
 }
 
-/* Settings menu of the top bar. */
-.settings {
-  position: relative;
-}
-
-.settings-menu {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
-  z-index: 50;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-width: 260px;
-  padding: 10px;
-  border: 1px solid var(--relief-line-2);
-  border-radius: 8px;
-  background: var(--relief-panel);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
-
-  .row {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    color: var(--relief-muted);
-    font-size: 12px;
-  }
-
-  .seg button {
-    font-size: 13px;
-  }
-
-  .item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 6px 8px;
-    border: 0;
-    border-radius: 6px;
-    background: none;
-    color: var(--relief-fg);
-    font: inherit;
-    cursor: pointer;
-
-    &:hover {
-      background: var(--relief-panel-2);
-    }
-  }
-}
-
 /* Left panel block titles, like .ptitle in the mockup. */
 .ptitle {
   display: flex;

@@ -1,7 +1,7 @@
 import { $, browser, expect } from '@wdio/globals';
 import { openRelief } from '../helpers/open-relief';
 import { sceneEdge, sceneEdges, sceneNodes, waitForNode, waitForScene } from '../helpers/map-scene';
-import { tid } from '../helpers/ui';
+import { tid, toggleLayer } from '../helpers/ui';
 
 // Contract with the UI (data attributes, no i18n dependency), on main...feat/promo-codes:
 //  - while the diff layer is on, each node of the map scene carries `status`
@@ -13,7 +13,7 @@ import { tid } from '../helpers/ui';
 //    (not asserted here), `data-symbols-added|removed|modified|moved` and `data-signatures`;
 //  - `data-testid="review-toggle"` is the "Relire la PR" switch (`aria-pressed`),
 //    `data-testid="toggle-diff-layer"` the diff layer switch (`aria-pressed`);
-//  - `data-testid="range-base"` / `range-head` are the two range pickers of the top bar (each
+//  - `data-testid="compare-destination"` / `compare-source` are the two range pickers of the left panel (destination and source) (each
 //    opens a `range-popover` with Branches / Tags / Commits tabs); the URL keeps the range in
 //    `?range=`.
 const DISCOUNT = 'pkg:@acme/api/billing::file:apps/api/billing/discount.ts';
@@ -56,11 +56,11 @@ it('the edge apps/web -> packages/db is new', async () => {
 });
 
 it('hiding the unchanged edges keeps only the changed ones', async () => {
-  await openRelief();
+  await openRelief({ unchangedEdges: true });
   await waitForScene((s) => s.edges.length > 0);
   const before = (await sceneEdges()).length;
 
-  await tid('toggle-unchanged-edges').click();
+  await toggleLayer('toggle-unchanged-edges');
   await waitForScene((s) => s.edges.length > 0 && s.edges.every((e) => e.status !== 'unchanged'));
   const after = await sceneEdges();
   expect(after.length).toBeLessThanOrEqual(before);
@@ -99,7 +99,7 @@ it('switching off "Relire la PR" shows the map without the diff', async () => {
 
 it('the diff layer can be hidden', async () => {
   await openFilesLevel();
-  await tid('toggle-diff-layer').click();
+  await toggleLayer('toggle-diff-layer');
   await expect(tid('toggle-diff-layer')).toHaveAttribute('aria-checked', 'false');
   await waitForScene((s) => s.nodes.find((n) => n.id === DISCOUNT)?.status === null);
 });
@@ -108,13 +108,13 @@ it('changing the range in the selector reloads the diff and updates the URL', as
   await openFilesLevel();
   await expect(tid('pr-stats')).toHaveAttribute('data-files', '15');
 
-  // Reverse range (base = feat/promo-codes, head = main), picked in the popovers: the merge base
+  // Reverse range (destination = feat/promo-codes, source = main), picked in the popovers: the merge base
   // is main itself, so the PR is empty.
-  await tid('range-base').click();
+  await tid('compare-destination').click();
   await tid('range-popover').waitForDisplayed();
   await tid('range-tab-branches').click();
   await $('//*[@data-testid="range-option"][normalize-space(.)="feat/promo-codes"]').click();
-  await tid('range-head').click();
+  await tid('compare-source').click();
   await tid('range-popover').waitForDisplayed();
   await tid('range-tab-branches').click();
   await $('//*[@data-testid="range-option"][normalize-space(.)="main"]').click();
@@ -150,7 +150,7 @@ it('only client.ts is format-only: the PR card counts 1 and Invoices.tsx (moved 
 
 it('at 1024x768 every element of the top bar fits in the viewport', async () => {
   await openRelief({ size: { width: 1024, height: 768 } });
-  await expect(tid('range-base')).toBeDisplayed();
+  await expect(tid('compare-destination')).toBeDisplayed();
   const overflowing = await browser.execute(() =>
     [...document.querySelectorAll('header.topbar > *')]
       .map((item) => ({ item, box: item.getBoundingClientRect() }))

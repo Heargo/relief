@@ -18,7 +18,9 @@ pub enum NodeKind {
 }
 
 /// Kind of relation between two nodes.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, JsonSchema,
+)]
 #[serde(rename_all = "snake_case")]
 pub enum EdgeKind {
     Imports,
@@ -107,6 +109,16 @@ pub struct Node {
     /// children are not all in it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub child_count: Option<usize>,
+    /// A test file (test folder or `*.test.*`, `*.spec.*`, `*.e2e.*` name), or a container that
+    /// holds nothing but tests.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub is_test: bool,
+    /// Branch the repository is read at, on the `repo:<name>` node of a workspace.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub branch: Option<String>,
+    /// Labels of the repository (`front`, `back`...), on the `repo:<name>` node of a workspace.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub labels: Option<Vec<String>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]

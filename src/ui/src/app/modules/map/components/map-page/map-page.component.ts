@@ -19,7 +19,11 @@ import { InputText } from '@openng/optimus-ui/inputtext';
 
 import { DocsBusiness } from '../../../../core/business/docs.business';
 import { LanguageBusiness } from '../../../../core/business/language.business';
-import { ThemeBusiness, type ThemeMode } from '../../../../core/business/theme.business';
+import { ThemeBusiness } from '../../../../core/business/theme.business';
+import { PAGE_RELOAD } from '../../../../core/services/page-reload';
+import { WelcomeBusiness } from '../../../welcome/business/welcome.business';
+import { WelcomeComponent } from '../../../welcome/components/welcome/welcome.component';
+import { MenuBarComponent } from '../menu-bar/menu-bar.component';
 import { LanguageCode } from '../../../../core/constants/languages';
 import { type AggregatedEdge, edgeTooltip } from '../../helpers/edges.logic';
 import { DiffPanelComponent } from '../../../review/components/diff-panel/diff-panel.component';
@@ -60,10 +64,15 @@ import { HotspotsSectionComponent } from '../../../explore/components/hotspots-s
 import { hotspots, riskLevel, riskMap } from '../../../explore/helpers/risk.logic';
 import { MapBusiness } from '../../business/map.business';
 import { PanelsBusiness } from '../../business/panels.business';
+import { RepoComparisonsBusiness } from '../../business/repo-comparisons.business';
+import { RepoComparisonsComponent } from '../repo-comparisons/repo-comparisons.component';
 import { RepoBusiness } from '../../business/repo.business';
 import { SubgraphBusiness } from '../../business/subgraph.business';
 import { repoMetaLine } from '../../helpers/repo-meta.logic';
+import { pruneLabels, toggled } from '../../helpers/label-list.logic';
+import { repoBoxes, type RepoBox } from '../../helpers/repo-level.logic';
 import { isPartial } from '../../../review/helpers/review-graph.logic';
+import type { EdgeBundle } from '../../helpers/edge-bundles.logic';
 import type { SearchResult } from '../../helpers/search.logic';
 import {
   actionForKey,
@@ -97,6 +106,8 @@ const CHANGED_FILES_LEVEL = 2;
     EdgeUsagesComponent,
     InspectorHeaderComponent,
     EdgeHeadComponent,
+    MenuBarComponent,
+    WelcomeComponent,
     NodeEdgesComponent,
     DiffPanelComponent,
     SignalsSectionComponent,
@@ -108,9 +119,11 @@ const CHANGED_FILES_LEVEL = 2;
     StructuralOverviewComponent,
     ExploreSectionComponent,
     HotspotsSectionComponent,
+    RepoComparisonsComponent,
   ],
   providers: [
     RepoBusiness,
+    WelcomeBusiness,
     SubgraphBusiness,
     PanelsBusiness,
     MapBusiness,
@@ -121,6 +134,7 @@ const CHANGED_FILES_LEVEL = 2;
     ReadingOrderBusiness,
     ReloadBusiness,
     RangePickerBusiness,
+    RepoComparisonsBusiness,
     RulesBusiness,
     RiskBusiness,
     CoChangeBusiness,
@@ -141,6 +155,7 @@ export class MapPageComponent implements OnInit {
   protected readonly reading = inject(ReadingOrderBusiness);
   protected readonly reloader = inject(ReloadBusiness);
   private readonly rangePicker = inject(RangePickerBusiness);
+  protected readonly repoComparisons = inject(RepoComparisonsBusiness);
   protected readonly ruleState = inject(RulesBusiness);
   protected readonly riskState = inject(RiskBusiness);
   protected readonly coChangeState = inject(CoChangeBusiness);
@@ -161,6 +176,36 @@ export class MapPageComponent implements OnInit {
     const found = this.found();
     return found && found.query === this.query() ? found.results : this.map.search(this.query());
   });
+
+  /** The repositories of a workspace with their current branch; empty on a single repository. */
+  protected readonly workspaceRepos = computed(() => {
+    const snapshot = this.repo.snapshot();
+    return this.repo.meta()?.workspace && snapshot ? repoBoxes(snapshot.graph) : [];
+  });
+
+  /** The repository whose label editor is open. */
+  protected readonly editingRepo = signal<string | null>(null);
+
+  protected toggleLabelEditor(name: string): void {
+    this.editingRepo.update((current) => (current === name ? null : name));
+  }
+
+  /** Adds the label to the repository, or removes it when it already carries it. */
+  protected async toggleRepoLabel(item: RepoBox, label: string): Promise<void> {
+    const labels = toggled(item.labels, label);
+    try {
+      await this.repo.setRepoLabels(item.name, labels);
+      // The review graph is the subgraph of the diff: it carries the labels too.
+      await this.review.reload();
+    } catch (error) {
+      // The labels stay as they were: the header still shows what is saved.
+      this.welcomeState.fail(error);
+    }
+  }
+
+  protected toggleLabelFilter(label: string): void {
+    this.map.setLabelFilter(toggled(this.map.labelFilter(), label));
+  }
 
   /** The grey line after the repo name: languages and detector. */
   protected readonly repoMeta = computed(() => {
@@ -217,11 +262,14 @@ export class MapPageComponent implements OnInit {
   });
 
   /** What the right panel inspects, and the subtitle of its header. */
-  protected readonly inspectorKind = computed<'none' | 'node' | 'edge'>(() => {
+  protected readonly inspectorKind = computed<'none' | 'node' | 'edge' | 'bundle'>(() => {
+    if (this.map.selectedBundle()) return 'bundle';
     if (this.map.selectedEdge()) return 'edge';
     return this.map.selectedNodeId() ? 'node' : 'none';
   });
   protected readonly inspectorSubtitle = computed(() => {
+    const bundle = this.map.selectedBundle();
+    if (bundle) return this.map.label(bundle.box);
     const edge = this.map.selectedEdge();
     if (edge) return edge.kinds.join(', ');
     const id = this.map.selectedNodeId();
@@ -281,8 +329,18 @@ export class MapPageComponent implements OnInit {
   });
   protected readonly labelOf = (id: string): string => this.map.label(id);
 
+  /** What the step-by-step reading keeps sharp; null while it is off. */
+  private readonly stepFocus = computed(() => {
+    const snapshot = this.repo.snapshot();
+    return snapshot ? this.reading.stepFocus(snapshot.graph) : null;
+  });
+  protected readonly stepElements = computed(() => this.stepFocus()?.elements ?? null);
+  protected readonly stepEdges = computed(() => this.stepFocus()?.edges ?? null);
+
   /** The ids kept sharp by the PR focus layer; null when it is off or there is no diff. */
   protected readonly focusIds = computed(() => {
+    const step = this.stepFocus();
+    if (step) return step.nodes;
     const diff = this.mapDiff();
     const snapshot = this.repo.snapshot();
     if (!this.review.focusLayer() || !diff || !snapshot) return null;
@@ -291,8 +349,14 @@ export class MapPageComponent implements OnInit {
   });
 
   /** The ids of the entries of the list that are seen, for the boxes. */
-  protected readonly seenIds = computed(
-    () => new Set(this.reading.ids().filter((id) => this.reading.isSeen(id))),
+  protected readonly seenIds = computed(() => {
+    const ids = this.reading.ids().flatMap((id) => [id, ...(this.reading.groupOf(id) ?? [])]);
+    return new Set(ids.filter((id) => this.reading.isSeen(id)));
+  });
+
+  /** Files that make the same change; only in review mode, where the diff is read. */
+  protected readonly repeated = computed(() =>
+    this.review.reviewMode() ? (this.overview.summary()?.repeated ?? []) : [],
   );
 
   /** What the map paints of the reading progress; none outside the review mode. */
@@ -332,6 +396,19 @@ export class MapPageComponent implements OnInit {
   });
 
   constructor() {
+    // A label that no longer exists leaves the active filter.
+    effect(() => {
+      const available = this.repo.availableLabels();
+      const chosen = this.map.labelFilter();
+      if (available.length === 0) return;
+      const kept = pruneLabels(chosen, available);
+      if (kept.length !== chosen.length) untracked(() => this.map.setLabelFilter(kept));
+    });
+    // The unchanged edges layer has a default and a memory per mode.
+    effect(() => {
+      const review = this.review.reviewMode();
+      untracked(() => this.map.setReviewMode(review));
+    });
     // The usages follow the selected edge.
     effect(() => {
       const key = this.usagesKey();
@@ -352,6 +429,28 @@ export class MapPageComponent implements OnInit {
       untracked(() => {
         this.map.setCommitFiles(scope?.files ?? null);
         this.map.frameNodes(scope ? [...scope.files] : null);
+      });
+    });
+    // The map selection is the entry the reader opened.
+    effect(() => {
+      const id = this.map.selectedNodeId();
+      untracked(() => {
+        if (id && this.reading.has(id)) this.reading.open(id);
+      });
+    });
+    // Step by step frames the current element and its neighbours; off, the view comes back.
+    let framing = false;
+    effect(() => {
+      const snapshot = this.repo.snapshot();
+      const ids = snapshot ? this.reading.frameIds(snapshot.graph) : null;
+      untracked(() => {
+        if (ids) {
+          framing = true;
+          this.map.frameNodes(ids, 'step');
+        } else if (framing) {
+          framing = false;
+          this.map.frameNodes(null, 'step');
+        }
       });
     });
     // The impact follows the selection and the range.
@@ -395,9 +494,24 @@ export class MapPageComponent implements OnInit {
   }
 
   private readonly pending = inject(PendingTasks);
+  private readonly welcomeState = inject(WelcomeBusiness);
+  private readonly reloadPage = inject(PAGE_RELOAD);
+  /** Why the menu could not open a repository (the welcome screen shows its own). */
+  protected readonly openError = this.welcomeState.error;
+
+  private readonly groupsToReading = effect(() => {
+    const groups = this.repeated();
+    untracked(() => this.reading.setRepeated(groups));
+  });
 
   ngOnInit(): void {
-    void this.repo.load().then(() => {
+    void this.start();
+  }
+
+  /** Reads the repository, then its diff; nothing more while no repository is opened. */
+  protected start(): Promise<void> {
+    return this.repo.load().then(() => {
+      if (this.repo.noSession()) return;
       // The page is stable once the map is drawn, not as soon as the diff is read.
       const done = this.pending.add();
       return this.review
@@ -414,33 +528,47 @@ export class MapPageComponent implements OnInit {
     });
   }
 
-  protected readonly settingsOpen = signal(false);
-  protected readonly themeModes: readonly ThemeMode[] = ['light', 'dark', 'system'];
-
-  protected openHelp(): void {
-    this.settingsOpen.set(false);
-    this.map.openHelp();
+  /** The menu entry "Open a repository": folder picker, then the map of the chosen one. */
+  protected async onOpenRepo(): Promise<void> {
+    const wasOpen = !this.repo.noSession();
+    if (!(await this.welcomeState.pickAndOpen())) return;
+    // A map already shown holds the state of the previous repository: start the page again.
+    if (wasOpen) this.reloadPage();
+    else await this.start();
   }
 
-  protected openDocs(): void {
-    this.settingsOpen.set(false);
-    void this.docs.open();
+  /** The menu entry "Open a workspace": folder picker, then the map of the chosen one. */
+  protected async onOpenWorkspace(): Promise<void> {
+    const wasOpen = !this.repo.noSession();
+    if (!(await this.welcomeState.pickAndOpenWorkspace())) return;
+    if (wasOpen) this.reloadPage();
+    else await this.start();
   }
 
-  @HostListener('document:click', ['$event'])
-  protected onDocumentClick(event: MouseEvent): void {
-    const target = event.target instanceof Element ? event.target : null;
-    if (this.settingsOpen() && !target?.closest('.settings')) this.settingsOpen.set(false);
+  /** The menu entry "Create a workspace": folder picker, then the new, empty workspace. */
+  protected async onCreateWorkspace(): Promise<void> {
+    const wasOpen = !this.repo.noSession();
+    if (!(await this.welcomeState.pickAndCreateWorkspace())) return;
+    if (wasOpen) this.reloadPage();
+    else await this.start();
+  }
+
+  /** The menu entry "Add a repository to the workspace": folder picker, then the workspace again. */
+  protected async onAddRepo(): Promise<void> {
+    if (await this.welcomeState.pickAndAddRepo()) this.reloadPage();
+  }
+
+  /** The menu entry "Open this repository as a workspace": folder picker, then the workspace. */
+  protected async onOpenAsWorkspace(): Promise<void> {
+    const path = this.repo.meta()?.path;
+    if (!path) return;
+    if (await this.welcomeState.pickFolderAndOpenAsWorkspace(path)) this.reloadPage();
   }
 
   @HostListener('window:keydown', ['$event'])
   protected onKey(event: KeyboardEvent): void {
     if (event.key === 'Escape' && this.rangePicker.open()) {
       this.rangePicker.close();
-      return;
-    }
-    if (event.key === 'Escape' && this.settingsOpen()) {
-      this.settingsOpen.set(false);
       return;
     }
     if (event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey) {
@@ -501,7 +629,9 @@ export class MapPageComponent implements OnInit {
       if (current && this.reading.has(current)) this.reading.toggle(current);
       return;
     }
-    const target = this.reading.step(current, move === 'next' ? 1 : -1);
+    const target = this.reading.stepByStep()
+      ? this.reading.stepCurrent(move === 'next' ? 1 : -1)
+      : this.reading.step(current, move === 'next' ? 1 : -1);
     if (target) this.map.selectResult(target);
   }
 
@@ -580,9 +710,17 @@ export class MapPageComponent implements OnInit {
   }
 
   protected clearSelection(): void {
+    this.map.clearBundleSelection();
     this.map.deselectNode();
     this.map.clearEdgeSelection();
     this.usageFocus.set(null);
+  }
+
+  protected bundleTitle(bundle: EdgeBundle): string {
+    return this.language.t(bundle.end === 'in' ? 'map.bundle.titleIn' : 'map.bundle.titleOut', {
+      count: bundle.count,
+      box: this.map.label(bundle.box),
+    });
   }
 
   protected edgeTitle(edge: AggregatedEdge): string {

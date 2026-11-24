@@ -1,0 +1,62 @@
+<div class="menubar" role="menubar">
+  @for (menu of menus; track menu) {
+    <div class="menu">
+      <button
+        type="button"
+        class="trigger"
+        role="menuitem"
+        aria-haspopup="menu"
+        [attr.data-testid]="'menu-trigger-' + menu"
+        [attr.aria-expanded]="openMenu() === menu"
+        [attr.aria-disabled]="disabledMenu(menu) ? 'true' : null"
+        [class.disabled]="disabledMenu(menu)"
+        [class.on]="openMenu() === menu"
+        (click)="toggle(menu)"
+      >
+        {{ 'menu.' + menu | translate }}
+      </button>
+      @if (menu === 'layers') {
+        <!-- always in the DOM, so the layer states can be read while the menu is closed -->
+        <div
+          class="panel layers"
+          role="menu"
+          data-testid="layers-panel"
+          [attr.aria-label]="'menu.layers' | translate"
+          [hidden]="openMenu() !== 'layers'"
+        >
+          <ng-content select="[menuLayers]" />
+        </div>
+      } @else if (openMenu() === menu) {
+        <div class="panel" role="menu" data-testid="menu-panel">
+          @for (entry of entries(); track entry.id) {
+            @if (entry.heading) {
+              <div class="heading" role="presentation">{{ entry.heading | translate }}</div>
+            }
+            <button
+              type="button"
+              class="item"
+              [attr.role]="entry.checked === undefined ? 'menuitem' : 'menuitemradio'"
+              [attr.data-testid]="'menu-item-' + entry.id"
+              [attr.aria-disabled]="entry.disabled ? 'true' : null"
+              [attr.aria-checked]="entry.checked === undefined ? null : entry.checked"
+              [attr.title]="entry.disabled && entry.tooltip ? (entry.tooltip | translate) : null"
+              [class.disabled]="entry.disabled"
+              [class.checked]="entry.checked"
+              (click)="pick(entry)"
+            >
+              <span class="label">
+                @if (entry.checked !== undefined) {
+                  <span class="mark" aria-hidden="true">{{ entry.checked ? '✓' : '' }}</span>
+                }
+                {{ entry.translate ? (entry.label | translate) : entry.label }}</span
+              >
+              @if (entry.hint) {
+                <kbd>{{ entry.hint }}</kbd>
+              }
+            </button>
+          }
+        </div>
+      }
+    </div>
+  }
+</div>

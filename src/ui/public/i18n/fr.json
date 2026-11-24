@@ -4,6 +4,34 @@
     "tagline": "Carte zoomable d'un dépôt git"
   },
   "optimus": {},
+  "menu": {
+    "workspace": "Espace de travail",
+    "layers": "Calques",
+    "settings": "Paramètres",
+    "help": "Aide",
+    "access": {
+      "workspace": "E",
+      "layers": "C",
+      "settings": "P",
+      "help": "A"
+    },
+    "items": {
+      "openRepo": "Ouvrir un dépôt…",
+      "openWorkspace": "Ouvrir un espace de travail…",
+      "createWorkspace": "Créer un espace de travail…",
+      "addRepo": "Ajouter un dépôt à l'espace…",
+      "openAsWorkspace": "Ouvrir ce dépôt comme espace de travail"
+    }
+  },
+  "welcome": {
+    "title": "Bienvenue dans relief",
+    "subtitle": "Ouvrez un dépôt pour voir sa carte.",
+    "openRepo": "Ouvrir un dépôt…",
+    "openWorkspace": "Ouvrir un espace de travail…",
+    "createWorkspace": "Créer un espace de travail…",
+    "recents": "Récents",
+    "noRecents": "Rien d'ouvert pour l'instant."
+  },
   "map": {
     "search": "Aller à un symbole, fichier, module…",
     "help": "Aide",
@@ -17,6 +45,13 @@
       "system": "Système"
     },
     "level": "Niveau",
+    "levelNames": {
+      "repos": "Dépôts",
+      "system": "Système",
+      "modules": "Modules",
+      "files": "Fichiers",
+      "symbols": "Symboles"
+    },
     "levels": {
       "0": "Système",
       "1": "Modules",
@@ -38,12 +73,22 @@
     "external": {
       "hide": "Masquer les dépendances externes"
     },
+    "bundle": {
+      "titleIn": "{{count}} arêtes vers {{box}}",
+      "titleOut": "{{count}} arêtes depuis {{box}}",
+      "added": "{{count}} nouvelles"
+    },
     "edges": {
       "links": "{{count}} liens",
       "links_one": "{{count}} lien",
       "new": "nouveau",
       "moved": "déplacé",
+      "labelsAlways": "Étiquettes d'arête : toujours",
       "unchanged": "Arêtes inchangées",
+      "tests": "Tests",
+      "testedBy": "testé par {{count}}",
+      "testedByNew": "testé par {{count}}, dont {{added}} nouveaux",
+      "testedByLabel": "Tracer les tests de {{name}}",
       "close": "Fermer"
     },
     "node": {
@@ -65,6 +110,11 @@
       "title": "Disposition",
       "fewerCrossings": "Moins de croisements",
       "rawGrid": "Grille brute"
+    },
+    "repoLabels": {
+      "title": "Étiquettes",
+      "edit": "Modifier les étiquettes de {{name}}",
+      "filter": "Filtrer par étiquette"
     },
     "canvasLabel": "Carte du dépôt",
     "announce": {
@@ -109,6 +159,7 @@
       "none": "Vue d'ensemble",
       "node": "Nœud",
       "edge": "Arête",
+      "bundle": "Faisceau",
       "dependsOn": "Dépend de",
       "usedBy": "Utilisé par",
       "resolved": "résolue",
@@ -123,6 +174,11 @@
       "unsupported": "Utilisations : non pris en charge pour ce langage.",
       "more": "et {{count}} de plus",
       "in": "dans"
+    },
+    "repoComparisons": {
+      "button": "Comparaisons par dépôt",
+      "title": "Comparaisons par dépôt",
+      "back": "Retour au panneau"
     }
   },
   "review": {
@@ -130,12 +186,13 @@
     "reload": "Recharger",
     "rangePicker": {
       "label": "Plage",
-      "base": "Base",
-      "head": "Head",
+      "source": "Source (fusionnée)",
+      "destination": "Destination (cible de la fusion)",
+      "mergedInto": "fusionnée dans",
+      "default": "Définir par défaut",
+      "defaultHint": "Ouvrir avec cette source et cette destination la prochaine fois",
       "worktree": "Arbre de travail",
-      "swap": "Échanger base et head",
-      "mergeBase": "base ···→ head : compare depuis l'ancêtre commun des deux côtés (ce que la PR ajoute). Clic pour un diff direct (base → head).",
-      "direct": "base → head : compare les deux côtés tels quels (diff direct). Clic pour comparer depuis l'ancêtre commun (base ···→ head).",
+      "swap": "Échanger source et destination",
       "filter": "Filtrer par nom, sujet ou SHA",
       "tabs": {
         "branches": "Branches",
@@ -148,9 +205,7 @@
         "base": "BASE",
         "head": "HEAD"
       },
-      "roleBase": "Référence · base",
-      "roleHead": "Changements · head",
-      "swapDisabled": "Inversion impossible : head est le working tree"
+      "swapDisabled": "Inversion impossible : la source est l'arbre de travail"
     },
     "range": {
       "reading": {
@@ -167,11 +222,13 @@
       "description": {
         "diff": "couleurs ajouté / modifié / supprimé",
         "unchanged-edges": "sinon seulement les dépendances qui bougent",
+        "tests": "sinon les arêtes qui partent d'un test sont repliées en un badge sur ce qu'il teste",
         "focus": "le changé + 1 saut, le reste estompé",
         "impact": "à la sélection d'un nœud",
         "rules": "relief.config.yaml",
         "risk": "complexité × churn × absence de tests",
         "hide-external": "paquets tiers et leurs liens",
+        "edge-labels-always": "toutes les étiquettes, pas seulement survol et sélection",
         "co-change": "fichiers qui changent ensemble"
       }
     },
@@ -236,7 +293,21 @@
       "returnChanged": "Type de retour modifié",
       "unspecified": "Signature modifiée"
     },
+    "repeated": {
+      "identical": "×{{count}} identiques",
+      "prompt": "Les autres fichiers du groupe ne sont pas vus.",
+      "markGroup": "Marquer le groupe comme vu",
+      "items": {
+        "edge_added": "ajoute {{kind}} → {{target}}",
+        "edge_removed": "retire {{kind}} → {{target}}",
+        "symbol_added": "ajoute {{name}}",
+        "symbol_removed": "retire {{name}}"
+      }
+    },
     "overview": {
+      "repeated": "Changements répétitifs",
+      "repeatedRow": "{{count}} fichiers : {{summary}}",
+      "repeatedMembers": "Afficher les fichiers du groupe",
       "title": "Changements structurels",
       "signatures": "Signatures modifiées",
       "violations": "Violations de règles introduites",
@@ -295,6 +366,9 @@
       "counts": "{{seen}}/{{total}} vus",
       "mark": "Marquer vu",
       "markNext": "Vu, suivant →",
+      "stepByStep": "Pas à pas",
+      "next": "Entrée suivante",
+      "previous": "Entrée précédente",
       "memoryOnly": "Pas de dossier de données : la progression reste en mémoire seulement.",
       "reasons": {
         "breakingSignature": "signature cassante",

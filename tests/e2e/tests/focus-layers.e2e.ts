@@ -2,10 +2,10 @@ import { browser, expect } from '@wdio/globals';
 import { clearReviewState } from '../helpers/review-state';
 import { openRelief } from '../helpers/open-relief';
 import { sceneNodes } from '../helpers/map-scene';
-import { press, tid, typeText } from '../helpers/ui';
+import { openLayersMenu, press, tid, typeText } from '../helpers/ui';
 
 // Contract with the UI (data attributes, no i18n dependency), on main...feat/promo-codes:
-//  - the left panel has a `layers-section` holding the buttons `toggle-diff-layer`,
+//  - the Layers menu of the top bar has a `layers-section` holding the buttons `toggle-diff-layer`,
 //    `toggle-unchanged-edges`, `toggle-focus-layer` and `toggle-impact-layer` (`aria-checked`);
 //  - the `f` key toggles the focus layer; while it is on, every node of the map scene outside "changed symbols
 //    + neighbours at one hop (+ their containers)" has `faded: true` in the scene.
@@ -47,7 +47,8 @@ describe('focus layer', () => {
     await openRelief({ size: { width: 3200, height: 2000 } });
   });
 
-  it('the Layers section holds the toggles', async () => {
+  it('the Layers menu of the top bar holds the toggles', async () => {
+    await openLayersMenu();
     const section = tid('layers-section');
     await expect(section).toBeDisplayed();
     for (const id of [

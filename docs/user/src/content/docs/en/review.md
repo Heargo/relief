@@ -9,26 +9,33 @@ Overlay the diff on the map: what is added, modified, removed or moved, and the 
 
 ## Review the PR
 
-The **Review the PR / Explore the repo** switch, at the top of the left sidebar, picks the mode: review or exploration. On, the map carries the diff of the chosen range. Off, it is the repository map alone, without any diff mark.
+At the top of the left sidebar, the repository name and the current branch say where you are. Below, the **Review the PR / Explore the repo** switch picks the mode: review or exploration. On, the map carries the diff of the chosen range. Off, it is the repository map alone, without any diff mark, and the comparison control is hidden.
 
 ## Pick a commit range
 
-In the top bar, the **base ···→ head ⇄** control picks what is compared, followed by the number of commits in the range. Each side shows its role: **Reference · base** is the starting point, **Changes · head** what you review. The map shows what head changes compared with base. Each side (keys `b` and `h`) opens a list with a filter field, shortcuts (base: `main`, `HEAD~1`, the latest tag; head: **Working tree**, `HEAD`) and three tabs, **Branches**, **Tags** and **Commits**. The Commits tab shows the history of head, with the commits of the range highlighted and the other end marked BASE or HEAD. Arrows, `Enter`, `Tab` (next tab) and `Esc` work from the keyboard.
+In **Review the PR** mode, in the left sidebar under the switch, the comparison reads like a pull request: **source** _merged into_ **destination**, followed by the number of commits in the range. The map shows what the source changes compared with the destination, since their common ancestor (range `destination...source`). Each side (keys `h` for the source and `b` for the destination) opens a list with a filter field, shortcuts (destination: `main`, `HEAD~1`, the latest tag; source: **Working tree**, `HEAD`) and three tabs, **Branches**, **Tags** and **Commits**. The Commits tab shows the history of the source, with the commits of the range highlighted and the other end marked BASE or HEAD. Arrows, `Enter`, `Tab` (next tab) and `Esc` work from the keyboard.
 
-- **`···→` or `→`**: `base...head` (default, `···→`) compares from the common ancestor, like a PR; a click switches to `base..head` (`→`), the direct diff between the two.
-- **Reading line**: under the bar, a sentence says what the map shows and which commit really serves as the base, for example "what feat/promo-codes changes compared with main, since their common ancestor 4e1a9c2". It fades after a few seconds or on the first click on the map, and comes back when hovering the control.
-- **⇄** swaps base and head. It is disabled when head is the working tree, which is always on the changes side.
+- **Default comparison**: without configuration, the source is the **Working tree** and the destination `main` (else `master`, else the current branch). **Set as default** keeps the current source and destination in `.relief/settings.json`; relief reads them back the next time it opens the repository. A range given at launch (`relief . A...B`) takes precedence and does not overwrite the saved choice.
+- **Reading line**: under the comparison, in the left panel, a sentence says what the map shows and which commit really serves as the base, for example "what feat/promo-codes changes compared with main, since their common ancestor 4e1a9c2". It fades after a few seconds or on the first click on the map, and comes back when hovering the control.
+- **⇄** swaps the source and the destination. It is disabled when the source is the working tree, which is always on the changes side.
 
-Picking a side reloads the diff.
+Picking a source or a destination reloads the diff.
 
 - **In the URL**: the range is kept in the `?range=` parameter. A link to `/?range=main...feat/promo-codes` reopens the same review.
-- **At launch**: `relief . main...feat/promo-codes` opens that range directly. Without a range, the map shows `HEAD` up to the working tree.
-- For now, the selector only offers pairs of branches: neither the working tree nor the index.
+- **At launch**: `relief . main...feat/promo-codes` opens that range directly. Without a range, the map shows the saved default comparison, by default the working tree against `main`.
 - The diff follows the chosen range; the map itself keeps the repository as relief opened it.
+
+## Compare each repository of a workspace
+
+In a workspace, the range selector is replaced by one comparison per repository. Under the Review / Explore toggle, the **Comparisons per repository** button turns the left panel into a menu: one line per repository, `source` **merged into** `destination`, with the same pickers as for a single repository (the branches offered are those of that repository). Click a side to choose another branch, or the working tree for the source.
+
+- A change only reads that repository again; the others are kept as they are, and the map and the diff follow.
+- The change lasts for the session. **Set as default** on a line writes that repository's comparison in the workspace file (`source` and `destination`), where relief reads it back the next time.
+- The **Back to the panel** button brings the usual panel back. The button is only in the Review mode of a workspace.
 
 ## Review changes in progress
 
-Without a range (`relief .`), relief compares `HEAD` with the working tree: that is how to review what an AI agent just wrote, before committing. When the range touches the working tree or the index, the **Reload** button in the top bar reads the repository again, and relief also reloads by itself when its window gets the focus back. The selection, the zoom level and the "seen" state are kept; a node that disappeared is simply deselected. Ranges between two commits do not change and do not reload.
+Without a range (`relief .`), relief opens the saved default comparison, by default the working tree against `main`: that is how to review what an AI agent just wrote, before committing. When the range touches the working tree or the index, the **Reload** entry of the Settings menu reads the repository again, and relief also reloads by itself when its window gets the focus back. The selection, the zoom level and the "seen" state are kept; a node that disappeared is simply deselected. Ranges between two commits do not change and do not reload.
 
 ## Read the diff layer
 
@@ -44,7 +51,7 @@ Each box (system, module, file, symbol) carries the state of what it contains.
 - **Intensity**: the bigger a change, the stronger the colour. Three degrees: up to 5 lines, up to 20 lines, beyond.
 - **Tinted containers**: a module or a system takes the tint of its descendants, so you can spot where the diff is from afar, before zooming in.
 - **Moved**: a moved file (renamed, for example `apps/web/utils/format.ts` to `packages/shared/money/format.ts`) shows once as moved, with its old location dashed. It is not counted as an addition plus a removal.
-- **Format only**: a file whose formatting alone changed (no symbol or link changed) carries the "format only" badge: no need to read it.
+- **Format only**: a file carries the "format only" badge when its text is the same on both sides once the blanks (spaces, tabs, line breaks) are removed, or when a language relief analyses sees no symbol or link changed in it (comments then count for nothing). A file in a language relief does not analyse whose text really changes, a comment included, is not "format only": it stays visible as changed, with its text diff.
 
 ### Signature badges
 
@@ -73,7 +80,7 @@ A legend at the bottom left of the map recalls the colours: Added, Modified, Rem
 
 ![The PR card at the top of the left sidebar](../../../assets/screens/en/review-card.png)
 
-Below the mode switch, **The PR** summarises the range:
+At the top of the **Tools** block, **The PR** summarises the range:
 
 - the range under review (`main...feat/promo-codes`);
 
@@ -89,11 +96,14 @@ Below the mode switch, **The PR** summarises the range:
 With nothing selected, the right panel lists what the PR changes, computed from the graph by relief's core (no AI summary):
 
 - **Modified signatures**: each symbol whose signature changes, with a **breaking** or **compatible** badge, and its number of direct and transitive callers (for example "3 direct callers · 6 transitive").
-- **Rule violations introduced**: coming soon. The group does not show until architecture rules are checked during review.
+- **Rule violations introduced**: the dependencies the range adds that a rule of `relief.config.yaml` forbids (see [Architecture rules](../rules/)). The violations that already existed on the base are listed apart, under **Rule violations already existing**. Without rules, these groups do not show.
 - **Files added, removed, moved**: one file per row, with its status (added, removed, moved, format only). A moved file shows its old and new path.
 - **Out of the diff, calls a breaking signature**: symbols the PR does not touch but which directly call a breaking signature, with a **tested** or **no test** badge. On acme-shop, `requireAuth` (tested) and `renewSubscriptions` (untested) call `SessionStore.refresh`.
+- **Repeated changes**: three or more files that make the same change (same imports added or removed, same symbols added or removed) form a single row, for example "4 files: adds imports → src/util/helpers.ts". The ▸ button unfolds the list of the files of the group; clicking a file selects it.
 
 Clicking a row selects its node and frames it on the map.
+
+On the map, the first file of a group of repeated changes (the representative) stays normal and carries "×4 identical"; the other members are faded and their changed edges are folded into those of the representative, with a counter. Selecting a member unfolds it: its edges and badge come back.
 
 ## Signals
 
@@ -104,20 +114,21 @@ In the left sidebar, the **Signals** section counts and lists:
 - breaking signatures, with "N transitive callers · M without tests";
 - new couplings between modules (+) and removed ones (−), for example `apps/web/components → packages/db/repos`. HTTP edges count too: on acme-shop, `apps/web/components → apps/api/routes` is added, making 4 new couplings;
 - files ignored because only their formatting changes;
-- rule violations introduced: coming soon.
+- the rule violations introduced by the range, then those that already existed (marked "existing"), each with the id of its rule.
 
-Clicking a signature or an ignored file selects it.
+Clicking a signature, a violation or an ignored file selects the node concerned.
 
 ## Layers
 
-The **Layers** section of the left sidebar groups the display switches, each with its shortcut:
+The **Layers** menu of the top bar (`Alt` + `L`), between Workspace and Settings, groups the display switches, some with a shortcut. It stays open while you flip several layers; `Esc` or a click outside closes it. In review:
 
 - **Diff layer**: shows or hides the colours, badges, counters and the added or removed edges. Removed nodes stay drawn, without a mark.
-- **Unchanged edges**: hides or shows the dependencies the diff does not touch.
+- **Unchanged edges**: hides or shows the dependencies the diff does not touch. In review they are hidden by default (those of the selected node stay visible); in exploration they are shown. Your choice is remembered for each mode.
+- **Tests**: off by default, the edges that start at a test file (a file under a `test`, `tests`, `__tests__`, `e2e` or `spec` folder, or named `*.test.*`, `*.spec.*` or `*.e2e.*`, and the modules that hold only tests) are not drawn, so that the code reads first. The test boxes stay on the map, dimmed. What they test carries a badge "tested by N" ("tested by N, M new" when reviewing a diff). Click the badge, or select a test, to draw its edges; switch the layer on to draw them all. Your choice is remembered.
 - **PR focus** (key `f`): only the changed symbols and their direct neighbours (what they call and what calls them) stay sharp, with the boxes that hold them; the rest is faded. On acme-shop, `CheckoutPage` stays sharp, `LoginPage` (two hops from the nearest change) is faded.
 - **Impact radius** (key `i`): see [Impact radius](#impact-radius).
 
-![The Layers section of the left sidebar](../../../assets/screens/en/review-layers.png)
+![The Layers menu of the top bar](../../../assets/screens/en/review-layers.png)
 
 ## Read the code
 
@@ -127,7 +138,7 @@ In "Review the PR" mode, selecting a changed symbol or file (click it on the map
 
 - **Unified diff**: the removed (−) and added (+) lines between the base and the head of the chosen range, with the file's line numbers on both sides. An added symbol only has added lines, a removed symbol only removed lines. For a moved file, the base is read at its old location.
 - **One block per symbol**: for a file, each symbol gets its own block, with its status (added, modified, removed, moved).
-- **Format only**: for a file where only the formatting changed, the text diff is hidden ("58 text diff lines hidden: only the formatting changes"). The **Show the text diff anyway** button shows it.
+- **Format only**: for a "format only" file, the text diff is hidden ("58 text diff lines hidden: only the formatting changes"). The **Show the text diff anyway** button shows it. A changed file with no changed symbol (a language relief does not analyse) shows the text diff of the whole file straight away.
 - **Signature**: when the signature changes, the panel shows the before and after, the **breaking** or **compatible** badge, the reason (for example "Return type widened (null possible)") and whether the symbol is part of the **public API** or **internal**.
 - **expand** / **collapse**: the header button widens the right panel to read long lines.
 
@@ -135,7 +146,7 @@ In "Review the PR" mode, selecting a changed symbol or file (click it on the map
 
 Select a node (click it, or search with `/`): relief computes everything that depends on it, directly or step by step. On the map, reached nodes get a dashed orange outline, the rest is dimmed and the edges of the path turn orange. A closed box that contains reached nodes shows "⚡ n".
 
-The **Impact radius** layer in the left sidebar (key `i`) turns this highlighting on or off.
+The **Impact radius** layer in the Layers menu (key `i`) turns this highlighting on or off.
 
 In the node panel, the impact section gives:
 
@@ -160,7 +171,15 @@ Three modes:
 
 Each row is numbered and says why to read it: breaking or changed signature, new, removed, moved, and the number of lines added and removed. On acme-shop, the PR has 14 files, or 22 symbols.
 
+A group of repeated changes is a single entry in the reading order, in File mode: the row of the representative carries "×4". When you mark the representative as seen, the section offers to mark the whole group.
+
 ![The Reading order section, in File mode](../../../assets/screens/en/review-reading-order.png)
+
+## Read step by step
+
+The **Step by step** button of the Reading order section keeps only the current element and its direct neighbours sharp (what it calls and what calls it, with the boxes holding them). Everything else on the map, arrows included, fades to 10 %. The current element is the entry you just opened, else the first unseen entry; its row is marked in the list.
+
+The **←** and **→** buttons (or the `p` and `n` keys) move to the previous or next entry, and the camera frames it and its neighbours. The setting is not kept from one session to the next. Turned off, the map goes back to normal and the selection stays.
 
 ## Replay commit by commit
 

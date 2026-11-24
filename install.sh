@@ -71,7 +71,8 @@ case $os in
     app_dir=$share/relief
     launcher=$bindir/relief
     desktop=$share/applications/relief.desktop
-    icon=$share/icons/hicolor/256x256/apps/relief.png
+    icons=$share/icons/hicolor
+    icon_sizes="32 48 64 128 256"
     ;;
   macos)
     app_dir=$home/Applications/relief.app
@@ -87,6 +88,24 @@ git_info() {
   branch=$(git -C "$root" rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)
   commit=$(git -C "$root" rev-parse --short=9 HEAD 2>/dev/null || echo unknown)
   if [ -n "$(git -C "$root" status --porcelain 2>/dev/null)" ]; then commit="$commit dirty"; fi
+}
+
+# --- desktop integration ---
+
+# refresh_desktop_caches: lets the desktop see the new launcher and icons now, not at the
+# next login. Every tool is optional.
+refresh_desktop_caches() {
+  [ "$os" = linux ] || return 0
+  [ "$dry" = 1 ] && return 0
+  if command -v gtk-update-icon-cache >/dev/null 2>&1 && [ -f "$icons/index.theme" ]; then
+    gtk-update-icon-cache -q -t "$icons" 2>/dev/null || true
+  fi
+  if command -v update-desktop-database >/dev/null 2>&1; then
+    update-desktop-database -q "$share/applications" 2>/dev/null || true
+  fi
+  for sycoca in kbuildsycoca6 kbuildsycoca5; do
+    if command -v "$sycoca" >/dev/null 2>&1; then "$sycoca" >/dev/null 2>&1 || true; break; fi
+  done
 }
 
 # --- uninstall ---
@@ -119,12 +138,14 @@ if [ "$uninstall" = 1 ]; then
       remove_path "$app_dir"
       if is_our_launcher; then remove_path "$launcher"; elif [ -e "$launcher" ] || [ -L "$launcher" ]; then echo "kept: $launcher is not relief launcher, left in place"; fi
       remove_path "$desktop"
-      remove_path "$icon"
+      for size in $icon_sizes; do remove_path "$icons/${size}x${size}/apps/relief.png"; done
       remove_path "$share/dev.relief.app"
       remove_path "$cache/relief"
       remove_path "$cache/dev.relief.app"
-      remove_empty_dirs "$share/icons/hicolor/256x256/apps" "$share/icons/hicolor/256x256" \
-        "$share/icons/hicolor" "$share/icons" "$share/applications" "$bindir" "$cache"
+      for size in $icon_sizes; do
+        remove_empty_dirs "$icons/${size}x${size}/apps" "$icons/${size}x${size}"
+      done
+      remove_empty_dirs "$icons" "$share/icons" "$share/applications" "$bindir" "$cache"
       ;;
     macos)
       remove_path "$app_dir"
@@ -163,7 +184,8 @@ if [ "$dry" = 1 ]; then
     linux)
       echo "step: docker-build"; echo "step: extract-appimage"; echo "step: install-launcher"
       echo "step: install-desktop"; echo "step: install-icon"
-      echo "install: $app_dir"; echo "install: $launcher"; echo "install: $desktop"; echo "install: $icon" ;;
+      echo "install: $app_dir"; echo "install: $launcher"; echo "install: $desktop"
+      for size in $icon_sizes; do echo "install: $icons/${size}x${size}/apps/relief.png"; done ;;
     macos)
       echo "step: native-build"; echo "step: install-app"; echo "step: link-bin"
       echo "install: $app_dir"; echo "install: $launcher" ;;
@@ -185,6 +207,19 @@ need_docker() {
   docker info >/dev/null 2>&1 || die "docker is installed but its daemon is not reachable. Start Docker and run this script again."
 }
 
+# docker_user_args: on Linux, `--user <uid>:<gid>` so that target/ belongs to the current user.
+# Not with a rootless Docker (container root already is the current user on the host, and runc
+# cannot hand the terminal to an unmapped uid: "chown /dev/stdout: invalid argument"), nor with
+# Docker Desktop (its VM maps the ownership of shared folders).
+docker_user_args() {
+  [ "$(uname -s 2>/dev/null)" = Linux ] || return 0
+  info=$(docker info --format '{{.OperatingSystem}} {{json .SecurityOptions}}' 2>/dev/null)
+  case "$info" in
+    *rootless* | "Docker Desktop"*) return 0 ;;
+  esac
+  echo "--user $(id -u):$(id -g)"
+}
+
 # docker_build <linux|windows>: builds the image, then the bundles inside it (as the current user on Linux)
 docker_build() {
   kind=$1
@@ -194,8 +229,7 @@ docker_build() {
   env_args=""
   # the MSVC license was accepted by the user (prompt or --accept-msvc-license) before this point
   if [ "$kind" = windows ]; then env_args="-e XWIN_ACCEPT_LICENSE=1"; fi
-  user_args=""
-  if [ "$(uname -s 2>/dev/null)" = Linux ]; then user_args="--user $(id -u):$(id -g)"; fi
+  user_args=$(docker_user_args)
   # shellcheck disable=SC2086
   MSYS_NO_PATHCONV=1 docker run --rm $user_args $env_args \
     -v "$root:/src:ro" -v "$root/target:/out" \
@@ -231,7 +265,7 @@ install_linux() {
   # extraction needs no FUSE
   (cd "$tmpx" && ./relief.AppImage --appimage-extract >/dev/null) || die "cannot extract the AppImage"
   rm -rf "$app_dir"
-  mkdir -p "$(dirname "$app_dir")" "$bindir" "$(dirname "$desktop")" "$(dirname "$icon")"
+  mkdir -p "$(dirname "$app_dir")" "$bindir" "$(dirname "$desktop")"
   mv "$tmpx/squashfs-root" "$app_dir"
   # AppRun moves to \$APPDIR/usr; relief goes back to OWD (set by the AppImage runtime, which
   # an extracted AppImage does not run), so that `relief .` is the folder of the terminal.
@@ -241,17 +275,25 @@ OWD="\$PWD"; export OWD
 exec "$app_dir/AppRun" "\$@"
 LAUNCHER
   chmod +x "$launcher"
-  cp "$root/src/interfaces/relief-desktop/icons/icon.png" "$icon"
+  # The icon goes into the hicolor theme under its name, in every size: the task bar picks the
+  # size it needs. The window's app_id (Wayland) and WM_CLASS (X11) are both "relief", which ties it
+  # to relief.desktop.
+  for size in $icon_sizes; do
+    mkdir -p "$icons/${size}x${size}/apps"
+    cp "$root/src/interfaces/relief-desktop/icons/${size}x${size}.png" "$icons/${size}x${size}/apps/relief.png"
+  done
   cat >"$desktop" <<DESKTOP
 [Desktop Entry]
 Type=Application
 Name=relief
 Comment=Zoomable map of a git repository with the diff overlaid
 Exec="$launcher" %F
-Icon=$icon
+Icon=relief
+StartupWMClass=relief
 Categories=Development;
 Terminal=false
 DESKTOP
+  refresh_desktop_caches
   finish
   add_path_hint
   echo "installed: $app_dir"

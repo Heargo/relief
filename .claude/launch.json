@@ -11,8 +11,21 @@
     {
       "name": "maquette",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["-y", "http-server@14.1.1", "docs/product/maquette", "-p", "4400", "-c-1"],
+      "runtimeArgs": [
+        "-y",
+        "http-server@14.1.1",
+        "docs/product/maquette",
+        "-p",
+        "4400",
+        "-c-1"
+      ],
       "port": 4400
+    },
+    {
+      "name": "ui",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": ["-c", "cd src/ui && npx ng serve --port 4200"],
+      "port": 4200
     }
   ]
 }

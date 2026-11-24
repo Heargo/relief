@@ -1,12 +1,19 @@
-import { computed, inject, Injectable, signal } from '@angular/core';
+import { computed, inject, Injectable, PendingTasks, signal } from '@angular/core';
 
 import type { MetaResponse, SnapshotResponse } from '../../../core/models/contract';
-import { ReliefApiService } from '../../../core/services/relief-api.service';
-import { headRef } from '../helpers/repo.logic';
+import { ApiRequestError, ReliefApiService } from '../../../core/services/relief-api.service';
+import { headRef, settingsRange } from '../helpers/repo.logic';
 import { ancestorIds, mergeExpanded } from '../helpers/subgraph.logic';
 
 /** Most nodes the map asks for: the core closes the containers below. */
 export const DISPLAY_BUDGET = 2000;
+
+/** The code of the API error while no repository is opened (the message is the fallback). */
+function isNoSession(error: unknown, message: string): boolean {
+  return error instanceof ApiRequestError && error.code !== null
+    ? error.code === 'no_session'
+    : message === 'no session';
+}
 
 export type RepoStatus = 'loading' | 'error' | 'ready';
 
@@ -14,9 +21,11 @@ export type RepoStatus = 'loading' | 'error' | 'ready';
 @Injectable()
 export class RepoBusiness {
   private readonly api = inject(ReliefApiService);
+  private readonly pending = inject(PendingTasks);
 
   private readonly _status = signal<RepoStatus>('loading');
   private readonly _error = signal<string | null>(null);
+  private readonly _noSession = signal(false);
   private readonly _meta = signal<MetaResponse | null>(null);
   private readonly _snapshot = signal<SnapshotResponse | null>(null);
   private readonly _ref = signal<string | null>(null);
@@ -24,12 +33,21 @@ export class RepoBusiness {
   /** The containers opened on demand, asked again with each read of the snapshot. */
   private expanded: string[] = [];
 
+  private readonly _labels = signal<string[]>([]);
+  private readonly _labelsError = signal<string | null>(null);
+
   readonly status = this._status.asReadonly();
   readonly error = this._error.asReadonly();
+  /** relief started without a path: the welcome screen is shown instead of the map. */
+  readonly noSession = this._noSession.asReadonly();
   readonly meta = this._meta.asReadonly();
   readonly snapshot = this._snapshot.asReadonly();
   /** Ids of the nodes whose content is being loaded. */
   readonly loading = this._loading.asReadonly();
+  /** The labels a repository of the workspace can carry. */
+  readonly availableLabels = this._labels.asReadonly();
+  /** Why the labels could not be read, when they could not. */
+  readonly labelsError = this._labelsError.asReadonly();
   readonly repoName = computed(() => this._meta()?.repo ?? null);
   readonly range = computed(() => this._meta()?.range ?? null);
   readonly ref = this._ref.asReadonly();
@@ -40,17 +58,54 @@ export class RepoBusiness {
   async load(): Promise<void> {
     this._status.set('loading');
     this._error.set(null);
+    this._noSession.set(false);
     this.expanded = [];
     try {
-      const meta = await this.api.meta();
+      let meta = await this.api.meta();
+      if (!meta.range) {
+        const done = this.pending.add();
+        meta = await this.withDefaultRange(meta).finally(done);
+      }
       this._meta.set(meta);
       const ref = headRef(meta.range);
       this._snapshot.set(await this.api.snapshot(ref, DISPLAY_BUDGET));
       this._ref.set(ref);
+      if (meta.workspace) await this.loadLabels();
       this._status.set('ready');
     } catch (error) {
-      this._error.set(error instanceof Error ? error.message : String(error));
+      const message = error instanceof Error ? error.message : String(error);
+      this._noSession.set(isNoSession(error, message));
+      this._error.set(message);
       this._status.set('error');
+    }
+  }
+
+  private async loadLabels(): Promise<void> {
+    try {
+      this._labels.set(await this.api.workspaceLabels());
+      this._labelsError.set(null);
+    } catch (error) {
+      this._labels.set([]);
+      this._labelsError.set(error instanceof Error ? error.message : String(error));
+    }
+  }
+
+  /** Replaces the labels of a repository of the workspace, then reads the snapshot again. */
+  async setRepoLabels(name: string, labels: string[]): Promise<void> {
+    const meta = await this.api.setRepoLabels(name, labels);
+    const ref = this._ref();
+    this._meta.set({ ...meta, range: this._meta()?.range ?? meta.range });
+    if (ref) await this.refreshSnapshot(ref);
+  }
+
+  /** Without a range, the saved comparison (source merged into destination) is the range. */
+  private async withDefaultRange(meta: MetaResponse): Promise<MetaResponse> {
+    try {
+      const settings = await this.api.settings();
+      return { ...meta, range: settingsRange(settings) };
+    } catch {
+      // Exceptional (the core falls back to its defaults itself): keep the opening range as is.
+      return meta;
     }
   }
 

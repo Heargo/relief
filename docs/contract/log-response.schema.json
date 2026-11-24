@@ -22,6 +22,13 @@
         "author": {
           "type": "string"
         },
+        "repo": {
+          "description": "The repository of the commit, in a workspace.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "sha": {
           "description": "Full SHA.",
           "type": "string"

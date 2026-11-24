@@ -10,6 +10,13 @@
         "type": "string"
       }
     },
+    "path": {
+      "description": "Folder of the open repository; for a workspace, the folder of the workspace.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
     "range": {
       "description": "Range the server was opened with, if any.",
       "type": [
@@ -26,11 +33,58 @@
       "items": {
         "type": "string"
       }
+    },
+    "workspace": {
+      "description": "The repositories of the workspace, when the session is a workspace (ADR 0010).",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/WorkspaceMeta"
+        },
+        {
+          "type": "null"
+        }
+      ]
     }
   },
   "required": [
     "repo",
     "branches",
     "tags"
-  ]
+  ],
+  "$defs": {
+    "WorkspaceMeta": {
+      "description": "The repositories of an open workspace, in file order.",
+      "type": "object",
+      "properties": {
+        "repos": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/WorkspaceRepoMeta"
+          }
+        }
+      },
+      "required": [
+        "repos"
+      ]
+    },
+    "WorkspaceRepoMeta": {
+      "description": "A repository of a workspace.",
+      "type": "object",
+      "properties": {
+        "labels": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "labels"
+      ]
+    }
+  }
 }

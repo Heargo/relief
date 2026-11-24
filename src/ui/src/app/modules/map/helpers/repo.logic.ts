@@ -10,3 +10,10 @@ export function headRef(range: string | null | undefined): string {
   // `A..` and `A...` (a side missing): the core refuses the range, its diff fails; nothing to show.
   return parts[parts.length - 1] || 'WORKTREE';
 }
+
+/** The range read for a comparison: `destination...source`, or the destination alone for the working tree. */
+export function settingsRange(settings: { source: string; destination: string }): string {
+  return settings.source === 'WORKTREE'
+    ? settings.destination
+    : `${settings.destination}...${settings.source}`;
+}

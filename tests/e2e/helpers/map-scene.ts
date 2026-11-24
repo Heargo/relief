@@ -30,6 +30,8 @@ export interface SceneNode extends ClientRect {
   badges: string[];
   counts: { unit: 'symbols' | 'files'; value: number }[];
   sub: string | null;
+  /** K08: the labels of a repository box (front, back, ops, tools), empty elsewhere. */
+  tags: string[];
   impact: 'hit' | 'box' | 'dim' | null;
   impactCount: number;
   reading: { seen: boolean; count: { seen: number; total: number } | null } | null;
@@ -38,6 +40,10 @@ export interface SceneNode extends ClientRect {
   risk: number | null;
   faded: boolean;
   emphasis: 'sharp' | 'dim' | null;
+  /** R17: "tested by N" badge on the target of folded test edges, null without. */
+  testedBy: { count: number; added: number } | null;
+  /** R18: "×N identical" on the representative of a group of repeated changes, null without. */
+  repeated: { count: number } | null;
 }
 
 export interface SceneEdge {
@@ -55,13 +61,41 @@ export interface SceneEdge {
   label: { text: string; cls: string; visible: boolean };
   tooltip: string;
   labelRect: ClientRect | null;
-  /** Middle of the edge, in client coordinates. */
+  /** Middle of the edge, in client coordinates (on its branch when it is bundled). */
+  mid: { x: number; y: number };
+  /** U31: id of the bundle the edge belongs to, null when drawn alone. */
+  bundle: string | null;
+  /** U31: the pointer is on the edge. */
+  hovered: boolean;
+  /** R19: faded by the step-by-step focus. */
+  faded: boolean;
+  /** U32: the points of the route along the corridors, in client coordinates; null for the direct curve. */
+  route: { x: number; y: number }[] | null;
+}
+
+/** U31: edges that enter (or leave) a box by the same side, drawn as a shared trunk. */
+export interface SceneBundle {
+  id: string;
+  box: string;
+  side: 'top' | 'right' | 'bottom' | 'left';
+  end: 'in' | 'out';
+  /** Number of edges in the bundle (3 at least). */
+  count: number;
+  /** Number of new edges (review). */
+  added: number;
+  status: 'added' | 'removed' | 'modified' | 'moved' | 'unchanged';
+  mixed: boolean;
+  selected: boolean;
+  label: { text: string };
+  edges: { from: string; to: string }[];
+  /** Middle of the trunk, in client coordinates: a click there selects the bundle. */
   mid: { x: number; y: number };
 }
 
 export interface Scene {
   nodes: SceneNode[];
   edges: SceneEdge[];
+  bundles: SceneBundle[];
 }
 
 export async function scene(): Promise<Scene> {
@@ -89,6 +123,10 @@ export async function sceneNodeByLabel(text: string): Promise<SceneNode | undefi
 
 export async function sceneEdges(): Promise<SceneEdge[]> {
   return (await scene()).edges;
+}
+
+export async function sceneBundles(): Promise<SceneBundle[]> {
+  return (await scene()).bundles;
 }
 
 /** A full (not merged, not co-change) edge of the scene, or undefined. */
@@ -153,6 +191,11 @@ async function click({ x, y }: { x: number; y: number }): Promise<void> {
 /** A real pointer click at the middle of a scene edge (merged ones included). */
 export async function clickSceneEdge(edge: SceneEdge): Promise<void> {
   await click({ x: Math.round(edge.mid.x), y: Math.round(edge.mid.y) });
+}
+
+/** A real pointer click on the trunk of a bundle. */
+export async function clickBundle(bundle: SceneBundle): Promise<void> {
+  await click({ x: Math.round(bundle.mid.x), y: Math.round(bundle.mid.y) });
 }
 
 /** A real pointer click at the node. */

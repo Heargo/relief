@@ -8,7 +8,7 @@ import {
   waitForNode,
   waitForScene,
 } from '../helpers/map-scene';
-import { poll, press, rectOf, tid } from '../helpers/ui';
+import { poll, press, rectOf, tid, toggleLayer } from '../helpers/ui';
 
 // Contract with the UI: the map is read through `window.__reliefScene()` (helpers/map-scene.ts),
 // not through its DOM:
@@ -27,7 +27,7 @@ it('level 0 shows the four systems and the external dependencies', async () => {
   await expect(tid('current-level')).toHaveAttribute('data-level', '0');
   await waitForScene((sc) => sc.nodes.filter(isSystem).length === 4);
   // the external dependencies are hidden by default (U13)
-  await tid('toggle-hide-external').click();
+  await toggleLayer('toggle-hide-external');
   await waitForNode('pkg:external');
   // nothing deeper is drawn at this level
   expect(await sessionDrawn()).toBe(false);

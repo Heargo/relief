@@ -51,7 +51,7 @@ The binary is linked against the glibc of the machine that built it: the `.deb` 
 
 If `relief` still shows subcommands (`show`, `diff`, `serve`), it is an old version installed by `cargo install` in `~/.cargo/bin`, which comes before `/usr/bin` in the `PATH`: `which -a relief` lists them, `cargo uninstall relief-cli` removes the old one.
 
-In all three cases the command is `relief` (the AppImage runs by its file name, or renamed to `relief`) and this documentation is embedded: the Documentation entry of the Settings menu works offline.
+In all three cases the command is `relief` (the AppImage runs by its file name, or renamed to `relief`) and this documentation is embedded: the Documentation entry of the Help menu works offline.
 
 ## Requirements to build
 
@@ -84,14 +84,52 @@ relief [path] [range]
 
 The relief window opens on the current repository. Nothing is written to your repository.
 
-- With no argument, the range shown goes from `HEAD` to the working tree. For another range (`range`), pass it: `relief . main...my-branch` (against the merge-base) or `relief . A..B`.
+- With no argument, `relief` opens no repository: it shows the welcome screen, where you open a repository with the folder picker or choose a recent one (the list is kept in your configuration folder). To open the current folder, run `relief .`. The "Open a workspace…" entry (welcome screen and **Workspace** menu) opens an existing workspace from its folder; "Create a workspace…" creates an empty one in the chosen folder. The whole journey is in [Workspace](../workspace/).
+- With no range, relief opens the default comparison of the repository: the working tree against `main` (else `master`, else the current branch), or the one you saved with **Set as default** (see [Review a PR](../review/#pick-a-commit-range)). For another range (`range`), pass it: `relief . main...my-branch` (against the merge-base) or `relief . A..B`.
 - The first argument (`path`) is the folder to analyse: `relief ~/code/my-repo`.
 
-## First look
+## Workspace
 
-The home screen shows the name and tagline of relief, and the window carries the repository name; the "Help" link opens this documentation in a second window, offline, in the language of the interface.
+A workspace groups several repositories (a front end, an API, a shared library) so you can read them together; the whole journey (create, add, label, compare) is in [Workspace](../workspace/). Here is its file format. It is a folder of your choice that holds:
 
-![relief home screen](../../../assets/screens/en/home.png)
+- `<name>.relief.json`, the configuration, which you can version or write by hand;
+- `.relief/`, the local data of the workspace (cache, review state), in the same format as the `.relief/` of a repository.
+
+The member repositories stay untouched: in workspace mode relief writes nothing in them and ignores their own `.relief/`.
+
+```json
+{
+  "repos": [
+    {
+      "name": "api",
+      "path": "../api",
+      "labels": ["back"],
+      "source": "WORKTREE",
+      "destination": "main"
+    }
+  ]
+}
+```
+
+- `name`: the name of the repository in the workspace, unique, non-empty, without `/` (by default, its folder name);
+- `path`: the repository folder, relative to the file (or absolute);
+- `labels`: the labels of the repository, optional. They are picked among `front`, `back`, `ops` and `tools`, plus the ones you declare in a top-level `labels` field of the file (for example `"labels": ["qa"]`, next to `repos`); an unknown label is refused when you label from the map;
+- `source` and `destination`: the default comparison of the repository (`WORKTREE` and `main` when absent).
+
+To open the workspace, give the file or its folder:
+
+```sh
+relief ~/code/shop/shop.relief.json
+relief ~/code/shop
+```
+
+The map brings the repositories of the workspace together: a **Repos** level sits above the systems, and each repository shows its diff on its own range (see "The map").
+
+## The welcome screen
+
+Started without an argument, relief shows its welcome screen: three buttons, **Open a repository…**, **Open a workspace…** and **Create a workspace…**, then the **Recent** list, each entry with its name, its path and an icon that tells a repository from a workspace. Clicking a recent entry opens it in the same window. Once a repository is open, the window carries its name, and the **Documentation** entry of the **Help** menu opens this documentation in a second window, offline, in the language of the interface.
+
+![The relief welcome screen, with a recent repository](../../../assets/screens/en/home.png)
 
 ## Read the map
 
@@ -100,7 +138,7 @@ The map is nested: systems, modules, files, symbols.
 - **Wheel**: zooms around the cursor; the `+` and `−` buttons zoom around the centre, `⤢` fits everything. A box opens by itself once it is big enough.
 - **Double-click** a box: frames it and opens it.
 - **Drag**: pans the map.
-- **Single click**: no effect for now.
+- **Single click**: selects the box or the arrow and opens it in the right panel.
 - The buttons at the bottom right (or keys `0` to `3`) choose the level shown.
 
 ![The map at the files level](../../../assets/screens/en/getting-started-files.png)

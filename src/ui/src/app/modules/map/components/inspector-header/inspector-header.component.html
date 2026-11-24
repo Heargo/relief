@@ -2,7 +2,7 @@
   <span class="badge" [class]="kind()" data-testid="inspector-badge" [attr.data-kind]="kind()">
     @if (kind() === 'node') {
       <i class="pi pi-box" aria-hidden="true"></i>
-    } @else if (kind() === 'edge') {
+    } @else if (kind() === 'edge' || kind() === 'bundle') {
       <i class="pi pi-link" aria-hidden="true"></i>
     }
     {{ 'map.inspector.' + kind() | translate }}

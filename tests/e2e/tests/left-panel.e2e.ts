@@ -1,12 +1,13 @@
 import { browser, expect } from '@wdio/globals';
 import { openRelief } from '../helpers/open-relief';
-import { tid } from '../helpers/ui';
+import { openLayersMenu, tid, toggleLayer } from '../helpers/ui';
 
 // Contract with the UI (left panel like the mockup, `.sec` / `.seg` / `.tog`):
 //  - the mode switch (`review-toggle`, `explore-toggle`) is a segmented control at the top of
 //    `left-panel`, not in the top bar;
-//  - the section titles (`h3` of `layers-section`, `layout-section`) are 11 px, uppercase;
-//  - the layers are switches (`role="switch"`, `aria-checked`) on `toggle-*` test ids;
+//  - the section titles (`h3` of `layout-section`) are 11 px, uppercase;
+//  - the layers live in the Layers menu of the top bar (`menu-trigger-layers`, between Workspace
+//    and Settings), as menu checkboxes (`role="menuitemcheckbox"`, `aria-checked`) on `toggle-*`;
 //  - the PR card has a progress bar `pr-progress` (`role="progressbar"`).
 
 const style = (testId: string, selector: string) =>
@@ -23,10 +24,8 @@ const style = (testId: string, selector: string) =>
 
 it('a section title is 11 px and uppercase', async () => {
   await openRelief({ size: { width: 1280, height: 800 } });
-  await expect(tid('layers-section')).toBeDisplayed();
-  for (const id of ['layers-section', 'layout-section']) {
-    expect(await style(id, 'h3')).toEqual({ size: '11px', transform: 'uppercase' });
-  }
+  await expect(tid('layout-section')).toBeDisplayed();
+  expect(await style('layout-section', 'h3')).toEqual({ size: '11px', transform: 'uppercase' });
 });
 
 it('the mode switch sits at the top of the left panel and switches the mode', async () => {
@@ -39,7 +38,7 @@ it('the mode switch sits at the top of the left panel and switches the mode', as
     return {
       inPanel: panel.contains(review) && panel.contains(explore),
       inTopbar: !!document.querySelector('header.topbar [data-testid="review-toggle"]'),
-      first: panel.firstElementChild!.contains(review),
+      first: panel.children[1].contains(review),
     };
   });
   expect(placed).toEqual({ inPanel: true, inTopbar: false, first: true });
@@ -49,12 +48,32 @@ it('the mode switch sits at the top of the left panel and switches the mode', as
   await expect(tid('review-toggle')).toHaveAttribute('aria-pressed', 'false');
 });
 
-it('the layers are switches that flip on click', async () => {
+it('the layers sit in the Layers menu of the top bar, between Workspace and Settings', async () => {
   await openRelief({ size: { width: 1280, height: 800 } });
+  const triggers = await browser.execute(() =>
+    [...document.querySelectorAll('header.topbar [data-testid^="menu-trigger-"]')].map((el) =>
+      el.getAttribute('data-testid'),
+    ),
+  );
+  expect(triggers).toEqual([
+    'menu-trigger-workspace',
+    'menu-trigger-layers',
+    'menu-trigger-settings',
+    'menu-trigger-help',
+  ]);
+  const inPanel = await browser.execute(
+    () => !!document.querySelector('[data-testid="left-panel"] [data-testid="layers-section"]'),
+  );
+  expect(inPanel).toBe(false);
+  await openLayersMenu();
   await expect(tid('toggle-focus-layer')).toBeDisplayed();
-  await expect(tid('toggle-focus-layer')).toHaveAttribute('role', 'switch');
+});
+
+it('the layers are menu checkboxes that flip on click', async () => {
+  await openRelief({ size: { width: 1280, height: 800 } });
+  await expect(tid('toggle-focus-layer')).toHaveAttribute('role', 'menuitemcheckbox');
   const before = await tid('toggle-focus-layer').getAttribute('aria-checked');
-  await tid('toggle-focus-layer').click();
+  await toggleLayer('toggle-focus-layer');
   await expect(tid('toggle-focus-layer')).toHaveAttribute(
     'aria-checked',
     before === 'true' ? 'false' : 'true',
@@ -70,7 +89,8 @@ it('the PR card shows the range and a progress bar', async () => {
 });
 
 // U16: the left panel stacks the mode switch, the tools of the mode (`tools-section`), then the
-// display block (`display-section`: layers, then layout), common to both modes.
+// display block (`display-section`: the layout), common to both modes. The layers are in the top
+// bar's Layers menu.
 const orderOf = (ids: string[]) =>
   browser.execute((list: string[]) => {
     const found = list
@@ -91,10 +111,9 @@ it('in PR mode the panel reads switch, PR tools, then display', async () => {
     'tools-section',
     'display-section',
   ]);
-  expect(await orderOf(['pr-card', 'reading-order', 'layers-section', 'layout-section'])).toEqual([
+  expect(await orderOf(['pr-card', 'reading-order', 'layout-section'])).toEqual([
     'pr-card',
     'reading-order',
-    'layers-section',
     'layout-section',
   ]);
   const inTools = await browser.execute(() => {
@@ -102,11 +121,11 @@ it('in PR mode the panel reads switch, PR tools, then display', async () => {
     const display = document.querySelector('[data-testid="display-section"]')!;
     return {
       card: tools.contains(document.querySelector('[data-testid="pr-card"]')),
-      layers: display.contains(document.querySelector('[data-testid="layers-section"]')),
       layout: display.contains(document.querySelector('[data-testid="layout-section"]')),
     };
   });
-  expect(inTools).toEqual({ card: true, layers: true, layout: true });
+  expect(inTools).toEqual({ card: true, layout: true });
+  await openLayersMenu();
   await expect(tid('toggle-diff-layer')).toBeDisplayed();
   await expect(tid('toggle-co-change-layer')).not.toBeExisting();
 });
@@ -120,10 +139,13 @@ it('in Explorer the panel reads switch, explore tools, then the same display blo
     'tools-section',
     'display-section',
   ]);
-  expect(
-    await orderOf(['entry-points-section', 'hotspots-section', 'layers-section', 'layout-section']),
-  ).toEqual(['entry-points-section', 'hotspots-section', 'layers-section', 'layout-section']);
+  expect(await orderOf(['entry-points-section', 'hotspots-section', 'layout-section'])).toEqual([
+    'entry-points-section',
+    'hotspots-section',
+    'layout-section',
+  ]);
   await expect(tid('pr-card')).not.toBeExisting();
+  await openLayersMenu();
   await expect(tid('toggle-diff-layer')).not.toBeExisting();
   await expect(tid('toggle-co-change-layer')).toBeDisplayed();
   await expect(tid('toggle-hide-external')).toBeDisplayed();

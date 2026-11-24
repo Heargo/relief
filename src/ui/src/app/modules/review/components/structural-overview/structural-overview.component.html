@@ -100,6 +100,52 @@
     </section>
   }
 
+  @if (groups().length > 0) {
+    <section data-testid="overview-group" data-group="repeated">
+      <h4>{{ 'review.overview.repeated' | translate }}</h4>
+      <ul>
+        @for (group of groups(); track group.representative) {
+          <li>
+            <button
+              type="button"
+              data-testid="overview-row"
+              [attr.data-repeated]="group.representative"
+              (click)="select(group.representative)"
+            >
+              {{ group.text }}
+            </button>
+            <button
+              type="button"
+              class="members-toggle"
+              data-testid="repeated-members-toggle"
+              [attr.aria-expanded]="unfolded().has(group.representative)"
+              [attr.aria-label]="'review.overview.repeatedMembers' | translate"
+              (click)="toggleMembers(group.representative)"
+            >
+              {{ unfolded().has(group.representative) ? '▾' : '▸' }}
+            </button>
+            @if (unfolded().has(group.representative)) {
+              <ul class="members">
+                @for (member of group.members; track member) {
+                  <li>
+                    <button
+                      type="button"
+                      data-testid="repeated-member"
+                      [attr.data-node-id]="member"
+                      (click)="select(member)"
+                    >
+                      <code>{{ label(member) }}</code>
+                    </button>
+                  </li>
+                }
+              </ul>
+            }
+          </li>
+        }
+      </ul>
+    </section>
+  }
+
   @if (summary().outOfDiff.length > 0) {
     <section data-testid="overview-group" data-group="out-of-diff">
       <h4>{{ 'review.overview.outOfDiff' | translate }}</h4>

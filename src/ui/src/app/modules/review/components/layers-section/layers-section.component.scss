@@ -1,10 +1,23 @@
+/* Shown inside the "Layers" menu panel of the top bar: no section frame of its own. */
+.sec {
+  padding: 2px;
+  border-bottom: 0;
+}
+
 .tog {
   width: 100%;
+  padding: 6px 8px;
   border: 0;
+  border-radius: 6px;
   background: none;
   color: var(--relief-fg);
   font: inherit;
   text-align: left;
+
+  &:hover,
+  &:focus-visible {
+    background: var(--relief-panel-2);
+  }
 }
 
 .what {

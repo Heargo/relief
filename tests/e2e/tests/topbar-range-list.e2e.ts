@@ -4,8 +4,8 @@ import { tid } from '../helpers/ui';
 
 it('on acme-shop the open range popover has an opaque background and a border', async () => {
   await openRelief({ size: { width: 1280, height: 800 } });
-  await tid('range-head').waitForDisplayed();
-  await tid('range-head').click();
+  await tid('compare-source').waitForDisplayed();
+  await tid('compare-source').click();
   await tid('range-popover').waitForDisplayed();
   const style = await browser.execute(() => {
     const el = document.querySelector('[data-testid="range-popover"]') as Element;

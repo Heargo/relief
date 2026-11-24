@@ -8,6 +8,7 @@
   position: relative;
   display: flex;
   align-items: flex-end;
+  flex-wrap: wrap;
   gap: 4px;
   min-width: 0;
   font:
@@ -43,7 +44,6 @@ button {
   text-overflow: ellipsis;
 }
 
-.mode,
 .swap {
   flex: none;
   padding-inline: 6px;
@@ -57,11 +57,12 @@ button {
 }
 
 .popover {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  z-index: 60;
-  width: 380px;
+  // In the left panel (overflow: auto): in the flow, so the panel does not clip it.
+  position: static;
+  order: 1;
+  flex: 1 0 100%;
+  width: 100%;
+  max-width: 380px;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -70,11 +71,6 @@ button {
   border-radius: 8px;
   background: var(--relief-panel);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-
-  &.right {
-    left: auto;
-    right: 0;
-  }
 }
 
 .filter {
@@ -172,19 +168,6 @@ li {
   min-width: 0;
 }
 
-.role {
-  font:
-    10px system-ui,
-    sans-serif;
-  color: var(--relief-muted);
-  white-space: nowrap;
-
-  .head > & {
-    color: var(--relief-accent);
-    text-decoration: underline;
-  }
-}
-
 .reading {
   flex: 0 1 auto;
   min-width: 0;
@@ -197,4 +180,16 @@ li {
   font:
     12px system-ui,
     sans-serif;
+}
+
+.merged {
+  align-self: center;
+  flex: none;
+  color: var(--relief-muted);
+  white-space: nowrap;
+}
+
+.default {
+  flex: none;
+  color: var(--relief-muted);
 }

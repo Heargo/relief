@@ -6,12 +6,12 @@ const pages = ['getting-started', 'map', 'review', 'rules', 'explore', 'cli', 'a
 
 type Handles = { main: string; docs: string };
 
-/** Opens the settings menu and clicks Documentation, then switches to the docs window it opens (label `docs`). */
+/** Opens the Help menu and clicks Documentation, then switches to the docs window it opens (label `docs`). */
 async function openDocsWindow(_uiLanguage: string): Promise<Handles> {
   const main = await browser.getWindowHandle();
   const before = await browser.getWindowHandles();
-  await tid('settings-button').click();
-  await tid('docs-button').click();
+  await tid('menu-trigger-help').click();
+  await tid('menu-item-docs').click();
   await browser.waitUntil(async () => (await browser.getWindowHandles()).length > before.length, {
     timeoutMsg: 'the Help link did not open a second window',
   });

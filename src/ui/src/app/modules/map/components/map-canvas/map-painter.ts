@@ -1,7 +1,7 @@
 // Canvas 2D painter of the map nodes (ADR 0009). No Angular: it draws a `MapScene` on a context,
 // shapes in world units under the camera, text in screen pixels.
 import type { Camera } from '../../helpers/camera.logic';
-import { createEdgePainter, dashed, NO_DASH } from './edge-painter';
+import { createEdgePainter, dashed, NO_DASH, STEP_FADED } from './edge-painter';
 import { headerFontSize } from '../../helpers/header.logic';
 import {
   closedFontPx,
@@ -93,15 +93,23 @@ const FADED = 0.2;
 const IMPACT_DIM = 0.3;
 const EMPHASIS_DIM = 0.35;
 const SEEN = 0.45;
+const TEST_DIM = 0.55;
 const OLD_LOCATION = 0.75;
 const RISK_TINT = 0.32;
 const BOX_RADIUS = 6;
 const TAB_RADIUS = 4;
 /** Height of the content row of a closed box, by kind (symbols use the whole box). */
-const CLOSED_ROW: Record<string, number> = { service: 38, package: 38, workspace: 38, module: 30 };
+const CLOSED_ROW: Record<string, number> = {
+  repo: 38,
+  service: 38,
+  package: 38,
+  workspace: 38,
+  module: 30,
+};
 
 function padding(kind: string): number {
-  if (kind === 'service' || kind === 'package' || kind === 'workspace') return 14;
+  if (kind === 'repo' || kind === 'service' || kind === 'package' || kind === 'workspace')
+    return 14;
   return kind === 'module' ? 10 : 8;
 }
 
@@ -128,7 +136,8 @@ export function createMapPainter(
 
   const alphaOf = (n: SceneNode): number => {
     let a = 1;
-    if (n.faded) a *= FADED;
+    if (n.faded) a *= n.deepFade ? STEP_FADED : FADED;
+    if (n.test) a *= TEST_DIM;
     if (n.impact === 'dim') a *= IMPACT_DIM;
     if (n.emphasis === 'dim') a *= EMPHASIS_DIM;
     if (n.reading?.seen) a *= SEEN;
@@ -308,6 +317,10 @@ export function createMapPainter(
       ctx.fillText(n.sub, x, cy);
       x += measure(sub, n.sub) + 6;
     }
+    for (const tag of n.tags ?? []) {
+      if (x + measure(BADGE_FONT, tag) + 8 > right) break;
+      x += pill(tag, x, cy, 'tag') + 6;
+    }
     const badges: [string, string, string?][] = n.badges.map((b) => [b, t(`review.badges.${b}`)]);
     if (n.impact === 'box' && n.impactCount > 0)
       badges.push([
@@ -317,6 +330,8 @@ export function createMapPainter(
       ]);
     if (n.reading?.count && n.mode === 'box')
       badges.push(['seen-count', t('review.reading.counts', { ...n.reading.count })]);
+    if (n.repeated)
+      badges.push(['repeated', t('review.repeated.identical', { count: n.repeated.count })]);
     if (n.flagged) badges.push(['archi', t('rules.badge')]);
     if (n.loading) badges.push(['loading', t('map.loading')]);
     // Chips sit on the right; the rest flows from the left while there is room.
@@ -380,7 +395,7 @@ export function createMapPainter(
 
   return {
     paint(
-      scene: Pick<MapScene, 'nodes' | 'edges'>,
+      scene: Pick<MapScene, 'nodes' | 'edges' | 'bundles'>,
       camera: Camera,
       viewport: Viewport,
       dpr: number,
@@ -415,10 +430,10 @@ export function createMapPainter(
       const selecting =
         scene.nodes.some((n) => n.emphasis !== null) ||
         scene.edges.some((e) => e.emphasis !== 'normal');
-      edgePainter.lines(scene.edges, camera, selecting);
+      edgePainter.lines(scene.edges, camera, selecting, scene.bundles);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.textBaseline = 'middle';
-      edgePainter.labels(scene.edges, camera);
+      edgePainter.labels(scene.edges, camera, scene.bundles);
       for (const n of shown) texts(n, camera);
     },
   };

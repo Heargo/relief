@@ -64,7 +64,7 @@ Les données de relief (cache d'index, état de relecture) vivent dans `.relief/
 ## Commandes
 
 ```
-relief [chemin] [plage]          # ouvre la fenêtre sur la carte ; code de sortie 2 si le dépôt ne s'ouvre pas
+relief [chemin] [plage]          # sans chemin : écran d'accueil ; avec : ouvre la fenêtre sur la carte ; code de sortie 2 si le dépôt ne s'ouvre pas
 ```
 
 ## Architecture

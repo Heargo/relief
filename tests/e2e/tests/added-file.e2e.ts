@@ -33,7 +33,8 @@ describe('a file added in the working tree', () => {
     await openRelief({ size: { width: 3200, height: 2000 } });
     writeFileSync(repoPath(ROOT_FILE), 'export const rootValue = 1;\n');
     writeFileSync(repoPath(SUB_FILE), 'export const folderValue = 2;\n');
-    await tid('reload-button').click();
+    await tid('menu-trigger-settings').click();
+    await tid('menu-item-reload').click();
     await tid('level-2').click();
     await expect(tid('current-level')).toHaveAttribute('data-level', '2');
     await waitForNodeMatching(isFile(ROOT_FILE), 15000);

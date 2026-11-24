@@ -57,6 +57,9 @@ pub struct DiffResponse {
     pub diff: GraphDiff,
     pub renames: Vec<FileRename>,
     pub format_only: FormatOnlySummary,
+    /// Paths of the `format_only` files (same paths as `diff.files`).
+    #[serde(default)]
+    pub format_only_paths: Vec<String>,
     /// Short SHA (7 characters) of the base really compared: the merge base for `...`, the base
     /// as is for `..`, HEAD for the working tree.
     #[serde(default)]
@@ -85,10 +88,40 @@ pub struct SearchResponse {
 pub struct MetaResponse {
     /// Name of the repository directory.
     pub repo: String,
+    /// Folder of the open repository; for a workspace, the folder of the workspace.
+    pub path: Option<String>,
     /// Range the server was opened with, if any.
     pub range: Option<String>,
     pub branches: Vec<String>,
     pub tags: Vec<String>,
+    /// The repositories of the workspace, when the session is a workspace (ADR 0010).
+    pub workspace: Option<WorkspaceMeta>,
+}
+
+/// The repositories of an open workspace, in file order.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct WorkspaceMeta {
+    pub repos: Vec<WorkspaceRepoMeta>,
+}
+
+/// A repository of a workspace.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct WorkspaceRepoMeta {
+    pub name: String,
+    pub labels: Vec<String>,
+}
+
+/// The comparison of one repository of a workspace: `source` is merged into `destination`
+/// (a ref or `WORKTREE` for the source), and the local branches to choose from.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct RepoComparison {
+    pub name: String,
+    pub source: String,
+    pub destination: String,
+    pub branches: Vec<String>,
+    /// Why the repository could not be read (branches then empty), when it could not.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
 }
 
 /// A symbol whose signature changed, with the callers it reaches in the head.
@@ -156,6 +189,29 @@ pub struct ReviewSummary {
     pub out_of_diff: Vec<OutOfDiffCaller>,
     pub couplings_added: Vec<ModuleCoupling>,
     pub couplings_removed: Vec<ModuleCoupling>,
+    /// Files changed the same way, three or more at a time.
+    #[serde(default)]
+    pub repeated: Vec<RepeatedChange>,
+}
+
+/// Files of the range that make the same change (same edges and symbols added / removed).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct RepeatedChange {
+    /// First member in reading order.
+    pub representative: NodeId,
+    /// File nodes, in reading order.
+    pub members: Vec<NodeId>,
+    pub summary: Vec<RepeatedChangeItem>,
+}
+
+/// One part of the change shared by the members of a [`RepeatedChange`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum RepeatedChangeItem {
+    EdgeAdded { kind: EdgeKind, target: NodeId },
+    EdgeRemoved { kind: EdgeKind, target: NodeId },
+    SymbolAdded { name: String },
+    SymbolRemoved { name: String },
 }
 
 /// A file of the range and its node.
@@ -227,6 +283,14 @@ pub struct MetricsResponse {
     pub nodes: std::collections::BTreeMap<String, crate::Metrics>,
 }
 
+/// The comparison kept by default: `source` is merged into `destination`.
+/// `source` is a ref or `WORKTREE`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct Settings {
+    pub source: String,
+    pub destination: String,
+}
+
 /// The nodes a reviewer marked as seen in one range.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct ReviewState {
@@ -266,6 +330,9 @@ pub struct CommitReadingEntry {
     pub files: Vec<ReadingItem>,
     /// Files of the commit without a structural change.
     pub other_files: usize,
+    /// The repository of the commit, in a workspace.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub repo: Option<String>,
 }
 
 /// One commit of a log.
@@ -280,6 +347,9 @@ pub struct LogEntry {
     pub author: String,
     /// Author time, in seconds since the Unix epoch.
     pub time: i64,
+    /// The repository of the commit, in a workspace.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub repo: Option<String>,
 }
 
 /// Response of the `log` command: the commits, newest first.

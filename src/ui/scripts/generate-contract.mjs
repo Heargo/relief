@@ -17,6 +17,8 @@ const roots = {
   MetricsResponse: 'metrics-response.schema.json',
   CoChangeResponse: 'co-change-response.schema.json',
   ReviewState: 'review-state.schema.json',
+  Settings: 'settings.schema.json',
+  RepoComparison: 'repo-comparison.schema.json',
   ReadingOrderResponse: 'reading-order-response.schema.json',
   CommitReadingResponse: 'commit-reading-response.schema.json',
   LogResponse: 'log-response.schema.json',

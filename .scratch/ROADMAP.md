@@ -2,7 +2,7 @@
 
 Status: proposed (2026-11-18)
 
-Tickets répartis en 17 features, chacune avec son code : `foundations/` (F), `graph-model/` (M), `git-source/` (G), `detectors/` (D), `lang-ts/` (T), `index/` (I), `diff-engine/` (E), `cli/` (C), `map-ui/` (U), `review-ui/` (R), `arch-rules/` (A), `explore/` (X), `scale/` (S), `languages/` (L), `native-app/` (N), `packaging/` (P), `multi-repo/` (K). `G02` = `.scratch/git-source/issues/02-*.md`.
+Tickets répartis en 18 features, chacune avec son code : `foundations/` (F), `graph-model/` (M), `git-source/` (G), `detectors/` (D), `lang-ts/` (T), `index/` (I), `diff-engine/` (E), `cli/` (C), `map-ui/` (U), `review-ui/` (R), `arch-rules/` (A), `explore/` (X), `scale/` (S), `languages/` (L), `native-app/` (N), `packaging/` (P), `multi-repo/` (K), `frameworks/` (H). `G02` = `.scratch/git-source/issues/02-*.md`.
 
 L'ordre suit les lignes `Blocked by:`, et à l'intérieur :
 
@@ -177,13 +177,32 @@ Brainstorm du 2026-11-20 : la carte rame sur un gros écran et les budgets de S0
 | ✓ | 53a | **D04** Fichiers hors système en dossiers, fixtures ignorées | `relief .` sur relief : une fixture `pyproject.toml` devient le système et tout le reste est à plat. | D03, L01 |
 | ✓ | 53 | **P01** Paquets `.deb` et AppImage | Installer relief sans compiler (`tauri build`). **Jalon H : relief v1.** | L01 |
 | ✓ | 53c | **P02** Construire et installer en une commande, sans admin | `./install.sh` : build Docker de la branche courante, installation dans le dossier de l'utilisateur, OS détecté. | P01 |
-| ☐ | 53b | **N10** Icône cassée dans le gestionnaire de tâches | Icône générique sous KDE/Wayland (`app_id` ≠ `relief.desktop` ?). | aucun |
+| ✓ | 53b | **N10** Icône cassée dans le gestionnaire de tâches | Icône générique sous KDE/Wayland (`app_id` ≠ `relief.desktop` ?). | aucun |
 
 ## Phase 12 : multirepo (nouvelles fonctionnalités)
 
 | ✓ | # | Ticket | Pourquoi maintenant | Bloqué par |
 | - | - | --- | --- | --- |
-| ☐ | 54 | **K01** Cadrer le multirepo | Un changement full stack sur plusieurs dépôts ; un niveau « dépôt » au-dessus du système. Spec `.scratch/multi-repo/spec.md`. | aucun |
+| ✓ | 54 | **K01** Cadrer le multirepo | Un changement full stack sur plusieurs dépôts ; un niveau « dépôt » au-dessus du système. Spec `.scratch/multi-repo/spec.md`. | aucun |
+| ✓ | 54a | **K03** Barre du haut en barre de menus | Espace de travail, Paramètres, Aide ; remplace le bouton de U15. | aucun |
+| ✓ | 54b | **K04** Panneau gauche : espace, mode, comparaison | Infos du dépôt en tête, comparaison sous le mode en relecture. | K03 |
+| ✓ | 54c | **K05** Comparaison façon PR : source → destination | Défaut working tree → `main`, configurable. | K04 |
+| ✓ | 54d | **K06** Écran d'accueil sans chemin | `relief` sans argument : ouvrir un dépôt, un espace, récents. | K03 |
+| ✓ | 54e | **K02** ADR : espace de travail et ids de dépôt | Préfixe `repo:<nom>/` en multidépôt seulement. | K01 |
+| ✓ | 54f | **K07** Fichier d'espace et session multidépôt | `<nom>.relief.json` + `.relief/` de l'espace. | K02 |
+| ✓ | 54g | **K08** Snapshot d'un espace : niveau dépôt | Union des dépôts, une plage par dépôt, niveau Dépôts. | K07 |
+| ✓ | 54h | **K09** Étiquettes de dépôt | front, back, ops, tools ; filtre. | K08 |
+| ✓ | 54i | **K10** Comparaison par dépôt | Menu du panneau gauche, une ligne par dépôt. | K05, K08 |
+| ✓ | 54j | **K11** Imports de paquets entre dépôts | Paquets publiés résolus vers le dépôt local, par les adapters. | K08 |
+| ✓ | 54k | **K12** Appels HTTP entre dépôts | T04 entre dépôts. | K08 |
+| ✓ | 54l | **K13** Parcours multidépôt de bout en bout | e2e de l'accueil à l'arête entre dépôts ; doc. | K09, K10, K11, K12 |
+| ☐ | 54m | **K14** Règles d'architecture dans un espace | Relevé à la review de K08 ; à trier. | K08 |
+| ☐ | 54n | **K15** Commit des arêtes HTTP entre dépôts | Relevé à la review de K12 ; à trier. | K12 |
+| ☐ | 54o | **E10** Code de haut niveau classé « format seul » | Relevé à la review du bug E09 ; à trier. | aucun |
+| ☐ | 54p | **H01** Frameworks dans l'adapter TS, routes NestJS | Aucune arête HTTP sur un vrai espace NestJS + Angular ; ADR 0011. Spec `.scratch/frameworks/spec.md`. | K12 |
+| ☐ | 54q | **H02** Appels Angular HttpClient | `this.http.get(url)` n'est pas vu comme un appel. | H01 |
+| ☐ | 54r | **H03** URL de base dynamique | `environment.API_URL + '/x'`, `${this.baseUrl}/x`. | H02 |
+| ☐ | 54s | **H04** URL de base dans le fichier d'espace | Lever l'ambiguïté quand plusieurs API déclarent la même route. | H03 |
 
 ## Phase 13 : confort de relecture (nouvelles fonctionnalités)
 
@@ -204,12 +223,28 @@ Brainstorm du 2026-11-20 (`quicknotes.md`) : en relecture on se perd dans les d�
 | ☐ | 65 | **U28** Ranger la carte à la main | Disposition personnelle ; maquette d'abord. | U04, U27 |
 | ☐ | 66 | **N11** Détacher un panneau dans sa propre fenêtre | Multi-écran : la carte d'un côté, le code de l'autre ; maquette d'abord. | N05 |
 
+## Phase 14 : lisibilité des grosses PR
+
+Retour du 2026-11-23 : sur une PR de migration, des centaines d'arêtes « new » en étoile rendent la carte illisible. Alléger par défaut sans rien perdre ; décisions dans `review-ui/spec.md` (« Phase 14 »). L'utilisateur a demandé de tout faire, sans maquette préalable.
+
+| ✓ | # | Ticket | Pourquoi maintenant | Bloqué par |
+| - | - | --- | --- | --- |
+| ✓ | 67 | **U29** Étiquettes d'arête à la demande | Des centaines de `new` peints sur la carte. | aucun |
+| ✓ | 68 | **U30** Arêtes agrégées au niveau affiché | Arêtes symbole → symbole au niveau Fichiers : ~10× trop de traits. | aucun |
+| ✓ | 69 | **R16** Arêtes inchangées masquées par défaut en relecture | Le gris se mêle au diff. | aucun |
+| ✓ | 70 | **R17** Les tests comme calque repliable | Le gros des arêtes d'une PR vient souvent des tests. | aucun |
+| ✓ | 71 | **E08** Changements répétitifs | Une migration = le même changement dans N fichiers. | aucun |
+| ✓ | 72 | **R18** Changements répétitifs dans la relecture | Un constat et un représentant au lieu de N. | E08 |
+| ✓ | 73 | **U31** Faisceaux d'arêtes et ports d'entrée | Une étoile devient un arbre lisible. | U30 |
+| ✓ | 74 | **R19** Relecture pas à pas | Seules les arêtes de l'élément en cours. | aucun |
+| ✓ | 75 | **U32** Tracés d'arête dans les couloirs | Les arêtes ne traversent plus les boîtes. | U31 |
+
 ## Plus tard (pas encore de tickets)
 
 Dans l'ordre probable, à transformer en specs quand la v1 est là :
 
 - Précision `resolved` par SCIP (`scip-typescript`, puis les autres indexers).
-- Adapter Go, puis Java.
+- Adapter Java puis Rust.
 - CI (GitHub Actions) dès que le dépôt a un remote : `just lint`, `just test`, `just e2e` (Linux, `tauri-driver`).
 - Partage d'index par `git notes` ou artefact de CI.
 - Paquets `.dmg` (macOS) et `.msi` (Windows) : `tauri-driver` ne tourne pas sous macOS, à reprendre sur demande.

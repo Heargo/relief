@@ -18,9 +18,15 @@ import { TranslatePipe } from '@ngx-translate/core';
 
 import { ThemeBusiness } from '../../../../core/business/theme.business';
 import { LanguageBusiness } from '../../../../core/business/language.business';
-import type { DiffResponse, GraphSnapshot, Violation } from '../../../../core/models/contract';
+import type {
+  DiffResponse,
+  GraphSnapshot,
+  RepeatedChange,
+  Violation,
+} from '../../../../core/models/contract';
 import { MapBusiness } from '../../business/map.business';
 import type { Crumb } from '../../helpers/breadcrumb.logic';
+import { repeatedNodes } from '../../../review/helpers/repeated-changes.logic';
 import type { ImpactMarks } from '../../../review/helpers/impact.logic';
 import type { ReadingNodeState } from '../../../review/business/reading-order.business';
 import { isClick } from '../../helpers/pointer.logic';
@@ -53,6 +59,9 @@ export class MapCanvasComponent {
   readonly impact = input<ImpactMarks | null>(null);
   /** Ids kept sharp by the PR focus layer; everything else is faded. Null when the layer is off. */
   readonly focus = input<ReadonlySet<string> | null>(null);
+  /** Step-by-step reading: the sharp edges, the others are faded to 10 %. Null when it is off. */
+  readonly stepEdges = input<ReadonlySet<string> | null>(null);
+  readonly stepElements = input<ReadonlySet<string> | null>(null);
 
   /** Violations painted on the edges; empty while the rules layer is off. */
   readonly violations = input<readonly Violation[]>([]);
@@ -68,13 +77,21 @@ export class MapCanvasComponent {
   /** Reading progress painted on the map: seen nodes dimmed, containers count what is seen. */
   readonly reading = input<((id: string) => ReadingNodeState | null) | null>(null);
 
+  /** Groups of files that make the same change: the representative counts, the others are faded. */
+  readonly repeated = input<RepeatedChange[] | undefined>(undefined);
+
   protected readonly map = inject(MapBusiness);
   private readonly language = inject(LanguageBusiness);
   private readonly theme = inject(ThemeBusiness);
   private readonly destroyRef = inject(DestroyRef);
   private readonly canvas = viewChild.required<ElementRef<HTMLElement>>('canvas');
 
-  protected readonly levels = [0, 1, 2, 3];
+  protected readonly levelIndexes = computed(() => this.map.levels().map((_, i) => i));
+
+  /** Translation key of the name of a level. */
+  protected levelName(level: number): string {
+    return `map.levelNames.${this.map.levels()[level] ?? 'symbols'}`;
+  }
   protected readonly statuses = ['added', 'modified', 'removed', 'moved'] as const;
   protected readonly edgeKinds = [
     { status: 'added', key: 'newEdge' },
@@ -112,6 +129,10 @@ export class MapCanvasComponent {
       untracked(() => this.map.setRepoName(name));
     });
     effect(() => {
+      const repeated = this.repeated();
+      untracked(() => this.map.setRepeated(repeated));
+    });
+    effect(() => {
       const impact = this.impact();
       untracked(() => this.map.setImpact(impact));
     });
@@ -126,15 +147,23 @@ export class MapCanvasComponent {
       this.map.camera();
       this.map.viewport();
       this.map.modesScale();
+      this.map.edgeLabelsAlways();
+      this.map.hoveredEdge();
+      this.map.selection();
       this.language.current();
       // The palette is read again when the theme changes.
       this.theme.dark();
       this.impact();
       this.reading();
+      this.repeated();
+      this.map.selectedNodeId();
       this.focus();
+      this.stepEdges();
+      this.stepElements();
       this.archi();
       this.risk();
       this.loading();
+      this.map.testBadges();
       untracked(() => this.schedule(draw));
     });
     afterNextRender(() => this.listen());
@@ -147,6 +176,40 @@ export class MapCanvasComponent {
   private readonly edgeByKey = computed(
     () => new Map(this.sceneMemo().edges.map((e) => [`${e.from}\0${e.to}`, e])),
   );
+  /** The "tested by N" badges, as buttons on the top right corner of the tested boxes. */
+  protected readonly testedBadges = computed(() => {
+    this.language.current();
+    const { scale, tx, ty } = this.map.camera();
+    const { width, height } = this.map.viewport();
+    const unfolded = this.map.unfoldedTests();
+    const badges: {
+      id: string;
+      label: string;
+      text: string;
+      open: boolean;
+      x: number;
+      y: number;
+    }[] = [];
+    for (const node of this.sceneMemo().nodes) {
+      if (!node.testedBy) continue;
+      const x = (node.rect.x + node.rect.w) * scale + tx;
+      const y = node.rect.y * scale + ty;
+      if (x < 0 || y < 0 || (width > 0 && x > width) || (height > 0 && y > height)) continue;
+      const { count, added } = node.testedBy;
+      badges.push({
+        id: node.id,
+        label: node.label,
+        text: this.language.t(added > 0 ? 'map.edges.testedByNew' : 'map.edges.testedBy', {
+          count,
+          added,
+        }),
+        open: unfolded.has(node.id),
+        x,
+        y,
+      });
+    }
+    return badges;
+  });
   private panning = false;
   /** Ends the pan in progress (listeners on `window`), if any. */
   private endPan: (() => void) | null = null;
@@ -195,17 +258,21 @@ export class MapCanvasComponent {
     this.hoverFrame = 0;
     this.hoverEvent = null;
     this.tip.set(null);
+    this.map.setHoveredEdge(null);
     this.surface().nativeElement.style.cursor = '';
   }
 
   private hover(event: PointerEvent): void {
     const hit = this.hitAt(event.clientX, event.clientY);
     this.surface().nativeElement.style.cursor = hit ? 'pointer' : '';
+    this.map.setHoveredEdge(
+      hit && (hit.kind === 'edge' || hit.kind === 'label') ? { from: hit.from, to: hit.to } : null,
+    );
     let text = '';
     if (hit?.kind === 'node') {
       const node = this.nodeById().get(hit.id);
       if (node?.labelClipped) text = node.label;
-    } else if (hit) {
+    } else if (hit?.kind === 'edge' || hit?.kind === 'label') {
       text = this.edgeByKey().get(`${hit.from}\0${hit.to}`)?.tooltip ?? '';
     }
     if (!text) {
@@ -318,14 +385,29 @@ export class MapCanvasComponent {
       coChangeLines: this.map.coChangeLines(),
       emphasis: this.map.emphasis(),
       modesScale: this.map.modesScale(),
+      edgeLabels: {
+        hovered: this.map.hoveredEdge(),
+        selectedNode: this.map.selectedNodeId(),
+        selectedEdge: this.map.selectedEdge(),
+        always: this.map.edgeLabelsAlways(),
+      },
       info: (id) => this.map.info(id),
       t: (key, params) => this.language.t(key, params),
       impact: this.impact(),
       reading: this.reading(),
       focus: this.focus(),
+      stepEdges: this.stepEdges(),
+      stepElements: this.stepElements(),
       archi: this.archi(),
       risk: this.risk(),
       loading: this.loading(),
+      bundles: this.map.bundles(),
+      selectedBundle: this.map.selectedBundle()?.id ?? null,
+      repeated: repeatedNodes(
+        this.repeated(),
+        ((id) => (id === null ? null : (this.map.visibleOf(id) ?? id)))(this.map.selectedNodeId()),
+      ),
+      tests: { isTest: (id) => this.map.isTest(id), badges: this.map.testBadges() },
       measureLabel,
     });
   }
@@ -351,10 +433,15 @@ export class MapCanvasComponent {
           ...client(r),
           tabRect: tabRect ? client(tabRect) : null,
         })),
-        edges: scene.edges.map(({ mid, labelRect, ...edge }) => ({
+        edges: scene.edges.map(({ mid, labelRect, route, ...edge }) => ({
           ...edge,
+          route: route ? route.map((p) => ({ x: px(p.x), y: py(p.y) })) : null,
           mid: { x: px(mid.x), y: py(mid.y) },
           labelRect: labelRect ? client(labelRect) : null,
+        })),
+        bundles: scene.bundles.map(({ mid, trunk, branches, ...bundle }) => ({
+          ...bundle,
+          mid: { x: px(mid.x), y: py(mid.y) },
         })),
       };
     };
@@ -362,7 +449,7 @@ export class MapCanvasComponent {
   }
 
   protected crumbText(crumb: Crumb): string {
-    return crumb.kind === 'level' ? this.language.t(`map.levels.${crumb.level}`) : crumb.label;
+    return crumb.kind === 'level' ? this.language.t(this.levelName(crumb.level)) : crumb.label;
   }
 
   protected zoomFromCenter(factor: number): void {
@@ -372,29 +459,32 @@ export class MapCanvasComponent {
 
   protected onDoubleClick(event: MouseEvent): void {
     const target = event.target instanceof Element ? event.target : null;
-    if (target?.closest('.map-levels, .map-crumbs, .map-legend')) return;
+    if (target?.closest('.map-levels, .map-crumbs, .map-legend, .map-tested')) return;
     const hit = this.hitAt(event.clientX, event.clientY);
     if (hit?.kind === 'node') this.map.dive(hit.id);
   }
 
   /** A click without drag: a node box selects it, an edge too, empty map deselects. */
   private onClick(target: Element | null, at: { x: number; y: number }): void {
-    if (!target || target.closest('.map-levels, .map-crumbs, .map-legend')) return;
+    if (!target || target.closest('.map-levels, .map-crumbs, .map-legend, .map-tested')) return;
     // The strokes of the common path are thin, and nodes may lie under them: pick by proximity.
     const hit = this.hitAt(at.x, at.y);
     if (hit?.kind === 'node') this.map.selectNode(hit.id);
+    else if (hit?.kind === 'bundle') this.map.selectBundle(hit.id);
     else if (hit) this.map.selectEdge(hit.from, hit.to);
     else this.map.deselectNode();
   }
 
   protected startPan(event: PointerEvent): void {
     const target = event.target instanceof Element ? event.target : null;
-    if (event.button !== 0 || target?.closest('.map-levels, .map-crumbs, .map-legend')) return;
+    if (event.button !== 0 || target?.closest('.map-levels, .map-crumbs, .map-legend, .map-tested'))
+      return;
     let x = event.clientX;
     let y = event.clientY;
     const root = this.canvas().nativeElement;
     root.classList.add('panning');
     this.panning = true;
+    this.map.setHoveredEdge(null);
     this.tip.set(null);
     const move = (ev: PointerEvent) => {
       this.map.pan(ev.clientX - x, ev.clientY - y);

@@ -102,6 +102,7 @@ expression: diff()
     "linesAdded": 0,
     "linesRemoved": 0
   },
+  "formatOnlyPaths": [],
   "renames": [
     {
       "from": "shop/util/format.py",

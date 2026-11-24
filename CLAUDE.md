@@ -4,7 +4,7 @@ Carte zoomable d'un dépôt git (système → modules → fichiers → symboles)
 
 ## Branches
 
-Travaille sur `develop` ou une branche `feat/*` fusionnée dans `develop`. Promotion par une PR `develop` → `main`. Ne pousse jamais directement sur `main`. Ne commite jamais de fichier `.env` ni de secret.
+Tout le développement se fait sur `develop`, directement : pas de branche `feat/*`, pas de worktree. Avant le premier commit, vérifie `git branch --show-current` ; si ce n'est pas `develop`, arrête-toi et demande. Promotion par une PR `develop` → `main`. Ne pousse jamais directement sur `main`. Ne commite jamais de fichier `.env` ni de secret.
 
 ## Développer un ticket
 

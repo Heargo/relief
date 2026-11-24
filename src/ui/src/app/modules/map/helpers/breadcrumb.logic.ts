@@ -1,5 +1,6 @@
 import type { GraphSnapshot } from '../../../core/models/contract';
 import { labelOf } from './node-info.logic';
+import { isWorkspaceRepo } from './repo-level.logic';
 
 export type Crumb =
   | { kind: 'root'; label: string }
@@ -22,7 +23,7 @@ export function breadcrumbTrail({ graph, repoName, selectedId, level }: Breadcru
   for (let id: string | null = selectedId; id;) {
     const node = byId.get(id);
     if (!node) break;
-    if (node.kind !== 'repo')
+    if (node.kind !== 'repo' || isWorkspaceRepo(node))
       chain.unshift({ kind: 'node', id, label: labelOf(id, node.kind, node.path) });
     id = node.parent ?? null;
   }

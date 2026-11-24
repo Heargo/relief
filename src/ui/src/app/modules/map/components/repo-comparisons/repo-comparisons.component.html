@@ -1,0 +1,87 @@
+<div class="menu" data-testid="repo-comparisons-menu">
+  <div class="head">
+    <button
+      type="button"
+      class="iconbtn"
+      data-testid="repo-comparisons-back"
+      (click)="state.back()"
+    >
+      ← {{ 'map.repoComparisons.back' | translate }}
+    </button>
+    <div class="ptitle">{{ 'map.repoComparisons.title' | translate }}</div>
+  </div>
+  @if (state.error(); as error) {
+    <p class="state error" data-testid="repo-comparisons-error">{{ error }}</p>
+  }
+  <ul class="rows">
+    @for (item of state.comparisons(); track item.name) {
+      <li class="row" data-testid="repo-comparison">
+        <b class="name" data-testid="repo-comparison-name">{{ item.name }}</b>
+        <div class="range" role="group" [attr.aria-label]="'review.rangePicker.label' | translate">
+          <button
+            type="button"
+            class="side iconbtn"
+            data-testid="repo-comparison-source"
+            aria-haspopup="dialog"
+            [attr.aria-expanded]="isOpen(item.name, 'source')"
+            [attr.aria-label]="'review.rangePicker.source' | translate"
+            [attr.title]="item.source"
+            (click)="state.openSide(item.name, 'source')"
+          >
+            {{ short(item.source) }}
+          </button>
+          <span class="merged" data-testid="repo-comparison-merged-into">{{
+            'review.rangePicker.mergedInto' | translate
+          }}</span>
+          <button
+            type="button"
+            class="side iconbtn"
+            data-testid="repo-comparison-destination"
+            aria-haspopup="dialog"
+            [attr.aria-expanded]="isOpen(item.name, 'destination')"
+            [attr.aria-label]="'review.rangePicker.destination' | translate"
+            [attr.title]="item.destination"
+            (click)="state.openSide(item.name, 'destination')"
+          >
+            {{ short(item.destination) }}
+          </button>
+          <button
+            type="button"
+            class="default iconbtn"
+            data-testid="repo-comparison-default"
+            [attr.title]="'review.rangePicker.defaultHint' | translate"
+            (click)="state.saveDefault(item.name)"
+          >
+            {{ 'review.rangePicker.default' | translate }}
+          </button>
+        </div>
+        @if (item.error; as error) {
+          <p class="state error" data-testid="repo-comparison-error">{{ error }}</p>
+        }
+        @if (state.open(); as open) {
+          @if (open.name === item.name) {
+            <div class="popover" data-testid="range-popover" role="dialog">
+              <input
+                pInputText
+                class="filter"
+                type="text"
+                autocomplete="off"
+                data-testid="range-filter"
+                [placeholder]="'review.rangePicker.filter' | translate"
+                [value]="state.query()"
+                (input)="state.setQuery($any($event.target).value)"
+              />
+              <ul class="list" role="listbox">
+                @for (ref of options(open.side, item.branches); track ref) {
+                  <li role="option" data-testid="range-option" (click)="state.pick(ref)">
+                    {{ ref === worktree ? ('review.rangePicker.worktree' | translate) : ref }}
+                  </li>
+                }
+              </ul>
+            </div>
+          }
+        }
+      </li>
+    }
+  </ul>
+</div>

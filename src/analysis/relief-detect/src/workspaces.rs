@@ -170,6 +170,9 @@ pub(crate) fn node(
         entry: false,
         entry_type: None,
         child_count: None,
+        is_test: false,
+        branch: None,
+        labels: None,
     }
 }
 
@@ -410,6 +413,7 @@ fn detect_workspaces(
         }
     }
 
+    crate::generic::mark_tests(&mut nodes);
     Some(Detection {
         detector: "workspaces".to_owned(),
         nodes,

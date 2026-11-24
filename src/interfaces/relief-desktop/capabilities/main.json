@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "main",
-  "description": "The relief window: only relief's own commands, no plugin.",
+  "description": "The relief window: relief's own commands and the folder picker of the dialog plugin.",
   "windows": ["main"],
   "permissions": [
     "allow-meta",
@@ -15,11 +15,24 @@
     "allow-edge-usages",
     "allow-review-state",
     "allow-set-review-state",
+    "allow-settings",
+    "allow-set-settings",
     "allow-reading-order",
     "allow-commit-reading",
     "allow-log",
     "allow-metrics",
     "allow-co-change",
-    "allow-open-docs"
+    "allow-open-docs",
+    "allow-open-repo",
+    "allow-recents",
+    "allow-open-workspace",
+    "allow-create-workspace",
+    "allow-open-repo-as-workspace",
+    "allow-add-workspace-repo",
+    "allow-workspace-labels",
+    "allow-set-workspace-repo-labels",
+    "allow-workspace-comparisons",
+    "allow-set-workspace-repo-comparison",
+    "dialog:allow-open"
   ]
 }

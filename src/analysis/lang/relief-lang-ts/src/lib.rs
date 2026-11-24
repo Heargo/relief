@@ -4,7 +4,10 @@ use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 
-use relief_adapter_api::{EntryPoint, Extraction, LanguageAdapter, LinkContext, ResolveEnv, Usage};
+use relief_adapter_api::{
+    EntryPoint, Extraction, HttpCallSite, LanguageAdapter, LinkContext, PublishedPackage,
+    ResolveEnv, Usage,
+};
 use relief_model::{
     Edge, EdgeKind, Node, NodeId, NodeKind, Precision, SignatureVerdict, Span, Visibility,
 };
@@ -22,6 +25,8 @@ mod usages;
 
 pub use http::HttpCall;
 pub use refs::{Binding, Instance, Ref};
+pub use relief_adapter_api::path_matches;
+use relief_adapter_api::{http_edge, verb_matches};
 
 use resolve::{JsonMemo, Resolution, resolve};
 
@@ -219,6 +224,48 @@ impl TsAdapter {
 }
 
 impl LanguageAdapter for TsAdapter {
+    fn http_calls(&self, file: &Node, index: Option<&str>) -> Vec<HttpCallSite> {
+        let Some(index) = index.and_then(|json| serde_json::from_str::<FileIndex>(json).ok())
+        else {
+            return Vec::new();
+        };
+        index
+            .http_calls
+            .into_iter()
+            .map(|c| HttpCallSite {
+                from: file.id.clone().symbol(&c.from),
+                verb: c.verb,
+                path: c.path,
+            })
+            .collect()
+    }
+
+    fn published_packages(
+        &self,
+        paths: &[&str],
+        read: &dyn Fn(&str) -> Option<Vec<u8>>,
+    ) -> Vec<PublishedPackage> {
+        paths
+            .iter()
+            .filter_map(|path| {
+                let dir = match path.rsplit_once('/') {
+                    Some((dir, "package.json")) => format!("{dir}/"),
+                    None if *path == "package.json" => String::new(),
+                    _ => return None,
+                };
+                let json: serde_json::Value = serde_json::from_slice(&read(path)?).ok()?;
+                let name = json.get("name")?.as_str()?;
+                let main = json.get("main")?.as_str()?;
+                let main = main.strip_prefix("./").unwrap_or(main);
+                Some(PublishedPackage {
+                    name: name.to_owned(),
+                    import_name: name.to_owned(),
+                    entry: format!("{dir}{main}"),
+                })
+            })
+            .collect()
+    }
+
     fn name(&self) -> &str {
         "typescript"
     }
@@ -315,6 +362,9 @@ impl LanguageAdapter for TsAdapter {
                 entry: false,
                 entry_type: None,
                 child_count: None,
+                is_test: false,
+                branch: None,
+                labels: None,
             })
             .collect();
         let extraction = Extraction {
@@ -517,19 +567,12 @@ fn link_http(file: &Node, index: &FileIndex, ctx: &LinkContext<'_>, out: &mut Ex
                 continue;
             };
             if *to == from
-                || call.verb.as_deref().is_some_and(|v| v != verb)
-                || !http::path_matches(path, &call.path)
+                || !verb_matches(call.verb.as_deref(), verb)
+                || !path_matches(path, &call.path)
             {
                 continue;
             }
-            let edge = Edge {
-                from: from.clone(),
-                to: to.clone(),
-                kind: EdgeKind::Http,
-                precision: Precision::Syntactic,
-                heuristic: call.verb.is_none(),
-                count: None,
-            };
+            let edge = http_edge(from.clone(), to.clone(), call.verb.as_deref());
             if !out.edges.contains(&edge) {
                 out.edges.push(edge);
             }
@@ -602,6 +645,9 @@ fn external_node(name: &str, ctx: &LinkContext<'_>, out: &mut Extraction) -> Nod
         entry: false,
         entry_type: None,
         child_count: None,
+        is_test: false,
+        branch: None,
+        labels: None,
     };
     out.nodes
         .push(make(&group, NodeKind::Module, "external-group", ctx.repo));

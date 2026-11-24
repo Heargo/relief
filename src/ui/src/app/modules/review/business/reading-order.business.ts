@@ -1,6 +1,11 @@
 import { computed, inject, Injectable, PendingTasks, signal } from '@angular/core';
 
-import type { DiffResponse, GraphSnapshot, ReadingItem } from '../../../core/models/contract';
+import type {
+  DiffResponse,
+  GraphSnapshot,
+  ReadingItem,
+  RepeatedChange,
+} from '../../../core/models/contract';
 import { ReliefApiService } from '../../../core/services/relief-api.service';
 import { DISPLAY_BUDGET } from '../../map/business/repo.business';
 import { baseContainers } from '../helpers/review-graph.logic';
@@ -15,6 +20,8 @@ import {
   step,
   toggleSeen,
 } from '../helpers/reading-order.logic';
+import { elementEdges, stepFocus } from '../helpers/step-focus.logic';
+import { collapseRepeated } from '../helpers/repeated-changes.logic';
 import {
   type CommitEntry,
   type CommitScope,
@@ -56,7 +63,10 @@ export class ReadingOrderBusiness {
   private readonly _selectedCommit = signal<string | null>(null);
   private readonly _commitView = signal<CommitView | null>(null);
   private readonly _seen = signal<string[]>([]);
+  private readonly _repeated = signal<RepeatedChange[]>([]);
   private readonly _persisted = signal(true);
+  private readonly _stepByStep = signal(false);
+  private readonly _opened = signal<string | null>(null);
   private range = 'HEAD';
   private token = 0;
   private viewToken = 0;
@@ -64,9 +74,13 @@ export class ReadingOrderBusiness {
   private saving: Promise<void> = Promise.resolve();
 
   readonly mode = this._mode.asReadonly();
+  /** Step-by-step reading: only the current element and its neighbours stay sharp (session only). */
+  readonly stepByStep = this._stepByStep.asReadonly();
   /** False once saving failed (no data folder): the progress lives in memory only. */
   readonly persisted = this._persisted.asReadonly();
-  readonly items = computed(() => (this._mode() === 'symbol' ? this._symbols() : this._files()));
+  readonly items = computed(() =>
+    this._mode() === 'symbol' ? this._symbols() : collapseRepeated(this._files(), this._repeated()),
+  );
   readonly selectedCommit = this._selectedCommit.asReadonly();
   /** The diff of the selected commit alone; null with no commit selected or while it loads. */
   readonly commitView = this._commitView.asReadonly();
@@ -79,6 +93,74 @@ export class ReadingOrderBusiness {
   readonly ids = computed(() => this.items().map((i) => i.id));
   readonly changed = computed<ChangedSymbols>(() => changedSymbols(this._files(), this._symbols()));
   readonly progress = computed(() => progress(this.ids(), this._seen(), this.changed()));
+
+  /** The current element of the step-by-step reading: the opened entry, else the first unseen. */
+  readonly current = computed<string | null>(() => {
+    if (!this._stepByStep()) return null;
+    const ids = this.ids();
+    const opened = this._opened();
+    if (opened !== null && ids.includes(opened)) return opened;
+    return ids.find((id) => !isSeen(this._seen(), id, this.changed())) ?? null;
+  });
+
+  setStepByStep(on: boolean): void {
+    this._stepByStep.set(on);
+  }
+
+  /** Records the entry the reader just opened. */
+  open(id: string): void {
+    this._opened.set(id);
+  }
+
+  /** Moves the current element along the list; null (and no move) past the ends. */
+  stepCurrent(direction: 1 | -1): string | null {
+    const current = this.current();
+    if (current === null) return null;
+    const target = step(this.ids(), current, direction);
+    if (target === null || target === current) return null;
+    this._opened.set(target);
+    return target;
+  }
+
+  /** What stays sharp around the current element; null while the switch is off. */
+  stepFocus(graph: GraphSnapshot): ReturnType<typeof stepFocus> | null {
+    const current = this.current();
+    return current === null ? null : stepFocus(graph, current);
+  }
+
+  /** The current element and its direct neighbours, to frame; null while the switch is off. */
+  frameIds(graph: GraphSnapshot): string[] | null {
+    const current = this.current();
+    if (current === null) return null;
+    const ids = new Set([current]);
+    for (const { from, to } of elementEdges(graph, current)) {
+      if (from === current) ids.add(to);
+      if (to === current) ids.add(from);
+    }
+    return [...ids];
+  }
+
+  /** The groups of files that make the same change: each is one entry of the file list. */
+  setRepeated(groups: RepeatedChange[]): void {
+    this._repeated.set(groups);
+  }
+
+  /** The members of the group `id` represents; null for any other id. */
+  groupOf(id: string): string[] | null {
+    return this._repeated().find((g) => g.representative === id)?.members ?? null;
+  }
+
+  /** Marks every member of the group `id` represents seen. */
+  markGroup(id: string): void {
+    const members = this.groupOf(id);
+    if (!members) return;
+    let seen = this._seen();
+    const changed = this.changed();
+    for (const member of members) {
+      if (!isSeen(seen, member, changed)) seen = toggleSeen(seen, member, changed);
+    }
+    this.save(seen);
+  }
 
   setMode(mode: ReadingMode): void {
     this._mode.set(mode);

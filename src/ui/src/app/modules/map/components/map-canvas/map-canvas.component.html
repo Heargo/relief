@@ -23,6 +23,22 @@
       {{ t.text }}
     </div>
   }
+  @for (badge of testedBadges(); track badge.id) {
+    <button
+      type="button"
+      class="map-tested"
+      data-testid="tested-by-badge"
+      [attr.data-node]="badge.id"
+      [class.open]="badge.open"
+      [style.left.px]="badge.x"
+      [style.top.px]="badge.y"
+      [title]="'map.edges.testedByLabel' | translate: { name: badge.label }"
+      (pointerdown)="$event.stopPropagation()"
+      (click)="map.toggleTestEdges(badge.id)"
+    >
+      {{ badge.text }}
+    </button>
+  }
   <nav
     class="map-crumbs"
     data-testid="breadcrumbs"
@@ -69,7 +85,7 @@
     }
   </nav>
   <div class="map-current" data-testid="current-level" [attr.data-level]="map.level()">
-    {{ 'map.level' | translate }} {{ map.level() }} · {{ 'map.levels.' + map.level() | translate }}
+    {{ 'map.level' | translate }} {{ map.level() }} · {{ levelName(map.level()) | translate }}
   </div>
   @if (diff()) {
     <div class="map-legend" data-testid="diff-legend" (pointerdown)="$event.stopPropagation()">
@@ -90,14 +106,14 @@
     </div>
   }
   <div class="map-levels" data-testid="levels">
-    @for (level of levels; track level) {
+    @for (level of levelIndexes(); track level) {
       <button
         type="button"
         [attr.data-testid]="'level-' + level"
         [class.on]="map.level() === level"
         (click)="map.setLevel(level)"
       >
-        <i></i>{{ level }} · {{ 'map.levels.' + level | translate }}
+        <i></i>{{ level }} · {{ levelName(level) | translate }}
       </button>
     }
     <div class="hint">{{ 'map.levels.code' | translate }}</div>

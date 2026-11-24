@@ -1,0 +1,6 @@
+# One commit: a Java file and an Angular template that no language adapter reads, next to a
+# TypeScript file. The e2e spec edits them in the working tree.
+commits:
+  - id: base
+    message: "feat: java and angular files"
+    date: "2024-01-01T10:00:00Z"

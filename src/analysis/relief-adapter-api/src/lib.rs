@@ -6,7 +6,7 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
 
 pub use relief_model::Usage;
-use relief_model::{Edge, Node, NodeId, SignatureReason, SignatureVerdict};
+use relief_model::{Edge, EdgeKind, Node, NodeId, Precision, SignatureReason, SignatureVerdict};
 
 /// A language adapter: turns one file into symbol nodes and edges.
 pub trait LanguageAdapter: Send + Sync {
@@ -96,6 +96,20 @@ pub trait LanguageAdapter: Send + Sync {
     ) -> Option<Vec<Usage>> {
         None
     }
+    /// The packages this repository publishes (a name other repositories import it by, and the
+    /// repository path of its entry point). `paths` and `read` describe the tree.
+    fn published_packages(
+        &self,
+        _paths: &[&str],
+        _read: &dyn Fn(&str) -> Option<Vec<u8>>,
+    ) -> Vec<PublishedPackage> {
+        Vec::new()
+    }
+    /// The HTTP calls of `file` with a literal path, from its serialised per-file index
+    /// (`extract_indexed`). Routes are not listed: a handler node carries its `route`.
+    fn http_calls(&self, _file: &Node, _index: Option<&str>) -> Vec<HttpCallSite> {
+        Vec::new()
+    }
     /// Judges a change between two normalised signature texts of this language.
     fn compare_signatures(&self, before: &str, after: &str) -> SignatureVerdict {
         SignatureVerdict {
@@ -104,6 +118,60 @@ pub trait LanguageAdapter: Send + Sync {
             equivalent: before == after,
         }
     }
+}
+
+/// Placeholder of a `${…}` substitution in a client path.
+pub const PATH_WILDCARD: char = '\u{0}';
+
+/// An HTTP client call with a literal path, made from a symbol.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct HttpCallSite {
+    /// The calling symbol.
+    pub from: NodeId,
+    /// Upper-case verb, `None` when it cannot be told.
+    pub verb: Option<String>,
+    /// Path as written, substitutions replaced by `PATH_WILDCARD`, query string removed.
+    pub path: String,
+}
+
+/// Whether a client path reaches a route path, parameters and substitutions
+/// matching any single segment.
+pub fn path_matches(route: &str, client: &str) -> bool {
+    let route: Vec<&str> = route.trim_matches('/').split('/').collect();
+    let client: Vec<&str> = client.trim_matches('/').split('/').collect();
+    route.len() == client.len()
+        && route
+            .iter()
+            .zip(&client)
+            .all(|(r, c)| r.starts_with(':') || c.contains(PATH_WILDCARD) || r == c)
+}
+
+/// Whether a call with this verb (`None`: unknown) can reach a route of `route_verb`.
+pub fn verb_matches(call_verb: Option<&str>, route_verb: &str) -> bool {
+    call_verb.is_none_or(|v| v == route_verb)
+}
+
+/// The `http` edge from a calling symbol to a route handler; heuristic when the verb of the
+/// call is unknown.
+pub fn http_edge(from: NodeId, to: NodeId, call_verb: Option<&str>) -> Edge {
+    Edge {
+        from,
+        to,
+        kind: EdgeKind::Http,
+        precision: Precision::Syntactic,
+        heuristic: call_verb.is_none(),
+        count: None,
+    }
+}
+
+/// A package a repository publishes: the name it is imported by and its entry point.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PublishedPackage {
+    pub name: String,
+    /// The name other repositories write in an import to reach it.
+    pub import_name: String,
+    /// Repository path of the entry point file.
+    pub entry: String,
 }
 
 /// What an adapter needs to resolve import specifiers outside of linking.

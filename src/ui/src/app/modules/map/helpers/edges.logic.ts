@@ -1,5 +1,6 @@
 import type { Edge, EdgeKind } from '../../../core/models/contract';
 import type { BoxGrid } from './box-grid.logic';
+import { roundedPath, type RoutePoint } from './edge-routing.logic';
 import type { Rect } from './layout.logic';
 
 /** The fine edges between two visible boxes, merged into one directed pair. */
@@ -15,6 +16,10 @@ export interface AggregatedEdge {
 
 export interface AggregateOptions {
   changed?: (edge: Edge) => boolean;
+  /** Tells a symbol node: a visible symbol end folds up to its file unless the edge is unfolded. */
+  isSymbol?: (id: string) => boolean;
+  /** Nodes whose edges (those with an end at or under them) keep their symbol ends. */
+  unfolded?: ReadonlySet<string>;
 }
 
 /** First ancestor (the node itself included) that is visible, or null. */
@@ -44,6 +49,50 @@ export function isAncestor(
   return false;
 }
 
+/** `visibleAncestor` without allocation: a cycle in the parents is cut by a step budget. */
+export function firstVisible(
+  id: string,
+  parents: Map<string, string | null>,
+  visible: Set<string>,
+  budget: number,
+): string | null {
+  let cur: string | null | undefined = id;
+  for (let n = 0; cur && n <= budget; n++, cur = parents.get(cur)) {
+    if (visible.has(cur)) return cur;
+  }
+  return null;
+}
+
+/** An edge with an end at or under an unfolded node keeps its symbol ends. */
+export function isUnfoldedEdge(
+  edge: Edge,
+  parents: Map<string, string | null>,
+  unfolded: ReadonlySet<string> | undefined,
+  budget: number,
+): boolean {
+  if (!unfolded || unfolded.size === 0) return false;
+  for (const end of [edge.from, edge.to]) {
+    let cur: string | null | undefined = end;
+    for (let n = 0; cur && n <= budget; n++, cur = parents.get(cur)) {
+      if (unfolded.has(cur)) return true;
+    }
+  }
+  return false;
+}
+
+/** A visible symbol end rises to its (visible) file; any other end stays. */
+export function foldSymbolEnd(
+  id: string | null,
+  parents: Map<string, string | null>,
+  visible: Set<string>,
+  isSymbol: (id: string) => boolean,
+  budget: number,
+): string | null {
+  if (id === null || !isSymbol(id)) return id;
+  const parent = parents.get(id);
+  return parent ? firstVisible(parent, parents, visible, budget) : id;
+}
+
 /**
  * Attaches each fine edge to the first visible ancestor of its ends, drops the edges internal to
  * a box or between a box and one of its descendants, and merges the rest per ordered pair.
@@ -55,9 +104,16 @@ export function aggregateEdges(
   opts: AggregateOptions = {},
 ): AggregatedEdge[] {
   const pairs = new Map<string, AggregatedEdge>();
+  const isSymbol = opts.isSymbol;
+  const unfolded = opts.unfolded;
+  const budget = parents.size + 1;
   for (const edge of edges) {
-    const from = visibleAncestor(edge.from, parents, visible);
-    const to = visibleAncestor(edge.to, parents, visible);
+    let from = visibleAncestor(edge.from, parents, visible);
+    let to = visibleAncestor(edge.to, parents, visible);
+    if (isSymbol && !isUnfoldedEdge(edge, parents, unfolded, budget)) {
+      from = foldSymbolEnd(from, parents, visible, isSymbol, budget);
+      to = foldSymbolEnd(to, parents, visible, isSymbol, budget);
+    }
     if (!from || !to || from === to) continue;
     if (isAncestor(from, to, parents) || isAncestor(to, from, parents)) continue;
     const key = `${from}\u0000${to}`;
@@ -72,11 +128,6 @@ export function aggregateEdges(
     if (opts.changed?.(edge)) pair.changed = true;
   }
   return [...pairs.values()];
-}
-
-/** The "unchanged edges" layer: hidden, only the pairs with a changed link remain. */
-export function filterEdges(edges: AggregatedEdge[], showUnchanged: boolean): AggregatedEdge[] {
-  return showUnchanged ? edges : edges.filter((e) => e.changed);
 }
 
 /** Stroke width in pixels, like the mockup: grows with the number of links, bounded. */
@@ -153,6 +204,40 @@ export function edgeLabelVisible(label: string, screenLength: number): boolean {
   return label !== '' && edgeLabelNeedsPlacement(screenLength);
 }
 
+/** An edge as the label rule sees it; `violation` keeps the label at rest. */
+export interface LabelEdge {
+  from: string;
+  to: string;
+  violation?: boolean;
+}
+
+/** What makes an individual edge label show: hover, selection, or the "always" switch. */
+export interface EdgeLabelContext {
+  hovered: { from: string; to: string } | null;
+  selectedNode: string | null;
+  selectedEdge: { from: string; to: string } | null;
+  always: boolean;
+}
+
+export const EDGE_LABELS_REST: EdgeLabelContext = {
+  hovered: null,
+  selectedNode: null,
+  selectedEdge: null,
+  always: false,
+};
+
+/** No label at rest, except a rule violation; hovered edge, edges of the selected node, selected edge. */
+export function edgeLabelShown(edge: LabelEdge, ctx: EdgeLabelContext): boolean {
+  if (ctx.always || edge.violation) return true;
+  const same = (o: { from: string; to: string } | null) =>
+    o !== null && o.from === edge.from && o.to === edge.to;
+  return (
+    same(ctx.hovered) ||
+    same(ctx.selectedEdge) ||
+    (ctx.selectedNode !== null && (ctx.selectedNode === edge.from || ctx.selectedNode === edge.to))
+  );
+}
+
 function defaultUnit(count: number): string {
   return count === 1 ? '1 link' : `${count} links`;
 }
@@ -179,6 +264,8 @@ export interface EdgeShape {
   covered: boolean;
   /** On-screen distance between the two borders (world distance times the scale). */
   length: number;
+  /** The route along the corridors (world units); null or absent: the direct curve. */
+  route?: RoutePoint[] | null;
 }
 
 interface Point {
@@ -313,5 +400,79 @@ export function edgeShape(
     my: mid.y,
     covered: free === undefined,
     length: geometry.length,
+  };
+}
+
+/** The point of a route at fraction `t` of its length. */
+function routeAt(route: readonly RoutePoint[], total: number, t: number): Point {
+  let left = total * t;
+  for (let i = 1; i < route.length; i++) {
+    const a = route[i - 1];
+    const b = route[i];
+    const len = Math.hypot(b.x - a.x, b.y - a.y);
+    if (left <= len || i === route.length - 1) {
+      const k = len === 0 ? 0 : Math.min(1, left / len);
+      return { x: a.x + (b.x - a.x) * k, y: a.y + (b.y - a.y) * k };
+    }
+    left -= len;
+  }
+  return route[0];
+}
+
+/**
+ * The shape of an edge that follows a route: rounded corners, an arrow head along the last
+ * segment, the label slid along the route off the boxes. `base` gives the on-screen length.
+ */
+export function routedEdgeShape(
+  route: RoutePoint[],
+  avoid: Rect[] | BoxGrid,
+  scale: number,
+  base: EdgeShape,
+): EdgeShape {
+  const p1 = route[route.length - 1];
+  const p0 = route[route.length - 2];
+  const tl = Math.hypot(p1.x - p0.x, p1.y - p0.y) || 1;
+  const ux = (p1.x - p0.x) / tl;
+  const uy = (p1.y - p0.y) / tl;
+  const bx = p1.x - (ux * ARROW_LENGTH) / scale;
+  const by = p1.y - (uy * ARROW_LENGTH) / scale;
+  const arrow =
+    `M${p1.x},${p1.y}L${bx - (uy * ARROW_HALF_WIDTH) / scale},${by + (ux * ARROW_HALF_WIDTH) / scale}` +
+    `L${bx + (uy * ARROW_HALF_WIDTH) / scale},${by - (ux * ARROW_HALF_WIDTH) / scale}Z`;
+  let total = 0;
+  for (let i = 1; i < route.length; i++)
+    total += Math.hypot(route[i].x - route[i - 1].x, route[i].y - route[i - 1].y);
+  const halfW = LABEL_HALF_WIDTH / scale;
+  const halfH = LABEL_HALF_HEIGHT / scale;
+  let mid = routeAt(route, total, 0.5);
+  let covered = false;
+  if (edgeLabelNeedsPlacement(base.length)) {
+    covered = true;
+    for (const t of LABEL_POSITIONS) {
+      const m = routeAt(route, total, t);
+      const hit = Array.isArray(avoid)
+        ? avoid.some(
+            (r) =>
+              m.x + halfW > r.x &&
+              m.x - halfW < r.x + r.w &&
+              m.y + halfH > r.y &&
+              m.y - halfH < r.y + r.h,
+          )
+        : (avoid as BoxGrid).hits(m.x, m.y, halfW, halfH);
+      if (!hit) {
+        mid = m;
+        covered = false;
+        break;
+      }
+    }
+  }
+  return {
+    d: roundedPath(route, 10 / scale),
+    arrow,
+    mx: mid.x,
+    my: mid.y,
+    covered,
+    length: base.length,
+    route,
   };
 }

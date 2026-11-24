@@ -41,7 +41,10 @@ function isSymbol(id: string): boolean {
 /** Repository path of the file a node id lives in, or null for a container above the files. */
 function filePath(id: string): string | null {
   const match = /::file:(.+?)(?:::|$)/.exec(id);
-  return match?.[1] ?? null;
+  if (!match) return null;
+  // In a workspace the paths of the diff carry their repository (`repo:<name>/<path>`).
+  const repo = /^repo:([^/]+)\//.exec(id);
+  return repo ? `repo:${repo[1]}/${match[1]}` : match[1];
 }
 
 /** Status shown for a container, from the status of everything it holds. */

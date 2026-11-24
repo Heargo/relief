@@ -1,10 +1,19 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  input,
+  output,
+  signal,
+} from '@angular/core';
 import { TranslatePipe } from '@ngx-translate/core';
 
 import { LanguageBusiness } from '../../../../core/business/language.business';
 import type { ReviewSummary } from '../../../../core/models/contract';
 import { splitViolations } from '../../../rules/helpers/rules.logic';
-import { nodeLabel } from '../../helpers/review-summary.logic';
+import { repeatedSummary } from '../../helpers/repeated-changes.logic';
+import { displayPath, nodeLabel } from '../../helpers/review-summary.logic';
 
 type FileKind = 'added' | 'removed' | 'moved' | 'format-only';
 
@@ -41,8 +50,8 @@ export class StructuralOverviewComponent {
       from: string | null = null,
     ): FileRow => ({
       kind,
-      path,
-      from,
+      path: displayPath(path),
+      from: from === null ? null : displayPath(from),
       nodeId,
     });
     return [
@@ -52,6 +61,24 @@ export class StructuralOverviewComponent {
       ...summary.formatOnlyFiles.map((f) => row('format-only', f.path, f.node)),
     ];
   });
+
+  /** The groups of files that make the same change, each with its summary line. */
+  protected readonly groups = computed(() =>
+    (this.summary().repeated ?? []).map((group) => ({
+      ...group,
+      text: this.language.t('review.overview.repeatedRow', {
+        count: group.members.length,
+        summary: repeatedSummary(group.summary, (key, params) => this.language.t(key, params)),
+      }),
+    })),
+  );
+  protected readonly unfolded = signal<ReadonlySet<string>>(new Set());
+
+  protected toggleMembers(representative: string): void {
+    const next = new Set(this.unfolded());
+    if (!next.delete(representative)) next.add(representative);
+    this.unfolded.set(next);
+  }
 
   protected select(id: string): void {
     this.nodeSelect.emit(id);

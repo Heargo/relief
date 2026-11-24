@@ -7,11 +7,22 @@ export type NodeMode = 'open' | 'box' | 'ghost' | 'hidden';
 /** On-screen width from which a container opens, per kind. */
 export const OPEN_THRESHOLDS = { system: 470, module: 300, file: 175 } as const;
 
-/** Level (1 to 3) at which each container kind opens. */
-const OPEN_LEVEL = { system: 1, module: 2, file: 3 } as const;
+/** On-screen width from which a repository of a workspace opens. */
+const REPO_OPEN_THRESHOLD = 400;
 
-function openKey(kind: NodeKind): keyof typeof OPEN_THRESHOLDS | null {
+/** Level (1 to 3) at which each container kind opens. */
+const OPEN_LEVEL = { repo: 1, system: 1, module: 2, file: 3 } as const;
+
+type OpenKey = keyof typeof OPEN_LEVEL;
+
+function thresholdOf(key: OpenKey): number {
+  return key === 'repo' ? REPO_OPEN_THRESHOLD : OPEN_THRESHOLDS[key];
+}
+
+function openKey(kind: NodeKind): OpenKey | null {
   switch (kind) {
+    case 'repo':
+      return 'repo';
     case 'service':
     case 'package':
     case 'workspace':
@@ -52,7 +63,7 @@ export function computeModes(
         key !== null &&
         node.children.length > 0 &&
         OPEN_LEVEL[key] <= maxLevel &&
-        node.w * camera.scale >= OPEN_THRESHOLDS[key] - 1e-9;
+        node.w * camera.scale >= thresholdOf(key) - 1e-9;
       if (opens) {
         modes.set(id, 'open');
         childContext = 'full';

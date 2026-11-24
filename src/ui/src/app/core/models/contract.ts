@@ -127,6 +127,28 @@ export type SignatureReason =
       code: 'unspecified';
     };
 /**
+ * One part of the change shared by the members of a [`RepeatedChange`].
+ */
+export type RepeatedChangeItem =
+  | {
+      kind: EdgeKind;
+      target: NodeId;
+      type: 'edge_added';
+    }
+  | {
+      kind: EdgeKind;
+      target: NodeId;
+      type: 'edge_removed';
+    }
+  | {
+      name: string;
+      type: 'symbol_added';
+    }
+  | {
+      name: string;
+      type: 'symbol_removed';
+    };
+/**
  * Why a file or symbol is on the reading list.
  */
 export type ReadingReason =
@@ -166,6 +188,8 @@ export interface Contract {
   MetricsResponse: MetricsResponse;
   CoChangeResponse: CoChangeResponse;
   ReviewState: ReviewState;
+  Settings: Settings;
+  RepoComparison: RepoComparison;
   ReadingOrderResponse: ReadingOrderResponse;
   CommitReadingResponse: CommitReadingResponse;
   LogResponse: LogResponse;
@@ -194,6 +218,10 @@ export interface Edge {
 }
 export interface Node {
   /**
+   * Branch the repository is read at, on the `repo:<name>` node of a workspace.
+   */
+  branch?: string | null;
+  /**
    * Exact number of direct children in the full graph, on a container of a subgraph whose
    * children are not all in it.
    */
@@ -208,7 +236,16 @@ export interface Node {
    */
   entryType?: string | null;
   id: NodeId;
+  /**
+   * A test file (test folder or `*.test.*`, `*.spec.*`, `*.e2e.*` name), or a container that
+   * holds nothing but tests.
+   */
+  isTest?: boolean;
   kind: NodeKind;
+  /**
+   * Labels of the repository (`front`, `back`...), on the `repo:<name>` node of a workspace.
+   */
+  labels?: string[] | null;
   lang?: string | null;
   metrics?: Metrics | null;
   parent?: NodeId | null;
@@ -323,6 +360,10 @@ export interface DiffResponse {
   diff: GraphDiff;
   formatOnly: FormatOnlySummary;
   /**
+   * Paths of the `format_only` files (same paths as `diff.files`).
+   */
+  formatOnlyPaths?: string[];
+  /**
    * Head subgraph of the review (changed nodes, their neighbours and ancestors); only when a
    * budget was asked for.
    */
@@ -350,6 +391,10 @@ export interface FileRename {
 export interface MetaResponse {
   branches: string[];
   /**
+   * Folder of the open repository; for a workspace, the folder of the workspace.
+   */
+  path?: string | null;
+  /**
    * Range the server was opened with, if any.
    */
   range?: string | null;
@@ -358,6 +403,23 @@ export interface MetaResponse {
    */
   repo: string;
   tags: string[];
+  /**
+   * The repositories of the workspace, when the session is a workspace (ADR 0010).
+   */
+  workspace?: WorkspaceMeta | null;
+}
+/**
+ * The repositories of an open workspace, in file order.
+ */
+export interface WorkspaceMeta {
+  repos: WorkspaceRepoMeta[];
+}
+/**
+ * A repository of a workspace.
+ */
+export interface WorkspaceRepoMeta {
+  labels: string[];
+  name: string;
 }
 /**
  * Body of every error of the HTTP API.
@@ -377,6 +439,10 @@ export interface ReviewSummary {
   movedFiles: MovedFile[];
   outOfDiff: OutOfDiffCaller[];
   removedFiles: FileRef[];
+  /**
+   * Files changed the same way, three or more at a time.
+   */
+  repeated?: RepeatedChange[];
   /**
    * Breaking signatures first.
    */
@@ -427,6 +493,20 @@ export interface OutOfDiffCaller {
    * A test reaches it directly.
    */
   tested: boolean;
+}
+/**
+ * Files of the range that make the same change (same edges and symbols added / removed).
+ */
+export interface RepeatedChange {
+  /**
+   * File nodes, in reading order.
+   */
+  members: NodeId[];
+  /**
+   * First member in reading order.
+   */
+  representative: string;
+  summary: RepeatedChangeItem[];
 }
 /**
  * A symbol whose signature changed, with the callers it reaches in the head.
@@ -573,6 +653,28 @@ export interface ReviewState {
   seen: NodeId[];
 }
 /**
+ * The comparison kept by default: `source` is merged into `destination`.
+ * `source` is a ref or `WORKTREE`.
+ */
+export interface Settings {
+  destination: string;
+  source: string;
+}
+/**
+ * The comparison of one repository of a workspace: `source` is merged into `destination`
+ * (a ref or `WORKTREE` for the source), and the local branches to choose from.
+ */
+export interface RepoComparison {
+  branches: string[];
+  destination: string;
+  /**
+   * Why the repository could not be read (branches then empty), when it could not.
+   */
+  error?: string | null;
+  name: string;
+  source: string;
+}
+/**
  * Response of the `reading_order` command.
  */
 export interface ReadingOrderResponse {
@@ -611,6 +713,10 @@ export interface CommitReadingEntry {
    * Files of the commit without a structural change.
    */
   otherFiles: number;
+  /**
+   * The repository of the commit, in a workspace.
+   */
+  repo?: string | null;
   short: string;
 }
 /**
@@ -624,6 +730,10 @@ export interface LogResponse {
  */
 export interface LogEntry {
   author: string;
+  /**
+   * The repository of the commit, in a workspace.
+   */
+  repo?: string | null;
   /**
    * Full SHA.
    */

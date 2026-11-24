@@ -27,6 +27,7 @@ const RESPONSE: DiffResponse = {
     files: [
       { path: 'apps/api/billing/invoice.ts', linesAdded: 4, linesRemoved: 1 },
       { path: 'packages/shared/http/client.ts', linesAdded: 29, linesRemoved: 29 },
+      { path: 'tools/total.rs', linesAdded: 1, linesRemoved: 1 },
     ],
     nodes: [
       change({ id: TOTAL, status: 'modified', body: true }),
@@ -37,6 +38,8 @@ const RESPONSE: DiffResponse = {
     edges: [],
   },
   formatOnly: { files: 1, linesAdded: 29, linesRemoved: 29 },
+  // The paths of the format-only files, as the API lists them (contract field to add).
+  ...({ formatOnlyPaths: ['packages/shared/http/client.ts'] } as object),
   renames: [],
 };
 
@@ -67,6 +70,11 @@ describe('formatOnlyHiddenLines', () => {
 
   it('is null for a file with a changed symbol', () => {
     expect(formatOnlyHiddenLines(INVOICE, RESPONSE)).toBeNull();
+  });
+
+  it('is null for a changed file the API does not list as format-only (a text change)', () => {
+    const total = 'pkg:tools::file:tools/total.rs';
+    expect(formatOnlyHiddenLines(total, RESPONSE)).toBeNull();
   });
 });
 

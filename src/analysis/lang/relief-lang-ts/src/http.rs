@@ -7,7 +7,7 @@ type TsNode<'a> = tree_sitter::Node<'a>;
 
 const VERBS: [&str; 5] = ["GET", "POST", "PUT", "PATCH", "DELETE"];
 /// Placeholder of a `${…}` substitution in a client path.
-pub(crate) const WILDCARD: char = '\u{0}';
+pub(crate) const WILDCARD: char = relief_adapter_api::PATH_WILDCARD;
 
 /// A client call with a literal path.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -143,16 +143,4 @@ fn method_of(options: TsNode<'_>, bytes: &[u8]) -> Option<String> {
         }
     }
     Some("GET".to_owned())
-}
-
-/// Whether a client path reaches a route path, parameters and substitutions
-/// matching any single segment.
-pub fn path_matches(route: &str, client: &str) -> bool {
-    let route: Vec<&str> = route.trim_matches('/').split('/').collect();
-    let client: Vec<&str> = client.trim_matches('/').split('/').collect();
-    route.len() == client.len()
-        && route
-            .iter()
-            .zip(&client)
-            .all(|(r, c)| r.starts_with(':') || c.contains(WILDCARD) || r == c)
 }

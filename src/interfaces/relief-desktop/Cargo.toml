@@ -26,6 +26,7 @@ relief-model = { path = "../../domain/relief-model" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tauri = { version = "2", features = ["wry", "x11", "compression"] }
+tauri-plugin-dialog = "2"
 
 [dev-dependencies]
 assert_cmd = "2"

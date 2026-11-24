@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type {
+  DiffResponse,
   Edge,
   MetaResponse,
   Node,
@@ -159,8 +160,9 @@ describe('MapBusiness, aggregated edges', () => {
     expect(business.selectedEdge()).toBeNull();
   });
 
-  it('shows the unchanged edges layer by default and can hide it', async () => {
+  it('shows the unchanged edges layer in exploration and can hide it', async () => {
     const business = await loaded();
+    business.setReviewMode(false);
     expect(business.showUnchangedEdges()).toBe(true);
     business.setShowUnchangedEdges(false);
     expect(business.showUnchangedEdges()).toBe(false);
@@ -168,5 +170,117 @@ describe('MapBusiness, aggregated edges', () => {
     expect(business.edges()).toEqual([]);
     business.setShowUnchangedEdges(true);
     expect(business.edges()).toHaveLength(2);
+  });
+
+  describe('unchanged edges per mode', () => {
+    const DIFF: DiffResponse = {
+      diff: {
+        base: 'main',
+        head: 'feat/promo-codes',
+        files: [],
+        nodes: [],
+        edges: [{ from: CHECKOUT, to: FIND, kind: 'calls', status: 'added', commit: null }],
+      },
+      formatOnly: { files: 0, linesAdded: 0, linesRemoved: 0 },
+      renames: [],
+    };
+
+    beforeEach(() => {
+      localStorage.clear();
+    });
+
+    it('hides them by default in review and shows them in exploration', async () => {
+      const business = await loaded();
+      business.setDiff(DIFF);
+      business.setReviewMode(true);
+      expect(business.showUnchangedEdges()).toBe(false);
+      business.setReviewMode(false);
+      expect(business.showUnchangedEdges()).toBe(true);
+    });
+
+    it('keeps only the changed edges in review by default', async () => {
+      const business = await loaded();
+      business.setDiff(DIFF);
+      business.setReviewMode(true);
+      expect(business.edges().map((e) => `${e.from}>${e.to}`)).toEqual([`${API}>${DB}`]);
+      business.setReviewMode(false);
+      expect(business.edges()).toHaveLength(2);
+    });
+
+    it('remembers the choice of each mode apart', async () => {
+      const business = await loaded();
+      business.setReviewMode(true);
+      business.setShowUnchangedEdges(true);
+      business.setReviewMode(false);
+      expect(business.showUnchangedEdges()).toBe(true);
+      business.setShowUnchangedEdges(false);
+      business.setReviewMode(true);
+      expect(business.showUnchangedEdges()).toBe(true);
+      business.setReviewMode(false);
+      expect(business.showUnchangedEdges()).toBe(false);
+    });
+
+    it('stores the choice per mode and reads it back in a new session', async () => {
+      const first = await loaded();
+      first.setReviewMode(true);
+      first.setShowUnchangedEdges(true);
+      first.setReviewMode(false);
+      first.setShowUnchangedEdges(false);
+      expect(localStorage.getItem('relief.unchangedEdges.review')).toBe('true');
+      expect(localStorage.getItem('relief.unchangedEdges.explore')).toBe('false');
+
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [
+          MapBusiness,
+          {
+            provide: ReliefApiService,
+            useValue: {
+              meta: vi.fn().mockResolvedValue(META),
+              snapshot: vi.fn().mockResolvedValue(SNAPSHOT),
+            },
+          },
+        ],
+      });
+      const second = await loaded();
+      second.setReviewMode(true);
+      expect(second.showUnchangedEdges()).toBe(true);
+      second.setReviewMode(false);
+      expect(second.showUnchangedEdges()).toBe(false);
+    });
+
+    it('keeps the unchanged edges visible in review when no diff is active', async () => {
+      const business = await loaded();
+      business.setReviewMode(true);
+      expect(business.edges()).toHaveLength(2);
+      business.setDiff(DIFF);
+      expect(business.edges()).toHaveLength(1);
+      business.setDiff(null);
+      expect(business.edges()).toHaveLength(2);
+    });
+
+    it('lists the unchanged edges of the selected node in its inspector when the layer is off', async () => {
+      const business = await loaded();
+      business.setDiff(DIFF);
+      business.setReviewMode(true);
+      business.selectResult(WEB);
+      expect(business.selectedNodeEdges().dependsOn.map((e) => `${e.from}>${e.to}`)).toEqual([
+        `${WEB}>${DB}`,
+      ]);
+    });
+
+    it('keeps the unchanged edges of the selected node when the layer is off', async () => {
+      const business = await loaded();
+      business.setDiff(DIFF);
+      business.setReviewMode(true);
+      expect(business.edges().every((e) => e.changed)).toBe(true);
+
+      business.selectResult(WEB);
+      const unchanged = business.edges().filter((e) => !e.changed);
+      expect(unchanged.length).toBeGreaterThan(0);
+      expect(
+        unchanged.every((e) => business.within(e.from, WEB) || business.within(e.to, WEB)),
+      ).toBe(true);
+    });
   });
 });

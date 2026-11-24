@@ -8,6 +8,8 @@ export interface CommitEntry {
   message: string;
   files: readonly ReadingItem[];
   otherFiles: number;
+  /** The repository of the commit, in a workspace. */
+  repo?: string | null;
 }
 
 /** What the map colours when one commit is selected. */

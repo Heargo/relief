@@ -4,6 +4,34 @@
     "tagline": "Zoomable map of a git repository"
   },
   "optimus": {},
+  "menu": {
+    "workspace": "Workspace",
+    "layers": "Layers",
+    "settings": "Settings",
+    "help": "Help",
+    "access": {
+      "workspace": "W",
+      "layers": "L",
+      "settings": "S",
+      "help": "H"
+    },
+    "items": {
+      "openRepo": "Open a repository…",
+      "openWorkspace": "Open a workspace…",
+      "createWorkspace": "Create a workspace…",
+      "addRepo": "Add a repository to the workspace…",
+      "openAsWorkspace": "Open this repository as a workspace"
+    }
+  },
+  "welcome": {
+    "title": "Welcome to relief",
+    "subtitle": "Open a repository to see its map.",
+    "openRepo": "Open a repository…",
+    "openWorkspace": "Open a workspace…",
+    "createWorkspace": "Create a workspace…",
+    "recents": "Recent",
+    "noRecents": "Nothing opened yet."
+  },
   "map": {
     "search": "Go to a symbol, file, module…",
     "help": "Help",
@@ -17,6 +45,13 @@
       "system": "System"
     },
     "level": "Level",
+    "levelNames": {
+      "repos": "Repos",
+      "system": "System",
+      "modules": "Modules",
+      "files": "Files",
+      "symbols": "Symbols"
+    },
     "levels": {
       "0": "System",
       "1": "Modules",
@@ -38,12 +73,22 @@
     "external": {
       "hide": "Hide external dependencies"
     },
+    "bundle": {
+      "titleIn": "{{count}} edges into {{box}}",
+      "titleOut": "{{count}} edges out of {{box}}",
+      "added": "{{count}} new"
+    },
     "edges": {
       "links": "{{count}} links",
       "links_one": "{{count}} link",
       "new": "new",
       "moved": "moved",
+      "labelsAlways": "Edge labels: always",
       "unchanged": "Unchanged edges",
+      "tests": "Tests",
+      "testedBy": "tested by {{count}}",
+      "testedByNew": "tested by {{count}}, {{added}} new",
+      "testedByLabel": "Draw the tests of {{name}}",
       "close": "Close"
     },
     "node": {
@@ -65,6 +110,11 @@
       "title": "Layout",
       "fewerCrossings": "Fewer crossings",
       "rawGrid": "Raw grid"
+    },
+    "repoLabels": {
+      "title": "Labels",
+      "edit": "Edit the labels of {{name}}",
+      "filter": "Filter by label"
     },
     "canvasLabel": "Map of the repository",
     "announce": {
@@ -109,6 +159,7 @@
       "none": "Overview",
       "node": "Node",
       "edge": "Edge",
+      "bundle": "Bundle",
       "dependsOn": "Depends on",
       "usedBy": "Used by",
       "resolved": "resolved",
@@ -123,6 +174,11 @@
       "unsupported": "Usages are not supported for this language.",
       "more": "and {{count}} more",
       "in": "in"
+    },
+    "repoComparisons": {
+      "button": "Comparisons per repository",
+      "title": "Comparisons per repository",
+      "back": "Back to the panel"
     }
   },
   "review": {
@@ -130,12 +186,13 @@
     "reload": "Reload",
     "rangePicker": {
       "label": "Range",
-      "base": "Base",
-      "head": "Head",
+      "source": "Source (merged)",
+      "destination": "Destination (merge target)",
+      "mergedInto": "merged into",
+      "default": "Set as default",
+      "defaultHint": "Open with this source and destination next time",
       "worktree": "Working tree",
-      "swap": "Swap base and head",
-      "mergeBase": "base ···→ head: compares from the common ancestor of both sides (what the PR adds). Click for a direct diff (base → head).",
-      "direct": "base → head: compares the two sides as they are (a direct diff). Click to compare from the common ancestor (base ···→ head).",
+      "swap": "Swap source and destination",
       "filter": "Filter by name, subject or SHA",
       "tabs": {
         "branches": "Branches",
@@ -148,9 +205,7 @@
         "base": "BASE",
         "head": "HEAD"
       },
-      "roleBase": "Reference · base",
-      "roleHead": "Changes · head",
-      "swapDisabled": "Swap is not available: the head is the working tree"
+      "swapDisabled": "Swap is not available: the source is the working tree"
     },
     "range": {
       "reading": {
@@ -167,11 +222,13 @@
       "description": {
         "diff": "added / modified / removed colours",
         "unchanged-edges": "otherwise only the dependencies that move",
+        "tests": "otherwise the edges that start at a test are folded into a badge on what they test",
         "focus": "the change + 1 hop, the rest faded",
         "impact": "when a node is selected",
         "rules": "relief.config.yaml",
         "risk": "complexity × churn × no tests",
         "hide-external": "third-party packages and their links",
+        "edge-labels-always": "every label, not only hovered or selected edges",
         "co-change": "files that change together"
       }
     },
@@ -236,7 +293,21 @@
       "returnChanged": "Return type changed",
       "unspecified": "Signature changed"
     },
+    "repeated": {
+      "identical": "×{{count}} identical",
+      "prompt": "The other files of the group are not seen.",
+      "markGroup": "Mark the group seen",
+      "items": {
+        "edge_added": "adds {{kind}} → {{target}}",
+        "edge_removed": "removes {{kind}} → {{target}}",
+        "symbol_added": "adds {{name}}",
+        "symbol_removed": "removes {{name}}"
+      }
+    },
     "overview": {
+      "repeated": "Repeated changes",
+      "repeatedRow": "{{count}} files: {{summary}}",
+      "repeatedMembers": "Show the files of the group",
       "title": "Structural changes",
       "signatures": "Modified signatures",
       "violations": "Rule violations introduced",
@@ -295,6 +366,9 @@
       "counts": "{{seen}}/{{total}} seen",
       "mark": "Mark seen",
       "markNext": "Seen, next →",
+      "stepByStep": "Step by step",
+      "next": "Next entry",
+      "previous": "Previous entry",
       "memoryOnly": "No data folder: the progress is kept in memory only.",
       "reasons": {
         "breakingSignature": "breaking signature",

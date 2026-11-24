@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-open-repo-as-workspace"
+description = "Enables the open_repo_as_workspace command without any pre-configured scope."
+commands.allow = ["open_repo_as_workspace"]
+
+[[permission]]
+identifier = "deny-open-repo-as-workspace"
+description = "Denies the open_repo_as_workspace command without any pre-configured scope."
+commands.deny = ["open_repo_as_workspace"]

@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { invoke } from '@tauri-apps/api/core';
+import { open } from '@tauri-apps/plugin-dialog';
 
 import type {
   ApiError,
@@ -9,15 +10,34 @@ import type {
   ImpactResponse,
   LogResponse,
   MetaResponse,
+  RepoComparison,
   CoChangeResponse,
   MetricsResponse,
   ReadingOrderResponse,
   ReviewState,
+  Settings,
   ReviewSummary,
   RulesResponse,
   SearchResponse,
   SnapshotResponse,
 } from '../models/contract';
+
+/** An error of the API: its message, and its `code` (`no_session`, `not_a_repository`…). */
+export class ApiRequestError extends Error {
+  constructor(
+    message: string,
+    readonly code: string | null,
+  ) {
+    super(message);
+  }
+}
+
+/** A repository or workspace opened before. */
+export interface RecentEntry {
+  kind: 'repo' | 'workspace';
+  path: string;
+  name: string;
+}
 
 /**
  * The only place that calls the relief API: the Tauri commands of the desktop app.
@@ -119,6 +139,16 @@ export class ReliefApiService {
     return this.command<void>('set_review_state', { range, state });
   }
 
+  /** The comparison to open with: the opening range, else the saved defaults, else the working tree against main. */
+  settings(): Promise<Settings> {
+    return this.command<Settings>('settings');
+  }
+
+  /** Saves the default comparison. */
+  setSettings(settings: Settings): Promise<void> {
+    return this.command<void>('set_settings', { settings });
+  }
+
   /** Source text of a file or symbol on one side of a range; without one, the range the app was opened with. */
   code(node: string, side: 'base' | 'head', range: string | null = null): Promise<string> {
     return this.command<string>('code', { node, side, range });
@@ -139,13 +169,106 @@ export class ReliefApiService {
     return this.command<void>('open_docs', { lang });
   }
 
-  private async command<T>(name: string, args?: Record<string, unknown>): Promise<T> {
+  /** The repositories and workspaces opened before, most recent first. */
+  recents(): Promise<RecentEntry[]> {
+    return this.command<RecentEntry[]>('recents');
+  }
+
+  /** Starts the session on a repository (welcome screen); answers its meta. */
+  openRepo(path: string): Promise<MetaResponse> {
+    return this.command<MetaResponse>('open_repo', { path });
+  }
+
+  /** Starts the session on a workspace (its `.relief.json` file or its folder); answers its meta. */
+  openWorkspace(path: string): Promise<MetaResponse> {
+    return this.command<MetaResponse>('open_workspace', { path });
+  }
+
+  /** Creates an empty workspace `<dir>/<name>.relief.json` (and `<dir>/.relief/`) and opens it. */
+  createWorkspace(dir: string, name: string): Promise<MetaResponse> {
+    return this.command<MetaResponse>('create_workspace', { dir, name });
+  }
+
+  /** Makes a workspace named after a repository in `dir` and opens it; answers its meta. */
+  openRepoAsWorkspace(repo: string, dir: string): Promise<MetaResponse> {
+    return this.command<MetaResponse>('open_repo_as_workspace', { repo, dir });
+  }
+
+  /** Adds a repository (with labels) to the open workspace; answers the meta of the workspace. */
+  addWorkspaceRepo(repo: string, labels: string[]): Promise<MetaResponse> {
+    return this.command<MetaResponse>('add_workspace_repo', { repo, labels });
+  }
+
+  /** The labels a repository of the open workspace can carry. */
+  workspaceLabels(): Promise<string[]> {
+    return this.command<string[]>('workspace_labels');
+  }
+
+  /** Replaces the labels of a repository of the open workspace; answers its meta. */
+  setRepoLabels(name: string, labels: string[]): Promise<MetaResponse> {
+    return this.command<MetaResponse>('set_workspace_repo_labels', { name, labels });
+  }
+
+  /** The comparison of each repository of the open workspace. */
+  workspaceComparisons(): Promise<RepoComparison[]> {
+    return this.command<RepoComparison[]>('workspace_comparisons');
+  }
+
+  /**
+   * Changes the comparison of one repository of the open workspace for the session and, with
+   * `save`, in the workspace file; answers the comparisons of the workspace.
+   */
+  setRepoComparison(
+    name: string,
+    source: string,
+    destination: string,
+    save: boolean,
+  ): Promise<RepoComparison[]> {
+    return this.command<RepoComparison[]>('set_workspace_repo_comparison', {
+      name,
+      source,
+      destination,
+      save,
+    });
+  }
+
+  /**
+   * The native folder picker; null when cancelled.
+   *
+   * E2E ONLY: the native dialog cannot be driven by WebdriverIO, so when `window.__reliefE2ePicks`
+   * is a non-empty string array, its first entry is answered instead (and removed), without any
+   * dialog. Only the e2e specs set it (through `browser.execute`); nothing in the app does, so it
+   * is inert in normal use.
+   */
+  async pickRepoFolder(): Promise<string | null> {
+    const queued = (window as unknown as { __reliefE2ePicks?: unknown }).__reliefE2ePicks;
+    if (Array.isArray(queued) && queued.length > 0) {
+      const next: unknown = queued.shift();
+      if (typeof next === 'string') return next;
+    }
     try {
-      return await invoke<T>(name, args);
+      const chosen = await open({ directory: true, multiple: false });
+      return typeof chosen === 'string' ? chosen : null;
     } catch (error) {
       throw new Error(messageOf(error));
     }
   }
+
+  private async command<T>(name: string, args?: Record<string, unknown>): Promise<T> {
+    try {
+      return await invoke<T>(name, args);
+    } catch (error) {
+      throw new ApiRequestError(messageOf(error), codeOf(error));
+    }
+  }
+}
+
+function codeOf(error: unknown): string | null {
+  if (typeof error === 'object' && error !== null && 'code' in error) {
+    const { code } = error as Partial<ApiError>;
+    if (typeof code === 'string') return code;
+  }
+  return null;
 }
 
 function messageOf(error: unknown): string {

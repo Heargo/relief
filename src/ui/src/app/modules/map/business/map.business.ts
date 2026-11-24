@@ -1,4 +1,4 @@
-import { computed, inject, Injectable, signal } from '@angular/core';
+import { computed, DestroyRef, inject, Injectable, signal } from '@angular/core';
 
 import { measured } from '../../../core/helpers/perf';
 
@@ -7,6 +7,7 @@ import type {
   Edge,
   GraphDiff,
   GraphSnapshot,
+  RepeatedChange,
   Violation,
   ViolationEdge,
 } from '../../../core/models/contract';
@@ -31,8 +32,8 @@ import {
   edgeGeometry,
   type EdgeGeometry,
   edgeShape,
+  routedEdgeShape,
   type EdgeShape,
-  filterEdges,
   isAncestor,
   visibleAncestor,
 } from '../helpers/edges.logic';
@@ -44,6 +45,7 @@ import {
 } from '../../review/helpers/diff-layer.logic';
 import { breadcrumbTrail, type Crumb } from '../helpers/breadcrumb.logic';
 import { layoutCrossings } from '../helpers/crossings.logic';
+import { routeEdge, type Corridors, type RoutePoint } from '../helpers/edge-routing.logic';
 import { computeLayouts, type Layouts } from '../helpers/layout-compute.logic';
 import { LAYOUT_EXECUTOR, onThreadExecutor } from './layout-executor';
 import {
@@ -52,6 +54,7 @@ import {
   readLayoutMode,
   writeLayoutMode,
 } from '../helpers/layout-mode.logic';
+import { bundleEdges, type BundleInput, type EdgeBundle } from '../helpers/edge-bundles.logic';
 import { interpolateLayout, type MapLayout, type Rect } from '../helpers/layout.logic';
 import { createBoxGrid } from '../helpers/box-grid.logic';
 import { type EdgeState } from '../helpers/edge-state.logic';
@@ -60,17 +63,26 @@ import { createEdgeStateCache } from '../helpers/edge-state-cache.logic';
 import {
   edgeBounds,
   edgeInView,
+  keepsFullRendering,
   partitionEdges,
   type EdgeDetail,
 } from '../helpers/edge-culling.logic';
 import { onImpactPath, type ImpactMarks } from '../../review/helpers/impact.logic';
+import { foldRepeatedEdges } from '../../review/helpers/repeated-changes.logic';
+import { foldTestEdges, testNodeIds } from '../helpers/test-edges.logic';
 import { buildNodeInfos, type NodeInfo } from '../helpers/node-info.logic';
+import { mapLevels } from '../helpers/repo-level.logic';
 import { headRef } from '../helpers/repo.logic';
+import { filterReposByLabels } from '../helpers/repo-filter.logic';
 import { containerToLoad, zoomedBox } from '../helpers/subgraph.logic';
 import {
   DEFAULT_HIDE_EXTERNAL,
   hideExternalDeps,
+  readEdgeLabelsAlways,
+  readTestEdges,
+  writeTestEdges,
   readHideExternal,
+  writeEdgeLabelsAlways,
   writeHideExternal,
 } from '../helpers/external.logic';
 import { buildSearchIndex, searchNodes, type SearchResult } from '../helpers/search.logic';
@@ -148,6 +160,10 @@ export interface CoChangeLine {
   shape: EdgeShape;
 }
 
+function unchangedKey(review: boolean): string {
+  return `relief.unchangedEdges.${review ? 'review' : 'explore'}`;
+}
+
 function storage(): Storage | null {
   try {
     return localStorage;
@@ -191,6 +207,24 @@ export class MapBusiness {
       return source ? readHideExternal(source) : DEFAULT_HIDE_EXTERNAL;
     })(),
   );
+  private readonly _edgeLabelsAlways = signal(
+    (() => {
+      const source = storage();
+      return source ? readEdgeLabelsAlways(source) : false;
+    })(),
+  );
+  private readonly _showTestEdges = signal(
+    (() => {
+      const source = storage();
+      return source ? readTestEdges(source) : false;
+    })(),
+  );
+  /** Targets whose test edges were unfolded by a click on their badge. */
+  private readonly _unfoldedTests = signal<ReadonlySet<string>>(new Set());
+  private readonly _repeated = signal<RepeatedChange[] | undefined>(undefined);
+  /** The nodes the core flags as tests, and the nodes under them. */
+  private readonly _testIds = signal<ReadonlySet<string>>(new Set());
+  private readonly _hoveredEdge = signal<{ from: string; to: string } | null>(null);
   /** The graph as received, before the display filters. */
   private sourceGraph: GraphSnapshot = EMPTY_GRAPH;
   private readonly _infos = signal<Map<string, NodeInfo>>(new Map());
@@ -210,10 +244,12 @@ export class MapBusiness {
   private readonly _coChangeEdges = signal<Edge[]>([]);
   private readonly _parents = signal<Map<string, string | null>>(new Map());
   private readonly _selectedEdgeKey = signal<string | null>(null);
+  private readonly _selectedBundleId = signal<string | null>(null);
   private readonly _selectedNodeId = signal<string | null>(null);
   /** The edge chosen in the list of a node, when the map does not draw it at this zoom. */
   private readonly _listedEdge = signal<AggregatedEdge | null>(null);
   private readonly _showUnchangedEdges = signal(true);
+  private readonly _reviewMode = signal(false);
   private readonly _diff = signal<DiffResponse | null>(null);
   /** The language of the edge texts: the translator changes with the language. */
   private readonly _translate = signal<{
@@ -225,6 +261,7 @@ export class MapBusiness {
   private readonly _commitFiles = signal<ReadonlySet<string> | null>(null);
 
   private readonly _graph = signal<GraphSnapshot>(EMPTY_GRAPH);
+  private readonly _labelFilter = signal<string[]>([]);
   private readonly _repoName = signal('');
   private readonly _helpOpen = signal(false);
 
@@ -244,7 +281,7 @@ export class MapBusiness {
   private flightTarget: Camera | null = null;
 
   private pristine = true;
-  private beforeFrame: { camera: Camera; level: number | null } | null = null;
+  private readonly beforeFrame = new Map<string, { camera: Camera; level: number | null }>();
   private animation = 0;
   private pendingSettle: (() => void) | null = null;
 
@@ -253,6 +290,8 @@ export class MapBusiness {
   readonly status = this._status.asReadonly();
   readonly layoutMode = this._layoutMode.asReadonly();
   readonly hideExternal = this._hideExternal.asReadonly();
+  /** The labels chosen in the Display section: only the repositories that carry one are shown. */
+  readonly labelFilter = this._labelFilter.asReadonly();
   readonly camera = this._camera.asReadonly();
   /** The whole camera, as the CSS transform of the layer that holds the nodes and the edges. */
   readonly layerTransform = computed(() => layerTransform(this._camera()));
@@ -261,6 +300,8 @@ export class MapBusiness {
   readonly viewport = this._viewport.asReadonly();
 
   private readonly scales = computed(() => levelScales(this._layout(), this._viewport()));
+  /** The levels of this map, widest first; the number of a level is its index. */
+  readonly levels = computed(() => mapLevels(this._graph()));
   readonly level = computed(
     () => this._forcedLevel() ?? currentLevel(this._camera().scale, this.scales()),
   );
@@ -376,13 +417,35 @@ export class MapBusiness {
   /** Kept from one visibility to the next: a mode change rebuilds only the pairs it touches. */
   private readonly edgeAggregator = computed(() => {
     const diff = this._diff()?.diff;
+    const infos = this._infos();
     return createEdgeAggregator(this._edges(), this._parents(), {
+      isSymbol: (id) => infos.get(id)?.kind === 'symbol',
       changed: (edge) => diff !== undefined && edgeStatus(edge, diff) !== 'unchanged',
     });
   });
 
+  /** The selected node: its edges go down to the symbols, the others stop at the files. */
+  private readonly unfoldedNodes = computed(
+    () => {
+      const infos = this._infos();
+      const unfolded = new Set<string>();
+      const add = (id: string | null | undefined): void => {
+        const kind = id ? infos.get(id)?.kind : undefined;
+        if (id && (kind === 'file' || kind === 'symbol')) unfolded.add(id);
+      };
+      add(this._selectedNodeId());
+      // A selected edge between symbols stays unfolded, so it keeps existing.
+      const key = this._selectedEdgeKey();
+      if (key !== null) {
+        for (const end of key.split('\u0000')) if (infos.get(end)?.kind === 'symbol') add(end);
+      }
+      return unfolded;
+    },
+    { equal: (a, b) => a.size === b.size && [...a].every((id) => b.has(id)) },
+  );
+
   private readonly allEdges = computed(() =>
-    measured('allEdges', () => this.edgeAggregator().update(this.boxIds())),
+    measured('allEdges', () => this.edgeAggregator().update(this.boxIds(), this.unfoldedNodes())),
   );
 
   /** The logical coupling edges, aggregated for the current visibility and placed on screen. */
@@ -402,8 +465,60 @@ export class MapBusiness {
   );
 
   readonly showUnchangedEdges = this._showUnchangedEdges.asReadonly();
-  /** Aggregated edges for the current visibility, after the "unchanged edges" layer. */
-  readonly edges = computed(() => filterEdges(this.allEdges(), this._showUnchangedEdges()));
+  /** The "Tests" layer on every edge: those that start at a test are folded, and the badges count
+   * all the tests of a target, whatever the "unchanged edges" layer hides. */
+  private readonly testFold = computed(() => {
+    const id = this._selectedNodeId();
+    return foldTestEdges(this.allEdges(), {
+      isTest: (end) => this._testIds().has(end),
+      layerOn: this._showTestEdges(),
+      selected: id === null ? null : (this.visibleOf(id) ?? id),
+      unfolded: this._unfoldedTests(),
+      changed: (edge) => edge.changed,
+    });
+  });
+  /** Aggregated edges drawn: after the "Tests" layer, then the "unchanged edges" layer. */
+  readonly edges = computed(() => {
+    const tested = this.testFold().edges;
+    const selected = this._selectedNodeId();
+    // The changed edges of the faded members of a repeated change count on their representative.
+    const all = foldRepeatedEdges(
+      tested,
+      this._repeated(),
+      selected === null ? null : (this.visibleOf(selected) ?? selected),
+    );
+    // In review without a diff nothing is "changed": the layer has nothing to hide.
+    if (this._showUnchangedEdges() || (this._reviewMode() && !this._diff())) return all;
+    // The unchanged edges of the selected node stay, to keep the context of what is read. A
+    // selected symbol keeps those of the box that holds it, as the edges are drawn between boxes.
+    const id = this._selectedNodeId();
+    const holder = id === null ? null : (this.visibleOf(id) ?? id);
+    const touches = (end: string) =>
+      id !== null && holder !== null && (this.within(end, id) || this.within(end, holder));
+    // A test edge that survived the fold was unfolded on purpose: it stays.
+    const unfolded = (end: string) => !this._showTestEdges() && this._testIds().has(end);
+    return all.filter((e) => e.changed || touches(e.from) || touches(e.to) || unfolded(e.from));
+  });
+  /** "Tested by N" badges, by target box; empty while the "Tests" layer is expanded. */
+  readonly testBadges = computed(() => this.testFold().badges);
+  readonly showTestEdges = this._showTestEdges.asReadonly();
+  readonly unfoldedTests = this._unfoldedTests.asReadonly();
+  /** Whether a node is a test, or lies under one. */
+  isTest(id: string): boolean {
+    return this._testIds().has(id);
+  }
+  setShowTestEdges(on: boolean): void {
+    this._showTestEdges.set(on);
+    this._unfoldedTests.set(new Set());
+    const source = storage();
+    if (source) writeTestEdges(source, on);
+  }
+  /** A click on the badge of a target: draws, or folds again, the edges of its tests. */
+  toggleTestEdges(target: string): void {
+    const next = new Set(this._unfoldedTests());
+    if (!next.delete(target)) next.add(target);
+    this._unfoldedTests.set(next);
+  }
   readonly selectedNodeId = this._selectedNodeId.asReadonly();
   /** What the map emphasises: the selected node, else the selected edge, else nothing. */
   readonly selection = computed<Selection | null>(() => {
@@ -460,7 +575,8 @@ export class MapBusiness {
       const around = edgesAround(this._edges(), this._parents(), this.boxIds(), id, (edge) => {
         return diff !== undefined && edgeStatus(edge, diff) !== 'unchanged';
       });
-      return nodeEdges(filterEdges(around, this._showUnchangedEdges()), id);
+      // The edges of the selected node all stay, whatever the layer.
+      return nodeEdges(around, id);
     }),
   );
 
@@ -500,17 +616,67 @@ export class MapBusiness {
     { a: Rect; b: Rect; scale: number; geometry: EdgeGeometry }
   >();
 
+  /** The routes already made, in world units: they stay the same at any zoom. */
+  private readonly routes = new WeakMap<Corridors, Map<string, RoutePoint[] | null>>();
+
+  private readonly routeTick = signal(0);
+  private readonly pendingRoutes = new Map<
+    string,
+    { corridors: Corridors; from: string; to: string }
+  >();
+  private routeFrame = 0;
+  private readonly routeDestroy = inject(DestroyRef).onDestroy(() => {
+    if (this.routeFrame) cancelAnimationFrame(this.routeFrame);
+    this.routeFrame = 0;
+    this.pendingRoutes.clear();
+  });
+
+  /** Routes the missing edges a few per animation frame, then draws them again. */
+  private scheduleRoutes(): void {
+    if (this.routeFrame) return;
+    this.routeFrame = requestAnimationFrame(() => {
+      this.routeFrame = 0;
+      let n = 0;
+      for (const [key, job] of this.pendingRoutes) {
+        if (n++ >= ROUTE_BATCH) break;
+        this.pendingRoutes.delete(key);
+        let made = this.routes.get(job.corridors);
+        if (!made) this.routes.set(job.corridors, (made = new Map()));
+        made.set(
+          key,
+          measured('routes', () => routeEdge(job.corridors, job.from, job.to)),
+        );
+      }
+      if (n > 0) this.routeTick.update((t) => t + 1);
+      if (this.pendingRoutes.size > 0) this.scheduleRoutes();
+    });
+  }
+
   /** The shape of an edge, made on demand: follows the layout, the last rest scale and the boxes. */
   private readonly edgeShapes = computed(() => {
     const layout = this._layout();
     const scale = this.modesScale();
     const boxes = this.boxGrid();
     this.edges();
+    // The routes follow the corridors of the layout the map is at, not one that is flying.
+    const layouts = this._layouts();
+    const key = layoutKey(this._layoutMode());
+    const corridors = layouts && layouts[key] === layout ? layouts.corridors[key] : null;
+    this.routeTick();
+    // What is still wanted is asked again by the edges in view.
+    this.pendingRoutes.clear();
+    let sync = ROUTE_SYNC;
+    // The edges of a bundle are drawn on their branches: their route would be thrown away.
+    const bundled = new Set<string>();
+    for (const bundle of this.bundles())
+      for (const br of bundle.branches) bundled.add(pairKey(br.from, br.to));
     const cache = new Map<AggregatedEdge, EdgeShape>();
     const geometries = this.geometries;
-    return (edge: AggregatedEdge, a: Rect, b: Rect): EdgeShape => {
+    // `routable`: false past the edge count where the lines are thin and unrouted anyway.
+    return (edge: AggregatedEdge, a: Rect, b: Rect, routable: boolean): EdgeShape => {
       let shape = cache.get(edge);
-      if (!shape) {
+      // A shape made without trying a route (`route` absent) is made again once it is routable.
+      if (!shape || (routable && corridors && shape.route === undefined)) {
         // The curve does not depend on the boxes to avoid: kept while the rects and the scale stay.
         let kept = geometries.get(edge);
         if (!kept || kept.a !== a || kept.b !== b || kept.scale !== scale) {
@@ -518,6 +684,32 @@ export class MapBusiness {
           geometries.set(edge, kept);
         }
         shape = edgeShape(a, b, boxes, scale, kept.geometry);
+        let route: RoutePoint[] | null = null;
+        let routed = false;
+        if (corridors && routable && !bundled.has(pairKey(edge.from, edge.to))) {
+          // Kept by pair of boxes, so that a level change finds again the routes it made.
+          let made = this.routes.get(corridors);
+          if (!made) this.routes.set(corridors, (made = new Map()));
+          const key = pairKey(edge.from, edge.to);
+          const known = made.get(key);
+          if (known !== undefined) {
+            route = known;
+            routed = true;
+          } else if (sync > 0) {
+            // A few at once (a handful of milliseconds at most), so that a small map is routed
+            // on its first drawing.
+            sync--;
+            route = measured('routes', () => routeEdge(corridors, edge.from, edge.to));
+            made.set(key, route);
+            routed = true;
+          } else {
+            // The rest not in a frame: the direct curve now, the route in a batch of its own.
+            this.pendingRoutes.set(key, { corridors, from: edge.from, to: edge.to });
+            this.scheduleRoutes();
+          }
+        }
+        if (routed)
+          shape = route ? routedEdgeShape(route, boxes, scale, shape) : { ...shape, route: null };
         cache.set(edge, shape);
       }
       return shape;
@@ -551,26 +743,72 @@ export class MapBusiness {
       }
       const stateOf = states(inView.map((v) => v.edge));
       const lines: DetailedEdgeLine[] = [];
+      const few = inView.length <= ROUTE_LIMIT;
       for (const { edge, a, b } of inView) {
-        const shape = shapes(edge, a, b);
         const state = stateOf(edge);
         const isSelected =
           selected !== null && selected.from === edge.from && selected.to === edge.to;
         // An edge the selection singles out (linked, picked, folded) keeps its full rendering,
         // so that the common path only holds edges the selection dims.
         const onPath = onImpactPath(impact, edge.from, edge.to) || singledOut(edge, emphasis);
+        const detail: EdgeDetail = {
+          changed: edge.changed || state.status !== 'unchanged',
+          violations: state.violations,
+          selected: isSelected,
+          onImpactPath: onPath,
+        };
         lines.push({
           edge,
-          shape,
-          selected: isSelected,
+          // Routed while there are few lines, and past that the edges in full rendering only.
+          shape: shapes(edge, a, b, few || keepsFullRendering(detail)),
           ...state,
-          changed: edge.changed || state.status !== 'unchanged',
-          onImpactPath: onPath,
+          ...detail,
         });
       }
       return lines;
     }),
   );
+
+  /**
+   * The bundles of the drawn edges, made at rest: they follow the layout and the edges, not the
+   * camera, so a pan does not recompute them.
+   */
+  readonly bundles = computed<EdgeBundle[]>(() =>
+    measured('bundles', () => {
+      const layout = this._layout();
+      const edges = this.edges();
+      const stateOf = this.edgeStates()(edges);
+      const emphasis = this.emphasis().edges;
+      const rects = new Map<string, Rect>();
+      const inputs: BundleInput[] = [];
+      for (const edge of edges) {
+        const a = layout.nodes.get(edge.from);
+        const b = layout.nodes.get(edge.to);
+        if (!a || !b || emphasis.get(edgeKey(edge.from, edge.to)) === 'hidden') continue;
+        rects.set(edge.from, a);
+        rects.set(edge.to, b);
+        inputs.push({ from: edge.from, to: edge.to, status: stateOf(edge).status });
+      }
+      return bundleEdges(inputs, rects);
+    }),
+  );
+
+  readonly selectedBundle = computed<EdgeBundle | null>(() => {
+    const id = this._selectedBundleId();
+    return id === null ? null : (this.bundles().find((b) => b.id === id) ?? null);
+  });
+
+  /** Selects a bundle (an unknown id selects nothing): nothing else stays selected. */
+  selectBundle(id: string): void {
+    if (!this.bundles().some((b) => b.id === id)) return;
+    this.clearEdgeSelection();
+    this._selectedNodeId.set(null);
+    this._selectedBundleId.set(id);
+  }
+
+  clearBundleSelection(): void {
+    this._selectedBundleId.set(null);
+  }
 
   private readonly partitionedEdges = computed(() => partitionEdges(this.viewEdges()));
 
@@ -579,6 +817,10 @@ export class MapBusiness {
 
   /** The unchanged edges drawn in one common path once many are on screen. */
   readonly mergedEdgeLines = computed<EdgeLine[]>(() => this.partitionedEdges().merged);
+
+  setRepeated(repeated: RepeatedChange[] | undefined): void {
+    this._repeated.set(repeated);
+  }
 
   setImpact(impact: ImpactMarks | null): void {
     this._impact.set(impact);
@@ -607,6 +849,7 @@ export class MapBusiness {
   }
 
   private applyEdge(from: string, to: string): void {
+    this._selectedBundleId.set(null);
     this._selectedNodeId.set(null);
     this._selectedFine.set(null);
     this._selectedEdgeKey.set(pairKey(from, to));
@@ -632,6 +875,7 @@ export class MapBusiness {
   }
 
   clearEdgeSelection(): void {
+    this._selectedBundleId.set(null);
     this._listedEdge.set(null);
     this._selectedFine.set(null);
     this._selectedEdgeKey.set(null);
@@ -655,6 +899,23 @@ export class MapBusiness {
 
   setShowUnchangedEdges(show: boolean): void {
     this._showUnchangedEdges.set(show);
+    try {
+      storage()?.setItem(unchangedKey(this._reviewMode()), String(show));
+    } catch {
+      // The choice is just not remembered.
+    }
+  }
+
+  /** Switches the mode: the layer takes the remembered choice of the mode, else its default. */
+  setReviewMode(review: boolean): void {
+    this._reviewMode.set(review);
+    let remembered: string | null = null;
+    try {
+      remembered = storage()?.getItem(unchangedKey(review)) ?? null;
+    } catch {
+      remembered = null;
+    }
+    this._showUnchangedEdges.set(remembered === null ? !review : remembered === 'true');
   }
 
   /** Applies a diff on the map, or none (the map alone). */
@@ -709,6 +970,7 @@ export class MapBusiness {
   /** Clears the node selection (a click on empty map). */
   deselectNode(): void {
     if (this.deferUntilLaidOut(() => this.deselectNode())) return;
+    this._selectedBundleId.set(null);
     this._selectedNodeId.set(null);
   }
 
@@ -740,6 +1002,7 @@ export class MapBusiness {
     this.interrupt();
     this._zoomPoint.set(null);
     this._diveTarget.set(null);
+    this._selectedBundleId.set(null);
     this._selectedNodeId.set(step.nodeId);
     this._selectedEdgeKey.set(step.edgeKey);
     this._listedEdge.set(step.listedEdge);
@@ -765,6 +1028,7 @@ export class MapBusiness {
   }
 
   private focusNode(id: string): void {
+    this._selectedBundleId.set(null);
     this._selectedNodeId.set(id);
     const parent = this._parents().get(id);
     // Frame close enough for the node and its ancestors to open on screen.
@@ -851,7 +1115,10 @@ export class MapBusiness {
    */
   show(received: GraphSnapshot, keepView = false): Promise<void> {
     this.sourceGraph = received;
-    const graph = hideExternalDeps(received, this._hideExternal());
+    const graph = filterReposByLabels(
+      hideExternalDeps(received, this._hideExternal()),
+      this._labelFilter(),
+    );
     const request = ++this.showRequest;
     if (!keepView) this.layingOut = true;
     if (this.executeLayout === onThreadExecutor) {
@@ -894,8 +1161,10 @@ export class MapBusiness {
     // built on them are made again as one when they change.
     this._infos.set(buildNodeInfos(graph));
     this._edges.set(graph.edges);
+    this._testIds.set(testNodeIds(graph.nodes));
     this._parents.set(new Map(graph.nodes.map((n) => [n.id, n.parent ?? null])));
     if (!keepView) {
+      this._unfoldedTests.set(new Set());
       this.clearEdgeSelection();
       this._history.update(clearHistory);
     }
@@ -920,12 +1189,35 @@ export class MapBusiness {
     for (const action of later) action();
   }
 
+  readonly edgeLabelsAlways = this._edgeLabelsAlways.asReadonly();
+  readonly hoveredEdge = this._hoveredEdge.asReadonly();
+
+  /** The edge under the pointer, for its label. */
+  setHoveredEdge(edge: { from: string; to: string } | null): void {
+    const current = this._hoveredEdge();
+    if (current?.from === edge?.from && current?.to === edge?.to) return;
+    this._hoveredEdge.set(edge);
+  }
+
+  /** Shows every edge label, or only those asked for; the choice is remembered. */
+  setEdgeLabelsAlways(always: boolean): void {
+    this._edgeLabelsAlways.set(always);
+    const source = storage();
+    if (source) writeEdgeLabelsAlways(source, always);
+  }
+
   /** Hides or shows the external dependencies; the map is laid out again where it is. */
   setHideExternal(hide: boolean): void {
     if (hide === this._hideExternal()) return;
     this._hideExternal.set(hide);
     const source = storage();
     if (source) writeHideExternal(source, hide);
+    if (this.sourceGraph.nodes.length > 0) void this.show(this.sourceGraph, true);
+  }
+
+  /** Keeps the repositories that carry one of `labels` (none: all); the map is laid out again. */
+  setLabelFilter(labels: string[]): void {
+    this._labelFilter.set(labels);
     if (this.sourceGraph.nodes.length > 0) void this.show(this.sourceGraph, true);
   }
 
@@ -974,6 +1266,7 @@ export class MapBusiness {
   }
 
   setLevel(level: number): void {
+    if (level < 0 || level >= this.levels().length) return;
     if (this.deferUntilLaidOut(() => this.setLevel(level))) return;
     this.interrupt();
     this._zoomPoint.set(null);
@@ -1033,11 +1326,11 @@ export class MapBusiness {
   }
 
   /** Frames the union of some nodes (the files of a replayed commit); `null` goes back to where the view was. */
-  frameNodes(ids: readonly string[] | null): void {
-    if (this.deferUntilLaidOut(() => this.frameNodes(ids))) return;
+  frameNodes(ids: readonly string[] | null, owner = 'scope'): void {
+    if (this.deferUntilLaidOut(() => this.frameNodes(ids, owner))) return;
     if (ids === null) {
-      const saved = this.beforeFrame;
-      this.beforeFrame = null;
+      const saved = this.beforeFrame.get(owner);
+      this.beforeFrame.delete(owner);
       if (!saved) return;
       this.interrupt();
       this._forcedLevel.set(saved.level);
@@ -1047,7 +1340,8 @@ export class MapBusiness {
     }
     const nodes = ids.map((id) => this._layout().nodes.get(id)).filter((n) => n !== undefined);
     if (nodes.length === 0) return;
-    this.beforeFrame ??= { camera: this._camera(), level: this._forcedLevel() };
+    if (!this.beforeFrame.has(owner))
+      this.beforeFrame.set(owner, { camera: this._camera(), level: this._forcedLevel() });
     const x = Math.min(...nodes.map((n) => n.x));
     const y = Math.min(...nodes.map((n) => n.y));
     const right = Math.max(...nodes.map((n) => n.x + n.w));
@@ -1162,7 +1456,14 @@ function pairKey(from: string, to: string): string {
   return `${from}\u0000${to}`;
 }
 
-function layoutKey(mode: LayoutMode): keyof Layouts {
+/** Edges in view beyond which only those in full rendering are routed (the others are thin). */
+const ROUTE_LIMIT = 50;
+/** Routes made per animation frame (a few milliseconds). */
+const ROUTE_BATCH = 4;
+/** Routes a drawing may make by itself before the rest waits for the batches. */
+const ROUTE_SYNC = 6;
+
+function layoutKey(mode: LayoutMode): 'optimized' | 'raw' {
   return mode === 'raw-grid' ? 'raw' : 'optimized';
 }
 

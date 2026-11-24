@@ -50,7 +50,7 @@ These measures depend on the history: relief computes them apart and keeps them 
 
 ## Logical coupling
 
-Some files often change together without depending on each other in the code: a file and its doc, a schema and its migrations, two services that share a format. The **Logical coupling** layer, in the Layers section, links them with dashed edges of another colour.
+Some files often change together without depending on each other in the code: a file and its doc, a schema and its migrations, two services that share a format. The **Logical coupling** layer, in the Layers menu, links them with dashed edges of another colour.
 
 relief draws them from the git history, not from the code: this layer works on **any repository**, even without a language adapter (Markdown, YAML, shell…).
 
@@ -69,8 +69,8 @@ Like the hotspots, this computation is kept in `.relief/cache/` and does not cha
 
 ## Search a symbol
 
-Coming soon: this feature does not exist yet.
+Search (`/`) works in exploration too: see [Search and find your way](../map/#search-and-find-your-way).
 
 ## Impact of a change
 
-Coming soon: this feature does not exist yet.
+Select a node to see what depends on it: see [Impact radius](../review/#impact-radius). In exploration, the **Dependencies** direction is how you [follow a flow](#follow-a-flow).
