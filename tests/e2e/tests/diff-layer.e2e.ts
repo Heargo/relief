@@ -13,7 +13,7 @@ import { tid } from '../helpers/ui';
 //    (not asserted here), `data-symbols-added|removed|modified|moved` and `data-signatures`;
 //  - `data-testid="review-toggle"` is the "Relire la PR" switch (`aria-pressed`),
 //    `data-testid="toggle-diff-layer"` the diff layer switch (`aria-pressed`);
-//  - `data-testid="range-base"` / `range-head` are the two range pickers of the top bar (each
+//  - `data-testid="compare-destination"` / `compare-source` are the two range pickers of the left panel (destination and source) (each
 //    opens a `range-popover` with Branches / Tags / Commits tabs); the URL keeps the range in
 //    `?range=`.
 const DISCOUNT = 'pkg:@acme/api/billing::file:apps/api/billing/discount.ts';
@@ -108,13 +108,13 @@ it('changing the range in the selector reloads the diff and updates the URL', as
   await openFilesLevel();
   await expect(tid('pr-stats')).toHaveAttribute('data-files', '15');
 
-  // Reverse range (base = feat/promo-codes, head = main), picked in the popovers: the merge base
+  // Reverse range (destination = feat/promo-codes, source = main), picked in the popovers: the merge base
   // is main itself, so the PR is empty.
-  await tid('range-base').click();
+  await tid('compare-destination').click();
   await tid('range-popover').waitForDisplayed();
   await tid('range-tab-branches').click();
   await $('//*[@data-testid="range-option"][normalize-space(.)="feat/promo-codes"]').click();
-  await tid('range-head').click();
+  await tid('compare-source').click();
   await tid('range-popover').waitForDisplayed();
   await tid('range-tab-branches').click();
   await $('//*[@data-testid="range-option"][normalize-space(.)="main"]').click();
@@ -150,7 +150,7 @@ it('only client.ts is format-only: the PR card counts 1 and Invoices.tsx (moved 
 
 it('at 1024x768 every element of the top bar fits in the viewport', async () => {
   await openRelief({ size: { width: 1024, height: 768 } });
-  await expect(tid('range-base')).toBeDisplayed();
+  await expect(tid('compare-destination')).toBeDisplayed();
   const overflowing = await browser.execute(() =>
     [...document.querySelectorAll('header.topbar > *')]
       .map((item) => ({ item, box: item.getBoundingClientRect() }))

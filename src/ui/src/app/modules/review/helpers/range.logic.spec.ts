@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { LogEntry } from '../../../core/models/contract';
 import { WORKTREE_RANGE } from './diff-layer.logic';
-import { formatRange, inRange, parseRange, rangeArrow, readingLine } from './range.logic';
+import { formatRange, inRange, parseRange, readingLine } from './range.logic';
 
 // API expected (range.logic.ts):
 //  - parseRange(range: string): { base: string; head: string; mergeBase: boolean }
@@ -108,7 +108,6 @@ describe('inRange', () => {
 //      three-dot -> key 'review.range.reading.mergeBase', params { head, base, sha: baseResolved };
 //      two-dot -> 'review.range.reading.direct', params { base };
 //      working tree head -> 'review.range.reading.worktree', params { base: 'HEAD', sha: baseResolved }.
-//  - rangeArrow(mergeBase: boolean): '···→' (three-dot) or '→' (two-dot).
 describe('readingLine', () => {
   it('names head, base and the merge base for a three-dot range', () => {
     expect(readingLine({ base: 'main', head: 'develop', mergeBase: true }, '4e1a9c2')).toEqual({
@@ -131,12 +130,5 @@ describe('readingLine', () => {
       key: 'review.range.reading.worktree',
       params: { base: 'HEAD', sha: 'a7c03f1' },
     });
-  });
-});
-
-describe('rangeArrow', () => {
-  it('is ···→ from the merge base and → for a direct diff', () => {
-    expect(rangeArrow(true)).toBe('···→');
-    expect(rangeArrow(false)).toBe('→');
   });
 });

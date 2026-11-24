@@ -1,8 +1,8 @@
-import { computed, inject, Injectable, signal } from '@angular/core';
+import { computed, inject, Injectable, PendingTasks, signal } from '@angular/core';
 
 import type { MetaResponse, SnapshotResponse } from '../../../core/models/contract';
 import { ReliefApiService } from '../../../core/services/relief-api.service';
-import { headRef } from '../helpers/repo.logic';
+import { headRef, settingsRange } from '../helpers/repo.logic';
 import { ancestorIds, mergeExpanded } from '../helpers/subgraph.logic';
 
 /** Most nodes the map asks for: the core closes the containers below. */
@@ -14,6 +14,7 @@ export type RepoStatus = 'loading' | 'error' | 'ready';
 @Injectable()
 export class RepoBusiness {
   private readonly api = inject(ReliefApiService);
+  private readonly pending = inject(PendingTasks);
 
   private readonly _status = signal<RepoStatus>('loading');
   private readonly _error = signal<string | null>(null);
@@ -42,7 +43,11 @@ export class RepoBusiness {
     this._error.set(null);
     this.expanded = [];
     try {
-      const meta = await this.api.meta();
+      let meta = await this.api.meta();
+      if (!meta.range) {
+        const done = this.pending.add();
+        meta = await this.withDefaultRange(meta).finally(done);
+      }
       this._meta.set(meta);
       const ref = headRef(meta.range);
       this._snapshot.set(await this.api.snapshot(ref, DISPLAY_BUDGET));
@@ -51,6 +56,17 @@ export class RepoBusiness {
     } catch (error) {
       this._error.set(error instanceof Error ? error.message : String(error));
       this._status.set('error');
+    }
+  }
+
+  /** Without a range, the saved comparison (source merged into destination) is the range. */
+  private async withDefaultRange(meta: MetaResponse): Promise<MetaResponse> {
+    try {
+      const settings = await this.api.settings();
+      return { ...meta, range: settingsRange(settings) };
+    } catch {
+      // Exceptional (the core falls back to its defaults itself): keep the opening range as is.
+      return meta;
     }
   }
 

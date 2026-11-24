@@ -8,7 +8,7 @@ use relief_model::contract::{
     diff_response_schema, diff_schema, edge_usages_response_schema, impact_response_schema,
     log_response_schema, meta_response_schema, metrics_response_schema,
     reading_order_response_schema, review_state_schema, review_summary_schema,
-    search_response_schema, snapshot_response_schema, snapshot_schema,
+    search_response_schema, settings_schema, snapshot_response_schema, snapshot_schema,
 };
 
 fn main() -> ExitCode {
@@ -31,6 +31,7 @@ fn main() -> ExitCode {
             co_change_response_schema(),
         ),
         ("review-state.schema.json", review_state_schema()),
+        ("settings.schema.json", settings_schema()),
         (
             "reading-order-response.schema.json",
             reading_order_response_schema(),

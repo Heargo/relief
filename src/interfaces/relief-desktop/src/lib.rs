@@ -13,7 +13,7 @@ use relief_app::{
 use relief_model::{
     ApiError, CoChangeResponse, CommitReadingResponse, DiffResponse, EdgeUsagesResponse,
     ImpactDirection, ImpactResponse, LogResponse, MetaResponse, MetricsResponse, NodeId,
-    ReadingOrderResponse, ReviewState, ReviewSummary, SearchResponse, SnapshotResponse,
+    ReadingOrderResponse, ReviewState, ReviewSummary, SearchResponse, Settings, SnapshotResponse,
 };
 use tauri::{AppHandle, Builder, Manager, Runtime, State, WebviewUrl, WebviewWindowBuilder};
 
@@ -46,6 +46,8 @@ pub fn register<R: Runtime>(builder: Builder<R>, session: Arc<Session>) -> Build
             edge_usages,
             review_state,
             set_review_state,
+            settings,
+            set_settings,
             reading_order,
             commit_reading,
             log,
@@ -301,6 +303,19 @@ async fn set_review_state(
     run(session, move |s| {
         s.set_review_state(&required_range(range)?, &state)
             .map_err(api_error)
+    })
+    .await
+}
+
+#[tauri::command]
+async fn settings(session: Shared<'_>) -> Result<Settings, ApiError> {
+    run(session, |s| s.settings().map_err(api_error)).await
+}
+
+#[tauri::command]
+async fn set_settings(session: Shared<'_>, settings: Settings) -> Result<(), ApiError> {
+    run(session, move |s| {
+        s.set_settings(&settings).map_err(api_error)
     })
     .await
 }

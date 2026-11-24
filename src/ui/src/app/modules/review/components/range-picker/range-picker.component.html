@@ -6,50 +6,13 @@
   (mouseleave)="flash()"
 >
   <div class="slot">
-    <span class="role" data-testid="range-role-base">{{
-      'review.rangePicker.roleBase' | translate
-    }}</span>
     <button
       type="button"
       class="side iconbtn"
-      data-testid="range-base"
-      aria-haspopup="dialog"
-      [attr.aria-expanded]="picker.open() === 'base'"
-      [attr.aria-label]="'review.rangePicker.base' | translate"
-      [attr.title]="picker.parts().base"
-      (click)="toggle('base')"
-    >
-      {{ short(picker.parts().base) }}
-    </button>
-  </div>
-  <button
-    type="button"
-    class="mode iconbtn"
-    data-testid="range-mode"
-    [disabled]="picker.headIsWorktree()"
-    [attr.aria-label]="
-      (picker.parts().mergeBase ? 'review.rangePicker.mergeBase' : 'review.rangePicker.direct')
-        | translate
-    "
-    [attr.title]="
-      (picker.parts().mergeBase ? 'review.rangePicker.mergeBase' : 'review.rangePicker.direct')
-        | translate
-    "
-    (click)="picker.toggleMode()"
-  >
-    {{ picker.arrow() }}
-  </button>
-  <div class="slot head">
-    <span class="role" data-testid="range-role-head">{{
-      'review.rangePicker.roleHead' | translate
-    }}</span>
-    <button
-      type="button"
-      class="side iconbtn"
-      data-testid="range-head"
+      data-testid="compare-source"
       aria-haspopup="dialog"
       [attr.aria-expanded]="picker.open() === 'head'"
-      [attr.aria-label]="'review.rangePicker.head' | translate"
+      [attr.aria-label]="'review.rangePicker.source' | translate"
       [attr.title]="picker.parts().head"
       (click)="toggle('head')"
     >
@@ -58,6 +21,23 @@
           ? ('review.rangePicker.worktree' | translate)
           : short(picker.parts().head)
       }}
+    </button>
+  </div>
+  <span class="merged" data-testid="compare-merged-into">{{
+    'review.rangePicker.mergedInto' | translate
+  }}</span>
+  <div class="slot">
+    <button
+      type="button"
+      class="side iconbtn"
+      data-testid="compare-destination"
+      aria-haspopup="dialog"
+      [attr.aria-expanded]="picker.open() === 'base'"
+      [attr.aria-label]="'review.rangePicker.destination' | translate"
+      [attr.title]="picker.parts().base"
+      (click)="toggle('base')"
+    >
+      {{ short(picker.parts().base) }}
     </button>
   </div>
   <button
@@ -79,6 +59,15 @@
       'review.rangePicker.commits' | translate: { count: picker.count() }
     }}</span>
   }
+  <button
+    type="button"
+    class="default iconbtn"
+    data-testid="compare-default"
+    [attr.title]="'review.rangePicker.defaultHint' | translate"
+    (click)="picker.saveDefault()"
+  >
+    {{ 'review.rangePicker.default' | translate }}
+  </button>
   @if (readingVisible() && !picker.open() && picker.reading(); as reading) {
     <div class="reading" data-testid="range-reading" role="status">
       {{ reading.key | translate: reading.params }}

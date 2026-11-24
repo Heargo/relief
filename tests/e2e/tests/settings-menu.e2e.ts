@@ -19,7 +19,7 @@ it('the U15 settings button is gone, the range picker is still in the top bar', 
   await openRelief({ size: SIZE });
   await expect(tid('settings-button')).not.toExist();
   await expect(tid('settings-menu')).not.toExist();
-  await expect(tid('range-base')).toBeDisplayed();
+  await expect(tid('compare-destination')).toBeDisplayed();
 });
 
 it('Settings > Theme changes the theme', async () => {

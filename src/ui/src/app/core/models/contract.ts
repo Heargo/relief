@@ -188,6 +188,7 @@ export interface Contract {
   MetricsResponse: MetricsResponse;
   CoChangeResponse: CoChangeResponse;
   ReviewState: ReviewState;
+  Settings: Settings;
   ReadingOrderResponse: ReadingOrderResponse;
   CommitReadingResponse: CommitReadingResponse;
   LogResponse: LogResponse;
@@ -616,6 +617,14 @@ export interface CoChangePair {
  */
 export interface ReviewState {
   seen: NodeId[];
+}
+/**
+ * The comparison kept by default: `source` is merged into `destination`.
+ * `source` is a ref or `WORKTREE`.
+ */
+export interface Settings {
+  destination: string;
+  source: string;
 }
 /**
  * Response of the `reading_order` command.

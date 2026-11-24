@@ -92,7 +92,7 @@ describe('MapPageComponent, workspace header and comparison in the left panel', 
     expect(section).not.toBeNull();
     expect(byId(el, 'left-panel')?.contains(section)).toBe(true);
     expect(section.querySelector('app-range-picker')).not.toBeNull();
-    expect(byId(el, 'range-base')).not.toBeNull();
+    expect(byId(el, 'compare-destination')).not.toBeNull();
     expect(
       byId(el, 'review-toggle')!.compareDocumentPosition(section) &
         Node.DOCUMENT_POSITION_FOLLOWING,
@@ -104,11 +104,11 @@ describe('MapPageComponent, workspace header and comparison in the left panel', 
     byId(el, 'explore-toggle')!.click();
     await fixture.whenStable();
     expect(byId(el, 'compare-section')).toBeNull();
-    expect(byId(el, 'range-base')).toBeNull();
+    expect(byId(el, 'compare-destination')).toBeNull();
     expect(byId(el, 'workspace-header')).not.toBeNull();
     byId(el, 'review-toggle')!.click();
     await fixture.whenStable();
     expect(byId(el, 'compare-section')).not.toBeNull();
-    expect(byId(el, 'range-base')).not.toBeNull();
+    expect(byId(el, 'compare-destination')).not.toBeNull();
   });
 });

@@ -6,7 +6,7 @@ import { tid } from '../helpers/ui';
 //  - `workspace-header` is the first block of `left-panel`: `repo-name` and `ref` (current
 //    branch), above the mode switch;
 //  - `compare-section` sits under the mode switch, in review mode only, and holds the range
-//    controls (`range-base`, `range-head`, ...), which are no longer in the top bar.
+//    controls (`compare-destination`, `compare-source`, ...), which are no longer in the top bar.
 
 const inside = (parent: string, child: string) =>
   browser.execute(
@@ -39,9 +39,13 @@ it('heads the left panel with the repository name and the branch', async () => {
 it('shows the comparison under the mode switch in review mode, out of the top bar', async () => {
   await openRelief({ size: { width: 1280, height: 800 } });
   await expect(tid('compare-section')).toBeDisplayed();
-  expect(await inside('[data-testid="compare-section"]', '[data-testid="range-base"]')).toBe(true);
-  expect(await inside('[data-testid="compare-section"]', '[data-testid="range-head"]')).toBe(true);
-  expect(await inside('header.topbar', '[data-testid="range-base"]')).toBe(false);
+  expect(
+    await inside('[data-testid="compare-section"]', '[data-testid="compare-destination"]'),
+  ).toBe(true);
+  expect(await inside('[data-testid="compare-section"]', '[data-testid="compare-source"]')).toBe(
+    true,
+  );
+  expect(await inside('header.topbar', '[data-testid="compare-destination"]')).toBe(false);
   const below = await browser.execute(() => {
     const t = document.querySelector('[data-testid="review-toggle"]')!;
     const c = document.querySelector('[data-testid="compare-section"]')!;
@@ -55,10 +59,10 @@ it('hides the comparison in explore mode, keeps the header, and restores it in r
   await tid('explore-toggle').click();
   await expect(tid('hotspots-section')).toBeDisplayed();
   await expect(tid('compare-section')).not.toBeExisting();
-  await expect(tid('range-base')).not.toBeExisting();
+  await expect(tid('compare-destination')).not.toBeExisting();
   await expect(tid('workspace-header')).toBeDisplayed();
   await expect(tid('repo-name')).toHaveText('acme-shop');
   await tid('review-toggle').click();
   await expect(tid('compare-section')).toBeDisplayed();
-  await expect(tid('range-base')).toBeDisplayed();
+  await expect(tid('compare-destination')).toBeDisplayed();
 });

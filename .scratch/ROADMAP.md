@@ -186,7 +186,7 @@ Brainstorm du 2026-11-20 : la carte rame sur un gros écran et les budgets de S0
 | ✓ | 54 | **K01** Cadrer le multirepo | Un changement full stack sur plusieurs dépôts ; un niveau « dépôt » au-dessus du système. Spec `.scratch/multi-repo/spec.md`. | aucun |
 | ✓ | 54a | **K03** Barre du haut en barre de menus | Espace de travail, Paramètres, Aide ; remplace le bouton de U15. | aucun |
 | ✓ | 54b | **K04** Panneau gauche : espace, mode, comparaison | Infos du dépôt en tête, comparaison sous le mode en relecture. | K03 |
-| ☐ | 54c | **K05** Comparaison façon PR : source → destination | Défaut working tree → `main`, configurable. | K04 |
+| ✓ | 54c | **K05** Comparaison façon PR : source → destination | Défaut working tree → `main`, configurable. | K04 |
 | ☐ | 54d | **K06** Écran d'accueil sans chemin | `relief` sans argument : ouvrir un dépôt, un espace, récents. | K03 |
 | ☐ | 54e | **K02** ADR : espace de travail et ids de dépôt | Préfixe `repo:<nom>/` en multidépôt seulement. | K01 |
 | ☐ | 54f | **K07** Fichier d'espace et session multidépôt | `<nom>.relief.json` + `.relief/` de l'espace. | K02 |

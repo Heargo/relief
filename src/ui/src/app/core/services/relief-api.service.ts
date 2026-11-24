@@ -13,6 +13,7 @@ import type {
   MetricsResponse,
   ReadingOrderResponse,
   ReviewState,
+  Settings,
   ReviewSummary,
   RulesResponse,
   SearchResponse,
@@ -117,6 +118,16 @@ export class ReliefApiService {
   /** Saves what is marked seen in a range. */
   setReviewState(range: string, state: ReviewState): Promise<void> {
     return this.command<void>('set_review_state', { range, state });
+  }
+
+  /** The comparison to open with: the opening range, else the saved defaults, else the working tree against main. */
+  settings(): Promise<Settings> {
+    return this.command<Settings>('settings');
+  }
+
+  /** Saves the default comparison. */
+  setSettings(settings: Settings): Promise<void> {
+    return this.command<void>('set_settings', { settings });
   }
 
   /** Source text of a file or symbol on one side of a range; without one, the range the app was opened with. */

@@ -39,7 +39,7 @@ pub use range::{
     SearchRequest, Side, SnapshotRequest,
 };
 pub use relief_diff::Granularity;
-pub use relief_model::{EdgeUsagesResponse, FileUsages, LogEntry, LogResponse};
+pub use relief_model::{EdgeUsagesResponse, FileUsages, LogEntry, LogResponse, Settings};
 
 /// What the import edges of one source file ask `edge_usages` to look for.
 struct Wanted {
@@ -127,6 +127,23 @@ struct StoredReviewState {
     range: String,
     #[serde(flatten)]
     state: ReviewState,
+}
+
+/// The sides of a range typed as `A...B`, `A..B` or `REV`.
+fn settings_of_range(text: &str) -> Option<Settings> {
+    let (destination, source) = if let Some((a, b)) = text.split_once("...") {
+        (a, b)
+    } else if let Some((a, b)) = text.split_once("..") {
+        (a, b)
+    } else if matches!(text, "WORKTREE" | "INDEX") {
+        return None;
+    } else {
+        (text, "WORKTREE")
+    };
+    Some(Settings {
+        source: source.to_owned(),
+        destination: destination.to_owned(),
+    })
 }
 
 fn reading_reason(reason: relief_diff::ReadingReason) -> ReadingReason {
@@ -483,6 +500,51 @@ impl Session {
             state: state.clone(),
         };
         let text = serde_json::to_string_pretty(&stored)
+            .map_err(|e| AppError::DataDir(format!("cannot write {}: {e}", file.display())))?;
+        let tmp = file.with_extension(format!("json.{}.tmp", std::process::id()));
+        fs::write(&tmp, text).map_err(io)?;
+        fs::rename(&tmp, &file).map_err(io)
+    }
+
+    /// The comparison to start from: the opening range, else the saved defaults, else the
+    /// working tree against `main` (or the default branch of the repository).
+    pub fn settings(&self) -> Result<Settings, AppError> {
+        if let Some(range) = &self.range
+            && let Some(settings) = settings_of_range(range.text())
+        {
+            return Ok(settings);
+        }
+        if let Some(data) = &self.data_dir {
+            let file = data.root().join("settings.json");
+            // A missing, unreadable or corrupt file gives the computed defaults.
+            if let Some(saved) = fs::read_to_string(&file)
+                .ok()
+                .and_then(|text| serde_json::from_str::<Settings>(&text).ok())
+            {
+                return Ok(saved);
+            }
+        }
+        let source = GitSource::open(&self.path)?;
+        let branches = source.branches()?;
+        let destination = if branches.iter().any(|b| b == "main") {
+            "main".to_owned()
+        } else {
+            // A detached HEAD has no branch name: HEAD always exists.
+            source.current_branch().unwrap_or_else(|| "HEAD".to_owned())
+        };
+        Ok(Settings {
+            source: "WORKTREE".to_owned(),
+            destination,
+        })
+    }
+
+    /// Saves the default comparison in `settings.json` (temporary file, then `rename`).
+    pub fn set_settings(&self, settings: &Settings) -> Result<(), AppError> {
+        let data = self.data_dir.as_ref().ok_or(AppError::NoDataDir)?;
+        let file = data.root().join("settings.json");
+        let io =
+            |e: std::io::Error| AppError::DataDir(format!("cannot write {}: {e}", file.display()));
+        let text = serde_json::to_string_pretty(settings)
             .map_err(|e| AppError::DataDir(format!("cannot write {}: {e}", file.display())))?;
         let tmp = file.with_extension(format!("json.{}.tmp", std::process::id()));
         fs::write(&tmp, text).map_err(io)?;

@@ -13,22 +13,22 @@ At the top of the left sidebar, the repository name and the current branch say w
 
 ## Pick a commit range
 
-In **Review the PR** mode, in the left sidebar under the switch, the **base ···→ head ⇄** control picks what is compared, followed by the number of commits in the range. Each side shows its role: **Reference · base** is the starting point, **Changes · head** what you review. The map shows what head changes compared with base. Each side (keys `b` and `h`) opens a list with a filter field, shortcuts (base: `main`, `HEAD~1`, the latest tag; head: **Working tree**, `HEAD`) and three tabs, **Branches**, **Tags** and **Commits**. The Commits tab shows the history of head, with the commits of the range highlighted and the other end marked BASE or HEAD. Arrows, `Enter`, `Tab` (next tab) and `Esc` work from the keyboard.
+In **Review the PR** mode, in the left sidebar under the switch, the comparison reads like a pull request: **source** _merged into_ **destination**, followed by the number of commits in the range. The map shows what the source changes compared with the destination, since their common ancestor (range `destination...source`). Each side (keys `h` for the source and `b` for the destination) opens a list with a filter field, shortcuts (destination: `main`, `HEAD~1`, the latest tag; source: **Working tree**, `HEAD`) and three tabs, **Branches**, **Tags** and **Commits**. The Commits tab shows the history of the source, with the commits of the range highlighted and the other end marked BASE or HEAD. Arrows, `Enter`, `Tab` (next tab) and `Esc` work from the keyboard.
 
-- **`···→` or `→`**: `base...head` (default, `···→`) compares from the common ancestor, like a PR; a click switches to `base..head` (`→`), the direct diff between the two.
+- **Default comparison**: without configuration, the source is the **Working tree** and the destination `main` (or the default branch of the repository when there is no `main`). **Set as default** keeps the current source and destination in `.relief/settings.json`; relief reads them back the next time it opens the repository. A range given at launch (`relief . A...B`) takes precedence and does not overwrite the saved choice.
 - **Reading line**: under the comparison, in the left panel, a sentence says what the map shows and which commit really serves as the base, for example "what feat/promo-codes changes compared with main, since their common ancestor 4e1a9c2". It fades after a few seconds or on the first click on the map, and comes back when hovering the control.
-- **⇄** swaps base and head. It is disabled when head is the working tree, which is always on the changes side.
+- **⇄** swaps the source and the destination. It is disabled when the source is the working tree, which is always on the changes side.
 
-Picking a side reloads the diff.
+Picking a source or a destination reloads the diff.
 
 - **In the URL**: the range is kept in the `?range=` parameter. A link to `/?range=main...feat/promo-codes` reopens the same review.
-- **At launch**: `relief . main...feat/promo-codes` opens that range directly. Without a range, the map shows `HEAD` up to the working tree.
+- **At launch**: `relief . main...feat/promo-codes` opens that range directly. Without a range, the map shows the saved default comparison, by default the working tree against `main`.
 - For now, the selector only offers pairs of branches: neither the working tree nor the index.
 - The diff follows the chosen range; the map itself keeps the repository as relief opened it.
 
 ## Review changes in progress
 
-Without a range (`relief .`), relief compares `HEAD` with the working tree: that is how to review what an AI agent just wrote, before committing. When the range touches the working tree or the index, the **Reload** entry of the Settings menu reads the repository again, and relief also reloads by itself when its window gets the focus back. The selection, the zoom level and the "seen" state are kept; a node that disappeared is simply deselected. Ranges between two commits do not change and do not reload.
+Without a range (`relief .`), relief opens the saved default comparison, by default the working tree against `main`: that is how to review what an AI agent just wrote, before committing. When the range touches the working tree or the index, the **Reload** entry of the Settings menu reads the repository again, and relief also reloads by itself when its window gets the focus back. The selection, the zoom level and the "seen" state are kept; a node that disappeared is simply deselected. Ranges between two commits do not change and do not reload.
 
 ## Read the diff layer
 

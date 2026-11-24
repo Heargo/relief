@@ -5,7 +5,7 @@ use schemars::{JsonSchema, schema_for};
 use crate::{
     ApiError, CoChangeResponse, CommitReadingResponse, DiffResponse, EdgeUsagesResponse, GraphDiff,
     GraphSnapshot, ImpactResponse, LogResponse, MetaResponse, MetricsResponse,
-    ReadingOrderResponse, ReviewState, ReviewSummary, SearchResponse, SnapshotResponse,
+    ReadingOrderResponse, ReviewState, ReviewSummary, SearchResponse, Settings, SnapshotResponse,
 };
 
 fn render<T: JsonSchema>() -> String {
@@ -57,6 +57,11 @@ pub fn impact_response_schema() -> String {
 /// JSON Schema of [`ReviewState`] (the `review_state` commands).
 pub fn review_state_schema() -> String {
     render::<ReviewState>()
+}
+
+/// JSON Schema of [`Settings`] (the `settings` commands).
+pub fn settings_schema() -> String {
+    render::<Settings>()
 }
 
 /// JSON Schema of [`ReadingOrderResponse`] (the `reading_order` command).

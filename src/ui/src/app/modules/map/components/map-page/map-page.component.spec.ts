@@ -122,23 +122,23 @@ describe('MapPageComponent', () => {
     expect(box?.querySelector('kbd')?.textContent?.trim()).toBe('/');
   });
 
-  it('shows the range split into base and head in the range control', async () => {
+  it('shows the range split into source and destination in the range control', async () => {
     const { el } = await render();
-    expect(byTestId(el, 'range-base')?.textContent?.trim()).toBe('main');
-    expect(byTestId(el, 'range-head')?.textContent?.trim()).toBe('feat/promo-codes');
+    expect(byTestId(el, 'compare-destination')?.textContent?.trim()).toBe('main');
+    expect(byTestId(el, 'compare-source')?.textContent?.trim()).toBe('feat/promo-codes');
   });
 
   it('shows the working tree as the head when the repo is opened without a range', async () => {
     api.meta.mockResolvedValue({ ...META, range: null });
     const { el } = await render();
-    expect(byTestId(el, 'range-base')?.textContent?.trim()).toBe('HEAD');
-    expect(byTestId(el, 'range-head')?.textContent?.trim()).toBe('Working tree');
+    expect(byTestId(el, 'compare-destination')?.textContent?.trim()).toBe('HEAD');
+    expect(byTestId(el, 'compare-source')?.textContent?.trim()).toBe('Working tree');
   });
 
   it('labels the working tree in French', async () => {
     api.meta.mockResolvedValue({ ...META, range: null });
     const { el } = await render('fr');
-    expect(byTestId(el, 'range-head')?.textContent?.trim()).toBe('Arbre de travail');
+    expect(byTestId(el, 'compare-source')?.textContent?.trim()).toBe('Arbre de travail');
   });
 
   it('the top bar has the menu bar and no settings button, the range picker stays', async () => {
@@ -146,7 +146,7 @@ describe('MapPageComponent', () => {
     expect(byTestId(el, 'menu-trigger-workspace')).not.toBeNull();
     expect(byTestId(el, 'settings-button')).toBeNull();
     expect(byTestId(el, 'reload-button')).toBeNull();
-    expect(byTestId(el, 'range-base')).not.toBeNull();
+    expect(byTestId(el, 'compare-destination')).not.toBeNull();
   });
 
   it('shows the API message when the API answers 500, not a blank page', async () => {

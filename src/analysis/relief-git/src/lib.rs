@@ -862,6 +862,12 @@ impl GitSource {
         self.ref_names(false)
     }
 
+    /// The branch `HEAD` points at, when it points at one.
+    pub fn current_branch(&self) -> Option<String> {
+        let name = self.repo.head_name().ok()??;
+        Some(name.shorten().to_string())
+    }
+
     /// Names of the tags, sorted.
     pub fn tags(&self) -> Result<Vec<String>, GitError> {
         self.ref_names(true)

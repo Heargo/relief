@@ -250,6 +250,14 @@ pub struct MetricsResponse {
     pub nodes: std::collections::BTreeMap<String, crate::Metrics>,
 }
 
+/// The comparison kept by default: `source` is merged into `destination`.
+/// `source` is a ref or `WORKTREE`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct Settings {
+    pub source: String,
+    pub destination: String,
+}
+
 /// The nodes a reviewer marked as seen in one range.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct ReviewState {

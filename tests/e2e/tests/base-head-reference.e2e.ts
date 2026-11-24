@@ -3,9 +3,8 @@ import { openRelief } from '../helpers/open-relief';
 import { tid } from '../helpers/ui';
 
 // Contract with the UI (ticket U23), on acme-shop main...feat/promo-codes:
-//  - `range-role-base` ("Reference · base") and `range-role-head` ("Changes · head") label the two
-//    selectors of the top bar;
-//  - `range-mode` shows `···→` (merge base) or `→` (direct diff);
+//  - the two selectors are `compare-source` and `compare-destination` (no role labels, no mode
+//    button: the range read is always `destination...source`);
 //  - `range-reading` is the reading line under the top bar: it names head, base and the short sha
 //    of the base really compared.
 
@@ -14,13 +13,12 @@ async function openLoaded(): Promise<void> {
   await tid('pr-stats').waitForExist();
 }
 
-it('both selectors carry their role', async () => {
+it('the selectors read source, merged into, destination', async () => {
   await openLoaded();
-  await expect(tid('range-role-base')).toHaveText(expect.stringContaining('Reference'));
-  await expect(tid('range-role-base')).toHaveText(expect.stringContaining('base'));
-  await expect(tid('range-role-head')).toHaveText(expect.stringContaining('Changes'));
-  await expect(tid('range-role-head')).toHaveText(expect.stringContaining('head'));
-  await expect(tid('range-mode')).toHaveText('···→');
+  await expect(tid('compare-source')).toHaveText('feat/promo-codes');
+  await expect(tid('compare-destination')).toHaveText('main');
+  await expect(tid('range-role-base')).not.toExist();
+  await expect(tid('range-mode')).not.toExist();
 });
 
 it('the reading line names head, base and the sha of the merge base', async () => {
@@ -32,20 +30,11 @@ it('the reading line names head, base and the sha of the merge base', async () =
   await expect(line).toHaveText(expect.stringMatching(/[0-9a-f]{7}/));
 });
 
-it('the reading line says "as is" for a direct diff', async () => {
-  await openLoaded();
-  await tid('range-mode').click();
-  await expect(tid('range-mode')).toHaveText('→');
-  await expect(tid('range-reading')).toHaveText(expect.stringContaining('main'));
-  await expect(tid('range-reading')).not.toHaveText(expect.stringMatching(/[0-9a-f]{7}/));
-});
-
 it('swap exchanges the two refs', async () => {
   await openLoaded();
   await tid('range-swap').click();
-  await expect(tid('range-base')).toHaveText('feat/promo-codes');
-  await expect(tid('range-head')).toHaveText('main');
-  await expect(tid('range-role-base')).toHaveText(expect.stringContaining('base'));
+  await expect(tid('compare-destination')).toHaveText('feat/promo-codes');
+  await expect(tid('compare-source')).toHaveText('main');
 });
 
 it('the reading line fades after a few seconds', async () => {
@@ -56,7 +45,7 @@ it('the reading line fades after a few seconds', async () => {
 
 it('swap is disabled on the working tree, with a tooltip saying why', async () => {
   await openLoaded();
-  await tid('range-head').click();
+  await tid('compare-source').click();
   await tid('range-popover').waitForDisplayed();
   await $('//*[@data-testid="range-option"][contains(normalize-space(.), "Working tree")]').click();
   await expect(tid('range-swap')).toBeDisabled();

@@ -158,12 +158,13 @@
     "reload": "Reload",
     "rangePicker": {
       "label": "Range",
-      "base": "Base",
-      "head": "Head",
+      "source": "Source (merged)",
+      "destination": "Destination (merge target)",
+      "mergedInto": "merged into",
+      "default": "Set as default",
+      "defaultHint": "Open with this source and destination next time",
       "worktree": "Working tree",
-      "swap": "Swap base and head",
-      "mergeBase": "base ···→ head: compares from the common ancestor of both sides (what the PR adds). Click for a direct diff (base → head).",
-      "direct": "base → head: compares the two sides as they are (a direct diff). Click to compare from the common ancestor (base ···→ head).",
+      "swap": "Swap source and destination",
       "filter": "Filter by name, subject or SHA",
       "tabs": {
         "branches": "Branches",
@@ -176,9 +177,7 @@
         "base": "BASE",
         "head": "HEAD"
       },
-      "roleBase": "Reference · base",
-      "roleHead": "Changes · head",
-      "swapDisabled": "Swap is not available: the head is the working tree"
+      "swapDisabled": "Swap is not available: the source is the working tree"
     },
     "range": {
       "reading": {

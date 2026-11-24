@@ -158,12 +158,13 @@
     "reload": "Recharger",
     "rangePicker": {
       "label": "Plage",
-      "base": "Base",
-      "head": "Head",
+      "source": "Source (fusionnée)",
+      "destination": "Destination (cible de la fusion)",
+      "mergedInto": "fusionnée dans",
+      "default": "Définir par défaut",
+      "defaultHint": "Ouvrir avec cette source et cette destination la prochaine fois",
       "worktree": "Arbre de travail",
-      "swap": "Échanger base et head",
-      "mergeBase": "base ···→ head : compare depuis l'ancêtre commun des deux côtés (ce que la PR ajoute). Clic pour un diff direct (base → head).",
-      "direct": "base → head : compare les deux côtés tels quels (diff direct). Clic pour comparer depuis l'ancêtre commun (base ···→ head).",
+      "swap": "Échanger source et destination",
       "filter": "Filtrer par nom, sujet ou SHA",
       "tabs": {
         "branches": "Branches",
@@ -176,9 +177,7 @@
         "base": "BASE",
         "head": "HEAD"
       },
-      "roleBase": "Référence · base",
-      "roleHead": "Changements · head",
-      "swapDisabled": "Inversion impossible : head est le working tree"
+      "swapDisabled": "Inversion impossible : la source est l'arbre de travail"
     },
     "range": {
       "reading": {

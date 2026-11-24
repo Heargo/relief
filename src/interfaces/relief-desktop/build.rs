@@ -13,6 +13,8 @@ fn main() {
         "edge_usages",
         "review_state",
         "set_review_state",
+        "settings",
+        "set_settings",
         "reading_order",
         "commit_reading",
         "log",

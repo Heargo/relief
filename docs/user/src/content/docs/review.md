@@ -13,22 +13,22 @@ En tête de la barre de gauche, le nom du dépôt et la branche courante rappell
 
 ## Choisir une plage de commits
 
-En mode **Relire la PR**, dans la barre de gauche, sous la bascule, le contrôle **base ···→ head ⇄** choisit ce qu'on compare, suivi du nombre de commits de la plage. Chaque côté porte son rôle : **Référence · base** est le point de départ, **Changements · head** ce qu'on relit. La carte montre ce que head change par rapport à base. Chaque côté (touches `b` et `h`) ouvre une liste avec un champ de filtre, des raccourcis (base : `main`, `HEAD~1`, le dernier tag ; head : **Arbre de travail**, `HEAD`) et trois onglets **Branches**, **Tags** et **Commits**. L'onglet Commits montre l'historique de head, les commits de la plage surlignés et l'autre extrémité marquée BASE ou HEAD. Les flèches, `Entrée`, `Tab` (onglet suivant) et `Échap` s'utilisent au clavier.
+En mode **Relire la PR**, dans la barre de gauche, sous la bascule, la comparaison se lit comme une pull request : **source** _fusionnée dans_ **destination**, suivie du nombre de commits de la plage. La carte montre ce que la source change par rapport à la destination, depuis leur ancêtre commun (plage `destination...source`). Chaque côté (touches `h` pour la source et `b` pour la destination) ouvre une liste avec un champ de filtre, des raccourcis (destination : `main`, `HEAD~1`, le dernier tag ; source : **Arbre de travail**, `HEAD`) et trois onglets **Branches**, **Tags** et **Commits**. L'onglet Commits montre l'historique de la source, les commits de la plage surlignés et l'autre extrémité marquée BASE ou HEAD. Les flèches, `Entrée`, `Tab` (onglet suivant) et `Échap` s'utilisent au clavier.
 
-- **`···→` ou `→`** : `base...head` (défaut, `···→`) compare depuis l'ancêtre commun, comme une PR ; un clic passe à `base..head` (`→`), le diff direct entre les deux.
+- **Comparaison par défaut** : sans configuration, la source est l'**arbre de travail** et la destination `main` (ou la branche par défaut du dépôt s'il n'y a pas de `main`). **Définir par défaut** garde la source et la destination actuelles dans `.relief/settings.json` ; relief les relit à la prochaine ouverture du dépôt. Une plage donnée au lancement (`relief . A...B`) prime et n'écrase pas le choix enregistré.
 - **Ligne de lecture** : sous la comparaison, dans le panneau gauche, une phrase dit ce que montre la carte et quel commit sert vraiment de base, par exemple « ce que feat/promo-codes change par rapport à main, depuis leur ancêtre commun 4e1a9c2 ». Elle s'efface après quelques secondes ou au premier clic sur la carte, et revient au survol du contrôle.
-- **⇄** inverse base et head. Il est désactivé quand head est l'arbre de travail, qui est toujours du côté des changements.
+- **⇄** inverse la source et la destination. Il est désactivé quand la source est l'arbre de travail, qui est toujours du côté des changements.
 
-Choisir un côté recharge le diff.
+Choisir une source ou une destination recharge le diff.
 
 - **Dans l'URL** : la plage est gardée dans le paramètre `?range=`. Un lien vers `/?range=main...feat/promo-codes` rouvre donc la même relecture.
-- **Au lancement** : `relief . main...feat/promo-codes` ouvre directement cette plage. Sans plage, la carte montre `HEAD` jusqu'à l'arbre de travail.
+- **Au lancement** : `relief . main...feat/promo-codes` ouvre directement cette plage. Sans plage, la carte montre la comparaison par défaut enregistrée, par défaut l'arbre de travail contre `main`.
 - Pour l'instant, le sélecteur ne propose que des paires de branches : ni l'arbre de travail, ni l'index.
 - Le calcul du diff suit la plage choisie ; la carte, elle, garde le dépôt tel que relief l'a ouvert.
 
 ## Relire des changements en cours
 
-Sans plage (`relief .`), relief compare `HEAD` à l'arbre de travail : c'est le moyen de relire ce qu'un agent IA vient d'écrire, avant de committer. Quand la plage touche l'arbre de travail ou l'index, l'entrée **Recharger** du menu Paramètres relit le dépôt, et relief recharge aussi tout seul quand sa fenêtre reprend le focus. La sélection, le niveau de zoom et l'état « vu » sont gardés ; un nœud qui a disparu est simplement désélectionné. Les plages entre deux commits ne changent pas et ne se rechargent pas.
+Sans plage (`relief .`), relief ouvre la comparaison par défaut enregistrée, par défaut l'arbre de travail contre `main` : c'est le moyen de relire ce qu'un agent IA vient d'écrire, avant de committer. Quand la plage touche l'arbre de travail ou l'index, l'entrée **Recharger** du menu Paramètres relit le dépôt, et relief recharge aussi tout seul quand sa fenêtre reprend le focus. La sélection, le niveau de zoom et l'état « vu » sont gardés ; un nœud qui a disparu est simplement désélectionné. Les plages entre deux commits ne changent pas et ne se rechargent pas.
 
 ## Lire le calque de diff
 

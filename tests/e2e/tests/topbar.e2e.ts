@@ -14,12 +14,12 @@ async function font(selector: string): Promise<{ size: string; family: string }>
 
 it('at 1280 px the search and the entries of the menu are 13 px and the range is 12 px monospace', async () => {
   await openRelief({ size: { width: 1280, height: 800 } });
-  await expect(tid('range-base')).toBeDisplayed();
+  await expect(tid('compare-destination')).toBeDisplayed();
   expect((await font('[data-testid="search"]')).size).toBe('13px');
   await tid('menu-trigger-settings').click();
   await expect(tid('menu-item-language-en')).toBeDisplayed();
   expect((await font('[data-testid="menu-item-language-en"]')).size).toBe('13px');
-  const range = await font('[data-testid="range-base"]');
+  const range = await font('[data-testid="compare-destination"]');
   expect(range.size).toBe('12px');
   expect(range.family).toMatch(/mono/i);
 });

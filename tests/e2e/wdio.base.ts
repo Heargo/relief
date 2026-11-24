@@ -48,6 +48,12 @@ export function fixtureOf(specFile: string): string {
   return /^\/\/\s*@fixture\s+([\w-]+)\s*$/.exec(first)?.[1] ?? defaultFixture;
 }
 
+/** True when the second line of the spec is `// @no-range`: acme-shop is then opened without a range. */
+export function opensWithoutRange(specFile: string): boolean {
+  const second = readFileSync(specFile.replace(/^file:\/\//, ''), 'utf8').split('\n')[1] ?? '';
+  return /^\/\/\s*@no-range\s*$/.test(second);
+}
+
 /** Spec files of a run: the `--spec` files when given, else the configured globs. */
 function specFiles(patterns: string | string[] | undefined): string[] {
   const list = [patterns ?? []].flat(2);
@@ -145,7 +151,11 @@ export function makeConfig(
       const repo = join(process.env['RELIEF_E2E_TMP'] as string, name);
       process.env['RELIEF_E2E_REPO'] = repo;
       const options = (caps as unknown as Record<string, { args: string[] }>)['tauri:options'];
-      if (options) options.args = name === defaultFixture ? [repo, range] : [repo];
+      if (options)
+        options.args =
+          name === defaultFixture && !opensWithoutRange(specs[0] as string)
+            ? [repo, range]
+            : [repo];
     },
     onComplete: () => stop(),
     ...overrides,

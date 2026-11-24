@@ -92,11 +92,6 @@ export function shortcutRefs(
   return [...(main ? [main] : []), 'HEAD~1', ...(lastTag ? [lastTag] : [])];
 }
 
-/** The arrow between the two sides: from the merge base (`···→`) or a direct diff (`→`). */
-export function rangeArrow(mergeBase: boolean): string {
-  return mergeBase ? '···→' : '→';
-}
-
 /** The i18n key and params of the line saying what the map shows for a range. */
 export function readingLine(
   parts: RangeParts,

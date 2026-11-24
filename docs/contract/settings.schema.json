@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Settings",
+  "description": "The comparison kept by default: `source` is merged into `destination`.\n`source` is a ref or `WORKTREE`.",
+  "type": "object",
+  "properties": {
+    "destination": {
+      "type": "string"
+    },
+    "source": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "source",
+    "destination"
+  ]
+}

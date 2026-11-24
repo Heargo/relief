@@ -14,7 +14,6 @@ import {
   parseRange,
   type RangeParts,
   type RangeTab,
-  rangeArrow,
   rangeCount,
   readingLine,
   shortcutRefs,
@@ -59,7 +58,6 @@ export class RangePickerBusiness {
 
   readonly parts = computed<RangeParts>(() => parseRange(currentRange(this.diff.range())));
   readonly headIsWorktree = computed(() => this.parts().head === WORKTREE_RANGE);
-  readonly arrow = computed(() => rangeArrow(this.parts().mergeBase));
   /** What the map shows for the range; null until the diff is loaded. */
   readonly reading = computed(() => {
     const resolved = this.diff.diff()?.baseResolved;
@@ -182,19 +180,21 @@ export class RangePickerBusiness {
     const side = this._open();
     if (!side) return;
     this.close();
-    await this.diff.setRange(formatRange({ ...this.parts(), [side]: value }));
+    await this.diff.setRange(formatRange({ ...this.parts(), [side]: value, mergeBase: true }));
   }
 
   async swap(): Promise<void> {
     const parts = this.parts();
     if (parts.head === WORKTREE_RANGE) return;
-    await this.diff.setRange(formatRange({ ...parts, base: parts.head, head: parts.base }));
+    await this.diff.setRange(
+      formatRange({ ...parts, base: parts.head, head: parts.base, mergeBase: true }),
+    );
   }
 
-  async toggleMode(): Promise<void> {
-    const parts = this.parts();
-    if (parts.head === WORKTREE_RANGE) return;
-    await this.diff.setRange(formatRange({ ...parts, mergeBase: !parts.mergeBase }));
+  /** Keeps the source and the destination shown as the comparison to open with. */
+  async saveDefault(): Promise<void> {
+    const { head, base } = this.parts();
+    await this.api.setSettings({ source: head, destination: base });
   }
 
   private headRev(): string {
