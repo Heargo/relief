@@ -30,7 +30,7 @@ Mesuré le 2026-11-24 sous CachyOS (KDE, Wayland), sur l'installation `install.s
 
 Fait :
 
-- Vraie icône tirée du logo de la barre du haut (la montagne, `#5eb1ff` sur `#131720`) : source `src/interfaces/relief-desktop/icons/icon.svg`, PNG en 32, 48, 64, 128 et 256 px (`icon.png` = 256). Pour les régénérer : `magick -background none -density 384 icon.svg -resize NxN PNG32:NxN.png`.
+- Vraie icône tirée du logo de la barre du haut (la montagne, `#1f6feb` sur fond blanc bordé de `#d5d9e2`) : source `src/interfaces/relief-desktop/icons/icon.svg`, PNG en 32, 48, 64, 128 et 256 px (`icon.png` = 256). Pour les régénérer : `magick -background none -density 384 icon.svg -resize NxN PNG32:NxN.png`.
 - `tauri.conf.json` liste toutes les tailles : le `.deb` (et le paquet Arch qui le reprend) les installe dans `hicolor/<N>x<N>/apps/relief.png`, et `generate_context!` en fait l'icône de fenêtre (X11, `just dev`).
 - `install.sh` installe toutes les tailles dans `~/.local/share/icons/hicolor`, écrit `Icon=relief` (nom de thème au lieu d'un chemin absolu) et `StartupWMClass=relief`, puis rafraîchit les caches quand les outils existent (`gtk-update-icon-cache`, `update-desktop-database`, `kbuildsycoca6`/`5`). La désinstallation retire toutes les tailles.
 - Garde-fou `src/interfaces/relief-desktop/tests/icons.rs` : chaque icône listée est un PNG carré de la taille de son nom, les tailles 32/48/128/256 sont présentes, et `enableGTKAppId` n'est pas activé (il casserait l'association avec `relief.desktop`).
