@@ -1,38 +1,139 @@
 <section class="welcome" data-testid="welcome">
-  <h1>{{ 'welcome.title' | translate }}</h1>
-  <p class="sub">{{ 'welcome.subtitle' | translate }}</p>
+  <header class="hero">
+    <div class="mark" aria-hidden="true">
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none">
+        <path d="M2 19 L8 9 L12 14 L16 6 L22 19 Z" fill="currentColor" opacity=".22" />
+        <path
+          d="M2 19 L8 9 L12 14 L16 6 L22 19"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linejoin="round"
+        />
+      </svg>
+    </div>
+    <h1>{{ 'welcome.title' | translate }}</h1>
+    <p class="sub">{{ 'welcome.subtitle' | translate }}</p>
+  </header>
+
   <div class="actions">
-    <button type="button" class="primary" data-testid="welcome-open-repo" (click)="pick()">
-      {{ 'welcome.openRepo' | translate }}
+    <button type="button" class="action primary" data-testid="welcome-open-repo" (click)="pick()">
+      <span class="icon" aria-hidden="true">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+        </svg>
+      </span>
+      <span class="label">{{ 'welcome.openRepo' | translate }}</span>
     </button>
-    <button type="button" data-testid="welcome-open-workspace" (click)="pickWorkspace()">
-      {{ 'welcome.openWorkspace' | translate }}
+    <button
+      type="button"
+      class="action"
+      data-testid="welcome-open-workspace"
+      (click)="pickWorkspace()"
+    >
+      <span class="icon" aria-hidden="true">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <rect x="3" y="3" width="7" height="7" rx="1.5" />
+          <rect x="14" y="3" width="7" height="7" rx="1.5" />
+          <rect x="3" y="14" width="7" height="7" rx="1.5" />
+          <rect x="14" y="14" width="7" height="7" rx="1.5" />
+        </svg>
+      </span>
+      <span class="label">{{ 'welcome.openWorkspace' | translate }}</span>
     </button>
-    <button type="button" data-testid="welcome-create-workspace" (click)="createWorkspace()">
-      {{ 'welcome.createWorkspace' | translate }}
+    <button
+      type="button"
+      class="action"
+      data-testid="welcome-create-workspace"
+      (click)="createWorkspace()"
+    >
+      <span class="icon" aria-hidden="true">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <rect x="3" y="3" width="18" height="18" rx="3" />
+          <path d="M12 8v8M8 12h8" />
+        </svg>
+      </span>
+      <span class="label">{{ 'welcome.createWorkspace' | translate }}</span>
     </button>
   </div>
+
   @if (welcome.error(); as error) {
-    <p class="error" data-testid="welcome-error">{{ error }}</p>
+    <p class="error" role="alert" data-testid="welcome-error">{{ error }}</p>
   }
-  <h2>{{ 'welcome.recents' | translate }}</h2>
-  @if (welcome.recents().length === 0) {
-    <p class="none" data-testid="welcome-no-recents">{{ 'welcome.noRecents' | translate }}</p>
-  } @else {
-    <ul class="recents">
-      @for (entry of welcome.recents(); track entry.path) {
-        <li>
-          <button
-            type="button"
-            class="recent"
-            data-testid="welcome-recent"
-            (click)="openRecent(entry.path, entry.kind)"
-          >
-            <span class="name">{{ entry.name }}</span>
-            <span class="path">{{ entry.path }}</span>
-          </button>
-        </li>
-      }
-    </ul>
-  }
+
+  <div class="recents-card">
+    <h2>{{ 'welcome.recents' | translate }}</h2>
+    @if (welcome.recents().length === 0) {
+      <p class="none" data-testid="welcome-no-recents">{{ 'welcome.noRecents' | translate }}</p>
+    } @else {
+      <ul class="recents">
+        @for (entry of welcome.recents(); track entry.path) {
+          <li>
+            <button
+              type="button"
+              class="recent"
+              data-testid="welcome-recent"
+              (click)="openRecent(entry.path, entry.kind)"
+            >
+              <span class="kind" [class.ws]="entry.kind === 'workspace'" aria-hidden="true">
+                @if (entry.kind === 'workspace') {
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    stroke-linejoin="round"
+                  >
+                    <rect x="3" y="3" width="7" height="7" rx="1.5" />
+                    <rect x="14" y="3" width="7" height="7" rx="1.5" />
+                    <rect x="3" y="14" width="7" height="7" rx="1.5" />
+                    <rect x="14" y="14" width="7" height="7" rx="1.5" />
+                  </svg>
+                } @else {
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    stroke-linejoin="round"
+                  >
+                    <path
+                      d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"
+                    />
+                  </svg>
+                }
+              </span>
+              <span class="text">
+                <span class="name">{{ entry.name }}</span>
+                <span class="path">{{ entry.path }}</span>
+              </span>
+              <svg class="chev" viewBox="0 0 16 16" aria-hidden="true">
+                <path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.8" />
+              </svg>
+            </button>
+          </li>
+        }
+      </ul>
+    }
+  </div>
 </section>
