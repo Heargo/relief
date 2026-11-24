@@ -26,6 +26,7 @@
     "allow-open-repo",
     "allow-recents",
     "allow-open-workspace",
+    "allow-create-workspace",
     "allow-open-repo-as-workspace",
     "allow-add-workspace-repo",
     "allow-workspace-labels",

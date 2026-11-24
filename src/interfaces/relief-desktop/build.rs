@@ -24,6 +24,7 @@ fn main() {
         "open_repo",
         "recents",
         "open_workspace",
+        "create_workspace",
         "open_repo_as_workspace",
         "add_workspace_repo",
         "workspace_labels",

@@ -18,6 +18,7 @@
     "items": {
       "openRepo": "Ouvrir un dépôt…",
       "openWorkspace": "Ouvrir un espace de travail…",
+      "createWorkspace": "Créer un espace de travail…",
       "addRepo": "Ajouter un dépôt à l'espace…",
       "openAsWorkspace": "Ouvrir ce dépôt comme espace de travail"
     }
@@ -27,7 +28,7 @@
     "subtitle": "Ouvrez un dépôt pour voir sa carte.",
     "openRepo": "Ouvrir un dépôt…",
     "openWorkspace": "Ouvrir un espace de travail…",
-    "createWorkspace": "Créer un espace de travail à partir d'un dépôt…",
+    "createWorkspace": "Créer un espace de travail…",
     "recents": "Récents",
     "noRecents": "Rien d'ouvert pour l'instant."
   },

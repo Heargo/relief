@@ -57,6 +57,7 @@ const api = {
   pickRepoFolder: vi.fn(),
   addWorkspaceRepo: vi.fn(),
   openRepoAsWorkspace: vi.fn(),
+  createWorkspace: vi.fn(),
 };
 
 const byId = (el: HTMLElement, id: string) =>
@@ -102,6 +103,7 @@ describe('MapPageComponent, workspace menu entries that build a workspace (K13)'
     api.pickRepoFolder.mockReset().mockResolvedValue('/picked/folder');
     api.addWorkspaceRepo.mockReset().mockResolvedValue(WORKSPACE_META);
     api.openRepoAsWorkspace.mockReset().mockResolvedValue(WORKSPACE_META);
+    api.createWorkspace.mockReset().mockResolvedValue(WORKSPACE_META);
   });
 
   it('"Add a repository to the workspace…" picks a folder and adds that repository, without labels', async () => {
@@ -123,6 +125,21 @@ describe('MapPageComponent, workspace menu entries that build a workspace (K13)'
     await choose(fixture, el, 'open-as-workspace');
     expect(api.pickRepoFolder).toHaveBeenCalledOnce();
     expect(api.openRepoAsWorkspace).toHaveBeenCalledExactlyOnceWith('/work/acme', '/picked/folder');
+  });
+
+  it('"Create a workspace…" picks a folder and creates the workspace there, named after it', async () => {
+    api.pickRepoFolder.mockResolvedValue('/work/space');
+    const { fixture, el } = await render(REPO_META);
+    await choose(fixture, el, 'create-workspace');
+    expect(api.pickRepoFolder).toHaveBeenCalledOnce();
+    expect(api.createWorkspace).toHaveBeenCalledExactlyOnceWith('/work/space', 'space');
+  });
+
+  it('creates no workspace when the folder picker is cancelled', async () => {
+    api.pickRepoFolder.mockResolvedValue(null);
+    const { fixture, el } = await render(WORKSPACE_META);
+    await choose(fixture, el, 'create-workspace');
+    expect(api.createWorkspace).not.toHaveBeenCalled();
   });
 
   it('opens nothing as a workspace when the folder picker is cancelled', async () => {

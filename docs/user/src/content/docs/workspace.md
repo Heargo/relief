@@ -8,12 +8,12 @@ Un espace de travail regroupe plusieurs dépôts (un front, une API, une bibliot
 ## Créer un espace depuis l'accueil
 
 1. Lancez `relief` sans argument : l'écran d'accueil s'affiche.
-2. Cliquez **Créer un espace de travail à partir d'un dépôt…**.
-3. Choisissez le dépôt de départ (par exemple votre front), puis le dossier de l'espace. Le dossier ne doit pas être dans le dépôt.
+2. Cliquez **Créer un espace de travail…** (aussi dans le menu **Espace de travail**).
+3. Choisissez le dossier de l'espace.
 
-relief écrit `<nom-du-dépôt>.relief.json` dans ce dossier et ouvre l'espace, qui ne contient pour l'instant que ce dépôt. L'espace rejoint les récents de l'accueil.
+relief crée dans ce dossier `.relief/` et le fichier d'espace `<nom-du-dossier>.relief.json`, puis ouvre l'espace, vide pour l'instant : ajoutez-y vos dépôts (section suivante). L'espace rejoint les récents de l'accueil.
 
-Depuis un dépôt déjà ouvert, le menu **Espace de travail** > **Ouvrir ce dépôt comme espace de travail** fait la même chose pour le dépôt affiché. Pour un espace existant, utilisez **Ouvrir un espace de travail…** (accueil ou menu).
+Depuis un dépôt déjà ouvert, le menu **Espace de travail** > **Ouvrir ce dépôt comme espace de travail** demande le dossier de l'espace et y crée `<nom-du-dépôt>.relief.json` avec ce dépôt. Le dossier ne doit pas être dans le dépôt. Pour un espace existant, utilisez **Ouvrir un espace de travail…** (accueil ou menu).
 
 ## Ajouter des dépôts
 

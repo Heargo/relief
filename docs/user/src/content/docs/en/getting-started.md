@@ -84,7 +84,7 @@ relief [path] [range]
 
 The relief window opens on the current repository. Nothing is written to your repository.
 
-- With no argument, `relief` opens no repository: it shows the welcome screen, where you open a repository with the folder picker or choose a recent one (the list is kept in your configuration folder). To open the current folder, run `relief .`. The "Open a workspace…" entry (welcome screen and **Workspace** menu) opens an existing workspace from its folder; "Create a workspace from a repository…" creates one from a repository. The whole journey is in [Workspace](../workspace/).
+- With no argument, `relief` opens no repository: it shows the welcome screen, where you open a repository with the folder picker or choose a recent one (the list is kept in your configuration folder). To open the current folder, run `relief .`. The "Open a workspace…" entry (welcome screen and **Workspace** menu) opens an existing workspace from its folder; "Create a workspace…" creates an empty one in the chosen folder. The whole journey is in [Workspace](../workspace/).
 - With no range, the range shown goes from `HEAD` to the working tree. For another range (`range`), pass it: `relief . main...my-branch` (against the merge-base) or `relief . A..B`.
 - The first argument (`path`) is the folder to analyse: `relief ~/code/my-repo`.
 

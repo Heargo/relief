@@ -545,6 +545,14 @@ export class MapPageComponent implements OnInit {
     else await this.start();
   }
 
+  /** The menu entry "Create a workspace": folder picker, then the new, empty workspace. */
+  protected async onCreateWorkspace(): Promise<void> {
+    const wasOpen = !this.repo.noSession();
+    if (!(await this.welcomeState.pickAndCreateWorkspace())) return;
+    if (wasOpen) this.reloadPage();
+    else await this.start();
+  }
+
   /** The menu entry "Add a repository to the workspace": folder picker, then the workspace again. */
   protected async onAddRepo(): Promise<void> {
     if (await this.welcomeState.pickAndAddRepo()) this.reloadPage();

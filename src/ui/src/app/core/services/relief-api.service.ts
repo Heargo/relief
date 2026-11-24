@@ -184,6 +184,11 @@ export class ReliefApiService {
     return this.command<MetaResponse>('open_workspace', { path });
   }
 
+  /** Creates an empty workspace `<dir>/<name>.relief.json` (and `<dir>/.relief/`) and opens it. */
+  createWorkspace(dir: string, name: string): Promise<MetaResponse> {
+    return this.command<MetaResponse>('create_workspace', { dir, name });
+  }
+
   /** Makes a workspace named after a repository in `dir` and opens it; answers its meta. */
   openRepoAsWorkspace(repo: string, dir: string): Promise<MetaResponse> {
     return this.command<MetaResponse>('open_repo_as_workspace', { repo, dir });

@@ -1,6 +1,7 @@
 import { inject, Injectable, signal } from '@angular/core';
 
 import { type RecentEntry, ReliefApiService } from '../../../core/services/relief-api.service';
+import { workspaceNameOf } from '../helpers/workspace-name.logic';
 
 /** The welcome screen: the recents, and the opening of a repository. */
 @Injectable()
@@ -50,13 +51,17 @@ export class WelcomeBusiness {
     }
   }
 
-  /** Asks for a repository then for the workspace folder, and opens the new workspace. */
+  /**
+   * Asks for a folder, creates an empty workspace there (`.relief/` and `<folder>.relief.json`)
+   * and opens it. False when cancelled or failed.
+   */
   async pickAndCreateWorkspace(): Promise<boolean> {
     this._error.set(null);
     try {
-      const repo = await this.api.pickRepoFolder();
-      if (repo === null) return false;
-      return await this.pickFolderAndOpenAsWorkspace(repo);
+      const dir = await this.api.pickRepoFolder();
+      if (dir === null) return false;
+      await this.api.createWorkspace(dir, workspaceNameOf(dir));
+      return true;
     } catch (error) {
       this.fail(error);
       return false;

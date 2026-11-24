@@ -6,9 +6,9 @@ import { TEST_PROVIDERS } from '../../../../../testing/test-providers';
 import { ReliefApiService } from '../../../../core/services/relief-api.service';
 import { WelcomeComponent } from './welcome.component';
 
-// K13: the welcome screen offers to create a workspace from a repository: the folder picker asks
-// for the repository, then for the folder of the workspace; `open_repo_as_workspace` (K07) does
-// the rest, and the page is told the session started.
+// The welcome screen creates a workspace: the folder picker asks for the folder of the workspace,
+// `create_workspace` writes `<folder>/.relief/` and `<folder name>.relief.json` there and opens it,
+// and the page is told the session started.
 
 const META = { repo: 'acme', range: null, branches: [], tags: [] };
 
@@ -17,7 +17,7 @@ const api = {
   openRepo: vi.fn(),
   openWorkspace: vi.fn(),
   pickRepoFolder: vi.fn(),
-  openRepoAsWorkspace: vi.fn(),
+  createWorkspace: vi.fn(),
 };
 
 async function render(lang: 'en' | 'fr' = 'en') {
@@ -36,69 +36,57 @@ async function render(lang: 'en' | 'fr' = 'en') {
 const byId = (el: HTMLElement, id: string) =>
   el.querySelector<HTMLElement>(`[data-testid="${id}"]`);
 
-describe('WelcomeComponent, create a workspace from a repository (K13)', () => {
+describe('WelcomeComponent, create a workspace', () => {
   beforeEach(() => {
     api.recents.mockReset().mockResolvedValue([]);
     api.openRepo.mockReset().mockResolvedValue(META);
     api.openWorkspace.mockReset().mockResolvedValue(META);
     api.pickRepoFolder.mockReset();
-    api.openRepoAsWorkspace.mockReset().mockResolvedValue(META);
+    api.createWorkspace.mockReset().mockResolvedValue(META);
   });
 
   it('offers the action, in English and in French', async () => {
     const en = await render('en');
-    expect(byId(en.el, 'welcome-create-workspace')?.textContent).toContain(
-      'Create a workspace from a repository',
+    expect(byId(en.el, 'welcome-create-workspace')?.textContent?.trim()).toBe(
+      'Create a workspace…',
     );
     TestBed.resetTestingModule();
     const fr = await render('fr');
-    expect(byId(fr.el, 'welcome-create-workspace')?.textContent).toContain(
-      'Créer un espace de travail',
+    expect(byId(fr.el, 'welcome-create-workspace')?.textContent?.trim()).toBe(
+      'Créer un espace de travail…',
     );
   });
 
-  it('asks for the repository, then for the workspace folder, and creates the workspace', async () => {
-    api.pickRepoFolder.mockResolvedValueOnce('/work/shop-web').mockResolvedValueOnce('/work/space');
+  it('asks for the workspace folder and creates the workspace there, named after the folder', async () => {
+    api.pickRepoFolder.mockResolvedValueOnce('/work/space');
     const { fixture, el, opened } = await render();
     byId(el, 'welcome-create-workspace')?.click();
     await fixture.whenStable();
     await fixture.whenStable();
-    expect(api.pickRepoFolder).toHaveBeenCalledTimes(2);
-    expect(api.openRepoAsWorkspace).toHaveBeenCalledExactlyOnceWith(
-      '/work/shop-web',
-      '/work/space',
-    );
+    expect(api.pickRepoFolder).toHaveBeenCalledOnce();
+    expect(api.createWorkspace).toHaveBeenCalledExactlyOnceWith('/work/space', 'space');
     expect(opened()).toBe(1);
   });
 
-  it('does nothing when the repository picker is cancelled', async () => {
+  it('does nothing when the folder picker is cancelled', async () => {
     api.pickRepoFolder.mockResolvedValueOnce(null);
     const { fixture, el, opened } = await render();
     byId(el, 'welcome-create-workspace')?.click();
     await fixture.whenStable();
-    expect(api.pickRepoFolder).toHaveBeenCalledOnce();
-    expect(api.openRepoAsWorkspace).not.toHaveBeenCalled();
-    expect(opened()).toBe(0);
-  });
-
-  it('does nothing when the workspace folder picker is cancelled', async () => {
-    api.pickRepoFolder.mockResolvedValueOnce('/work/shop-web').mockResolvedValueOnce(null);
-    const { fixture, el, opened } = await render();
-    byId(el, 'welcome-create-workspace')?.click();
-    await fixture.whenStable();
-    await fixture.whenStable();
-    expect(api.openRepoAsWorkspace).not.toHaveBeenCalled();
+    expect(api.createWorkspace).not.toHaveBeenCalled();
     expect(opened()).toBe(0);
   });
 
   it('shows the error of a failed creation and stays on the welcome screen', async () => {
-    api.pickRepoFolder.mockResolvedValueOnce('/work/shop-web').mockResolvedValueOnce('/work/space');
-    api.openRepoAsWorkspace.mockRejectedValue(new Error('the workspace folder is inside the repo'));
+    api.pickRepoFolder.mockResolvedValueOnce('/work/space');
+    api.createWorkspace.mockRejectedValue(
+      new Error('/work/space/space.relief.json already exists'),
+    );
     const { fixture, el, opened } = await render();
     byId(el, 'welcome-create-workspace')?.click();
     await fixture.whenStable();
     await fixture.whenStable();
-    expect(byId(el, 'welcome-error')?.textContent).toContain('inside the repo');
+    expect(byId(el, 'welcome-error')?.textContent).toContain('already exists');
     expect(opened()).toBe(0);
   });
 });

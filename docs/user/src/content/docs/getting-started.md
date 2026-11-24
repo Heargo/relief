@@ -84,7 +84,7 @@ relief [path] [range]
 
 La fenêtre de relief s'ouvre sur le dépôt `path`. Rien n'est écrit dans votre dépôt.
 
-- Sans argument, `relief` n'ouvre aucun dépôt : il affiche l'écran d'accueil, où vous ouvrez un dépôt avec le sélecteur de dossier ou choisissez un dépôt récent (la liste est gardée dans votre dossier de configuration). Pour ouvrir le dossier courant, lancez `relief .`. L'entrée « Ouvrir un espace de travail… » (écran d'accueil et menu **Espace de travail**) ouvre un espace existant depuis son dossier ; « Créer un espace de travail à partir d'un dépôt… » en crée un depuis un dépôt. Tout le parcours est dans [Espace de travail](../workspace/).
+- Sans argument, `relief` n'ouvre aucun dépôt : il affiche l'écran d'accueil, où vous ouvrez un dépôt avec le sélecteur de dossier ou choisissez un dépôt récent (la liste est gardée dans votre dossier de configuration). Pour ouvrir le dossier courant, lancez `relief .`. L'entrée « Ouvrir un espace de travail… » (écran d'accueil et menu **Espace de travail**) ouvre un espace existant depuis son dossier ; « Créer un espace de travail… » en crée un, vide, dans le dossier choisi. Tout le parcours est dans [Espace de travail](../workspace/).
 - Sans plage, la plage affichée va de `HEAD` à l'arbre de travail. Pour une autre plage (`range`), donnez-la : `relief . main...ma-branche` (contre le merge-base) ou `relief . A..B`.
 - Le premier argument (`path`) est le dossier à analyser : `relief ~/code/mon-depot`.
 

@@ -15,9 +15,9 @@ import { tid, toggleLayer } from '../helpers/ui';
 // the paths queued in `window.__reliefE2ePicks` (a string[]) and only opens the dialog when the
 // queue is empty or absent. Nothing sets it outside the e2e specs.
 //
-//  1. `welcome-create-workspace` asks for a repository (shop-web), then for a folder (<tmp>/space):
-//     the app opens the workspace `shop-web.relief.json` created there.
-//  2. Workspace > `menu-item-add-repo` asks for a repository (shop-api) and adds it.
+//  1. `welcome-create-workspace` asks for a folder (<tmp>/space): the app opens the empty
+//     workspace `space.relief.json` created there.
+//  2. Workspace > `menu-item-add-repo` asks for a repository (shop-web, then shop-api) and adds it.
 //  3. Each `workspace-repo` row gets a label (`repo-labels-edit`, `repo-label-option-<label>`).
 //  4. The default comparison of both repositories is their working tree against main, and both
 //     fixtures are checked out on their feature branch: the changes of the front (OrderList) and
@@ -26,7 +26,7 @@ import { tid, toggleLayer } from '../helpers/ui';
 
 const TMP = () => process.env['RELIEF_E2E_REPO'] as string;
 const SPACE = () => join(TMP(), 'space');
-const FILE = () => join(SPACE(), 'shop-web.relief.json');
+const FILE = () => join(SPACE(), 'space.relief.json');
 const WEB_ORDER_LIST = 'repo:shop-web/pkg:shop-web/src::file:src/OrderList.ts';
 const API_ORDERS = 'repo:shop-api/pkg:shop-api/src::file:src/orders.ts';
 
@@ -42,7 +42,7 @@ async function queuePicks(...paths: string[]): Promise<void> {
 const workspaceRows = () => $$('[data-testid="workspace-repo"]');
 
 describe('a multi-repo review, from the welcome screen to an edge between repositories', () => {
-  it('creates a workspace from a repository', async () => {
+  it('creates an empty workspace in a folder', async () => {
     mkdirSync(SPACE());
     await setViewport(1280, 800);
     await browser.execute(() => {
@@ -53,16 +53,24 @@ describe('a multi-repo review, from the welcome screen to an edge between reposi
     await expect(tid('welcome')).toBeDisplayed();
     await expect(tid('welcome-create-workspace')).toBeDisplayed();
 
-    await queuePicks(join(TMP(), 'shop-web'), SPACE());
+    await queuePicks(SPACE());
     await tid('welcome-create-workspace').click();
     await tid('repo-name').waitForDisplayed();
-    await expect(tid('repo-name')).toHaveText('shop-web');
+    await expect(tid('repo-name')).toHaveText('space');
     await expect(tid('welcome')).not.toExist();
-    expect(await workspaceRows()).toHaveLength(1);
-    expect(repoNames()).toEqual(['shop-web']);
+    expect(await workspaceRows()).toHaveLength(0);
+    expect(repoNames()).toEqual([]);
   });
 
-  it('adds a second repository from the Workspace menu', async () => {
+  it('adds the repositories from the Workspace menu', async () => {
+    await queuePicks(join(TMP(), 'shop-web'));
+    await tid('menu-trigger-workspace').click();
+    await tid('menu-item-add-repo').click();
+    await browser.waitUntil(async () => (await workspaceRows()).length === 1, {
+      timeoutMsg: 'the first repository never showed in the left panel',
+    });
+    expect(repoNames()).toEqual(['shop-web']);
+
     await queuePicks(join(TMP(), 'shop-api'));
     await tid('menu-trigger-workspace').click();
     await tid('menu-item-add-repo').click();

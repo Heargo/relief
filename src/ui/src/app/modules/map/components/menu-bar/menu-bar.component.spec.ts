@@ -18,6 +18,7 @@ interface Emitted {
   reload: number;
   docs: number;
   openRepo: number;
+  createWorkspace: number;
   addRepo: number;
   openAsWorkspace: number;
 }
@@ -64,6 +65,7 @@ describe('MenuBarComponent', () => {
       reload: 0,
       docs: 0,
       openRepo: 0,
+      createWorkspace: 0,
       addRepo: 0,
       openAsWorkspace: 0,
     };
@@ -74,6 +76,7 @@ describe('MenuBarComponent', () => {
     c.reload.subscribe(() => emitted.reload++);
     c.docs.subscribe(() => emitted.docs++);
     c.openRepo.subscribe(() => emitted.openRepo++);
+    c.createWorkspace.subscribe(() => emitted.createWorkspace++);
     c.addRepo.subscribe(() => emitted.addRepo++);
     c.openAsWorkspace.subscribe(() => emitted.openAsWorkspace++);
     host = fixture.nativeElement;
@@ -92,7 +95,7 @@ describe('MenuBarComponent', () => {
     expect(q('menu-panel')).toBeNull();
   });
 
-  it('the Workspace menu lists the four entries', async () => {
+  it('the Workspace menu lists the five entries', async () => {
     await click('menu-trigger-workspace');
     expect(must('menu-trigger-workspace').getAttribute('aria-expanded')).toBe('true');
     const labels = [...host.querySelectorAll('[data-testid="menu-panel"] [role="menuitem"]')].map(
@@ -101,6 +104,7 @@ describe('MenuBarComponent', () => {
     expect(labels).toEqual([
       'Open a repository…',
       'Open a workspace…',
+      'Create a workspace…',
       'Add a repository to the workspace…',
       'Open this repository as a workspace',
     ]);
@@ -127,6 +131,15 @@ describe('MenuBarComponent', () => {
     await click('menu-item-add-repo');
     expect(emitted.addRepo).toBe(0);
     expect(q('menu-panel')).not.toBeNull();
+  });
+
+  it('Create a workspace emits createWorkspace and closes the menu, in a workspace too', async () => {
+    fixture.componentRef.setInput('workspace', true);
+    await settle();
+    await click('menu-trigger-workspace');
+    await click('menu-item-create-workspace');
+    expect(emitted.createWorkspace).toBe(1);
+    expect(q('menu-panel')).toBeNull();
   });
 
   it('Open this repository as a workspace emits openAsWorkspace and closes the menu', async () => {
@@ -258,6 +271,8 @@ describe('MenuBarComponent', () => {
     expect(focusedId()).toBe('menu-item-open-repo');
     await key(document.activeElement as Element, { key: 'ArrowDown' });
     expect(focusedId()).toBe('menu-item-open-workspace');
+    await key(document.activeElement as Element, { key: 'ArrowDown' });
+    expect(focusedId()).toBe('menu-item-create-workspace');
     // "Add a repository" is disabled on a single repository: the focus skips it
     await key(document.activeElement as Element, { key: 'ArrowDown' });
     expect(focusedId()).toBe('menu-item-open-as-workspace');

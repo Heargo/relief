@@ -8,12 +8,12 @@ A workspace groups several repositories (a front end, an API, a shared library) 
 ## Create a workspace from the welcome screen
 
 1. Run `relief` with no argument: the welcome screen appears.
-2. Click **Create a workspace from a repository…**.
-3. Pick the starting repository (for example your front end), then the folder of the workspace. The folder must not be inside the repository.
+2. Click **Create a workspace…** (also in the **Workspace** menu).
+3. Pick the folder of the workspace.
 
-relief writes `<repository-name>.relief.json` in that folder and opens the workspace, which holds only that repository for now. The workspace joins the recents of the welcome screen.
+relief creates `.relief/` and the workspace file `<folder-name>.relief.json` in that folder, then opens the workspace, empty for now: add your repositories to it (next section). The workspace joins the recents of the welcome screen.
 
-From a repository that is already open, **Workspace** > **Open this repository as a workspace** does the same for the repository shown. For an existing workspace, use **Open a workspace…** (welcome screen or menu).
+From a repository that is already open, **Workspace** > **Open this repository as a workspace** asks for the folder of the workspace and creates `<repository-name>.relief.json` there with that repository. The folder must not be inside the repository. For an existing workspace, use **Open a workspace…** (welcome screen or menu).
 
 ## Add repositories
 

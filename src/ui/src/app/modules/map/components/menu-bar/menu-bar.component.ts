@@ -69,6 +69,7 @@ export class MenuBarComponent {
   readonly docs = output<void>();
   readonly openRepo = output<void>();
   readonly openWorkspace = output<void>();
+  readonly createWorkspace = output<void>();
   readonly addRepo = output<void>();
   readonly openAsWorkspace = output<void>();
 
@@ -93,6 +94,9 @@ export class MenuBarComponent {
         return [
           this.entry('open-repo', 'menu.items.openRepo', () => this.openRepo.emit()),
           this.entry('open-workspace', 'menu.items.openWorkspace', () => this.openWorkspace.emit()),
+          this.entry('create-workspace', 'menu.items.createWorkspace', () =>
+            this.createWorkspace.emit(),
+          ),
           this.entry('add-repo', 'menu.items.addRepo', () => this.addRepo.emit(), {
             disabled: !this.workspace(),
           }),
