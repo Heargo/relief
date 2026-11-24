@@ -27,7 +27,7 @@ The header of the left panel lists each repository with its branch and labels. T
 
 ## Compare each repository
 
-Each repository is compared on its own range: by default, its working tree against `main`. The **Comparisons per repository** button (under the Review / Explore switch) lists one row per repository, where you change the source or the destination; **Set as default** writes it to the workspace file. Details in [Review a PR](../review/#compare-each-repository-of-a-workspace).
+Each repository is compared on its own range: by default, its working tree against `main`, else `master`, else its current branch. The **Comparisons per repository** button (under the Review / Explore switch) lists one row per repository, where you change the source or the destination; **Set as default** writes it to the workspace file. Details in [Review a PR](../review/#compare-each-repository-of-a-workspace).
 
 A change that touches the front end and the API thus shows on the same map: at the **Repos** level both boxes are marked; going down to the files, the modified files of each repository are marked too, with the reading order and the impact across the whole.
 

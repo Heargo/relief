@@ -27,7 +27,7 @@ L'en-tête de la barre de gauche liste chaque dépôt avec sa branche et ses ét
 
 ## Comparer chaque dépôt
 
-Chaque dépôt se compare sur sa propre plage : par défaut, son arbre de travail contre `main`. Le bouton **Comparaisons par dépôt** (sous la bascule Relecture / Exploration) liste une ligne par dépôt, où l'on change la source ou la destination ; **Définir par défaut** l'écrit dans le fichier d'espace. Détails dans [Relire une PR](../review/#comparer-chaque-dépôt-dun-espace).
+Chaque dépôt se compare sur sa propre plage : par défaut, son arbre de travail contre `main`, sinon `master`, sinon sa branche courante. Le bouton **Comparaisons par dépôt** (sous la bascule Relecture / Exploration) liste une ligne par dépôt, où l'on change la source ou la destination ; **Définir par défaut** l'écrit dans le fichier d'espace. Détails dans [Relire une PR](../review/#comparer-chaque-dépôt-dun-espace).
 
 Un changement qui touche le front et l'API apparaît ainsi sur la même carte : au niveau **Dépôts**, les deux boîtes sont marquées ; en descendant aux fichiers, les fichiers modifiés de chaque dépôt le sont aussi, avec l'ordre de lecture et l'impact sur l'ensemble.
 

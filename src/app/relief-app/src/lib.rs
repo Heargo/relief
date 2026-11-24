@@ -210,6 +210,18 @@ fn majority(authors: &[&str]) -> Option<String> {
         .map(|(a, _)| a.to_owned())
 }
 
+/// The default destination of a repository, in a single repository as in a workspace: `main`,
+/// else `master`, else its current branch, else `HEAD` (a detached HEAD has no branch name).
+pub(crate) fn default_destination(git: &GitSource) -> Result<String, AppError> {
+    let branches = git.branches()?;
+    for name in ["main", "master"] {
+        if branches.iter().any(|b| b == name) {
+            return Ok(name.to_owned());
+        }
+    }
+    Ok(git.current_branch().unwrap_or_else(|| "HEAD".to_owned()))
+}
+
 fn is_virtual(commit: &CommitId) -> bool {
     matches!(commit.to_string().as_str(), "WORKTREE" | "INDEX")
 }
@@ -622,17 +634,9 @@ impl Session {
                 return Ok(saved);
             }
         }
-        let source = self.git()?;
-        let branches = source.branches()?;
-        let destination = if branches.iter().any(|b| b == "main") {
-            "main".to_owned()
-        } else {
-            // A detached HEAD has no branch name: HEAD always exists.
-            source.current_branch().unwrap_or_else(|| "HEAD".to_owned())
-        };
         Ok(Settings {
             source: "WORKTREE".to_owned(),
-            destination,
+            destination: default_destination(&self.git()?)?,
         })
     }
 

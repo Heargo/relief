@@ -207,7 +207,7 @@ impl Workspace {
 
     /// Adds the repository at `repo`, named after its folder, and saves the file.
     pub fn add_repo(&mut self, repo: &Path, labels: &[&str]) -> Result<(), AppError> {
-        GitSource::open(repo)?;
+        let git = GitSource::open(repo)?;
         let name = folder_name(repo)?;
         check_name(&name)?;
         Self::check_outside(self.dir(), repo)?;
@@ -226,7 +226,7 @@ impl Workspace {
             path: relative(&base, &target),
             labels: labels.iter().map(|l| (*l).to_owned()).collect(),
             source: default_source(),
-            destination: default_destination(),
+            destination: crate::default_destination(&git)?,
         });
         self.save()
     }

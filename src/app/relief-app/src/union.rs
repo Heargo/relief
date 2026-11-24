@@ -257,14 +257,13 @@ impl Session {
             .iter()
             .map(|repo| {
                 let mut repo = repo.clone();
-                if let Some((source, destination)) = self.comparison_of(&repo.name)? {
-                    repo.source = source;
+                let source = GitSource::open(&workspace.path_of(&repo))?;
+                repo.destination = file_destination(&repo, &source)?;
+                if let Some((from, destination)) = self.comparison_of(&repo.name)? {
+                    repo.source = from;
                     repo.destination = destination;
                 }
-                Ok(Member {
-                    source: GitSource::open(&workspace.path_of(&repo))?,
-                    repo,
-                })
+                Ok(Member { source, repo })
             })
             .collect()
     }
@@ -298,11 +297,13 @@ impl Session {
                     error: None,
                 };
                 let read = (|| -> Result<(), AppError> {
+                    let git = GitSource::open(&workspace.path_of(repo))?;
+                    row.destination = file_destination(repo, &git)?;
                     if let Some((source, destination)) = self.comparison_of(&repo.name)? {
                         row.source = source;
                         row.destination = destination;
                     }
-                    row.branches = GitSource::open(&workspace.path_of(repo))?.branches()?;
+                    row.branches = git.branches()?;
                     Ok(())
                 })();
                 row.error = read.err().map(|e| e.to_string());
@@ -356,7 +357,15 @@ impl Session {
         } else {
             new.clone()
         };
-        let destination = self.resolve(&member.source, &member.repo.destination)?;
+        // The repository names the error: several repositories share the review.
+        let destination = self
+            .resolve(&member.source, &member.repo.destination)
+            .map_err(|e| match e {
+                AppError::UnknownRef(message) => {
+                    AppError::UnknownRef(format!("{}: {message}", member.repo.name))
+                }
+                other => other,
+            })?;
         let old = member.source.merge_base(&destination, &tip)?;
         Ok(ResolvedRange { old, new })
     }
@@ -546,4 +555,14 @@ impl Session {
             warnings,
         })
     }
+}
+
+/// The destination the workspace file gives a repository. Before the default followed the
+/// repository, relief wrote `main` for every one: on a repository without `main`, that `main`
+/// is read as the repository's default destination.
+fn file_destination(repo: &WorkspaceRepo, git: &GitSource) -> Result<String, AppError> {
+    if repo.destination == "main" && git.resolve("main").is_err() {
+        return crate::default_destination(git);
+    }
+    Ok(repo.destination.clone())
 }
