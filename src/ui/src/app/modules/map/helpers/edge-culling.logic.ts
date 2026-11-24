@@ -38,7 +38,7 @@ export function edgeInView(box: Rect, camera: Camera, viewport: Viewport, margin
   );
 }
 
-function keepsFullRendering(edge: EdgeDetail): boolean {
+export function keepsFullRendering(edge: EdgeDetail): boolean {
   return (
     edge.changed ||
     edge.violations.introduced > 0 ||
@@ -74,21 +74,31 @@ function distanceToSegment(
   return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
 }
 
+/** Distance to a path made of `M`, `L` and `Q` commands (a curve, or a rounded route). */
 function distanceToCurve(d: string, p: { x: number; y: number }): number {
-  const n = (d.match(/-?\d+(\.\d+)?(e-?\d+)?/gi) ?? []).map(Number);
-  if (n.length < 6) return Infinity;
-  const [x0, y0, cx, cy, x1, y1] = n;
   let best = Infinity;
-  let prev = { x: x0, y: y0 };
-  for (let i = 1; i <= CURVE_STEPS; i++) {
-    const t = i / CURVE_STEPS;
-    const u = 1 - t;
-    const next = {
-      x: u * u * x0 + 2 * u * t * cx + t * t * x1,
-      y: u * u * y0 + 2 * u * t * cy + t * t * y1,
-    };
-    best = Math.min(best, distanceToSegment(p, prev, next));
-    prev = next;
+  let cur = { x: 0, y: 0 };
+  for (const part of d.match(/[MLQ][^MLQ]*/g) ?? []) {
+    const n = (part.slice(1).match(/-?\d+(\.\d+)?(e-?\d+)?/gi) ?? []).map(Number);
+    if (part[0] === 'Q' && n.length >= 4) {
+      const [cx, cy, x1, y1] = n;
+      let prev = cur;
+      for (let i = 1; i <= CURVE_STEPS; i++) {
+        const t = i / CURVE_STEPS;
+        const u = 1 - t;
+        const next = {
+          x: u * u * cur.x + 2 * u * t * cx + t * t * x1,
+          y: u * u * cur.y + 2 * u * t * cy + t * t * y1,
+        };
+        best = Math.min(best, distanceToSegment(p, prev, next));
+        prev = next;
+      }
+      cur = { x: x1, y: y1 };
+    } else if (n.length >= 2) {
+      const next = { x: n[0], y: n[1] };
+      if (part[0] === 'L') best = Math.min(best, distanceToSegment(p, cur, next));
+      cur = next;
+    }
   }
   return best;
 }

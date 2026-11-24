@@ -1,5 +1,6 @@
 import type { Edge, EdgeKind } from '../../../core/models/contract';
 import type { BoxGrid } from './box-grid.logic';
+import { roundedPath, type RoutePoint } from './edge-routing.logic';
 import type { Rect } from './layout.logic';
 
 /** The fine edges between two visible boxes, merged into one directed pair. */
@@ -263,6 +264,8 @@ export interface EdgeShape {
   covered: boolean;
   /** On-screen distance between the two borders (world distance times the scale). */
   length: number;
+  /** The route along the corridors (world units); null or absent: the direct curve. */
+  route?: RoutePoint[] | null;
 }
 
 interface Point {
@@ -397,5 +400,79 @@ export function edgeShape(
     my: mid.y,
     covered: free === undefined,
     length: geometry.length,
+  };
+}
+
+/** The point of a route at fraction `t` of its length. */
+function routeAt(route: readonly RoutePoint[], total: number, t: number): Point {
+  let left = total * t;
+  for (let i = 1; i < route.length; i++) {
+    const a = route[i - 1];
+    const b = route[i];
+    const len = Math.hypot(b.x - a.x, b.y - a.y);
+    if (left <= len || i === route.length - 1) {
+      const k = len === 0 ? 0 : Math.min(1, left / len);
+      return { x: a.x + (b.x - a.x) * k, y: a.y + (b.y - a.y) * k };
+    }
+    left -= len;
+  }
+  return route[0];
+}
+
+/**
+ * The shape of an edge that follows a route: rounded corners, an arrow head along the last
+ * segment, the label slid along the route off the boxes. `base` gives the on-screen length.
+ */
+export function routedEdgeShape(
+  route: RoutePoint[],
+  avoid: Rect[] | BoxGrid,
+  scale: number,
+  base: EdgeShape,
+): EdgeShape {
+  const p1 = route[route.length - 1];
+  const p0 = route[route.length - 2];
+  const tl = Math.hypot(p1.x - p0.x, p1.y - p0.y) || 1;
+  const ux = (p1.x - p0.x) / tl;
+  const uy = (p1.y - p0.y) / tl;
+  const bx = p1.x - (ux * ARROW_LENGTH) / scale;
+  const by = p1.y - (uy * ARROW_LENGTH) / scale;
+  const arrow =
+    `M${p1.x},${p1.y}L${bx - (uy * ARROW_HALF_WIDTH) / scale},${by + (ux * ARROW_HALF_WIDTH) / scale}` +
+    `L${bx + (uy * ARROW_HALF_WIDTH) / scale},${by - (ux * ARROW_HALF_WIDTH) / scale}Z`;
+  let total = 0;
+  for (let i = 1; i < route.length; i++)
+    total += Math.hypot(route[i].x - route[i - 1].x, route[i].y - route[i - 1].y);
+  const halfW = LABEL_HALF_WIDTH / scale;
+  const halfH = LABEL_HALF_HEIGHT / scale;
+  let mid = routeAt(route, total, 0.5);
+  let covered = false;
+  if (edgeLabelNeedsPlacement(base.length)) {
+    covered = true;
+    for (const t of LABEL_POSITIONS) {
+      const m = routeAt(route, total, t);
+      const hit = Array.isArray(avoid)
+        ? avoid.some(
+            (r) =>
+              m.x + halfW > r.x &&
+              m.x - halfW < r.x + r.w &&
+              m.y + halfH > r.y &&
+              m.y - halfH < r.y + r.h,
+          )
+        : (avoid as BoxGrid).hits(m.x, m.y, halfW, halfH);
+      if (!hit) {
+        mid = m;
+        covered = false;
+        break;
+      }
+    }
+  }
+  return {
+    d: roundedPath(route, 10 / scale),
+    arrow,
+    mx: mid.x,
+    my: mid.y,
+    covered,
+    length: base.length,
+    route,
   };
 }

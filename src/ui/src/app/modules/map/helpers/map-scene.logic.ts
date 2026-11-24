@@ -83,6 +83,8 @@ export interface SceneEdge {
   mid: { x: number; y: number };
   /** The curve and arrow head (SVG path data, world units), and whether the label is covered. */
   shape: { d: string; arrow: string; covered: boolean };
+  /** The points of the route along the corridors (world units); null for the direct curve. */
+  route?: { x: number; y: number }[] | null;
   /** Id of the bundle the edge belongs to, null when it is drawn alone. */
   bundle?: string | null;
   /** The pointer is on the edge. */
@@ -413,6 +415,7 @@ function sceneEdge(
     labelRect: labelRect(line.label, labelVisible, mid.x, mid.y, input.modesScale),
     mid,
     shape: { d: shape.d, arrow: shape.arrow, covered: shape.covered },
+    route: inBundle || !shape.route ? null : shape.route.map((p) => ({ x: p.x, y: p.y })),
     bundle: inBundle?.bundle ?? null,
     hovered,
   };
@@ -437,6 +440,7 @@ function sceneCoChange({ edge, shape }: CoChangeLine, input: MapSceneInput): Sce
     labelRect: null,
     mid: { x: shape.mx, y: shape.my },
     shape: { d: shape.d, arrow: shape.arrow, covered: shape.covered },
+    route: null,
     bundle: null,
     hovered: false,
   };

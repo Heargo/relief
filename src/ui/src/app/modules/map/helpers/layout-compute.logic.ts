@@ -1,4 +1,5 @@
 import type { GraphSnapshot } from '../../../core/models/contract';
+import { buildCorridors, type Corridors } from './edge-routing.logic';
 import { layoutCrossings } from './crossings.logic';
 import { alphabeticalOrder, optimizeOrder } from './layout-optimize.logic';
 import { layoutGraph, type MapLayout } from './layout.logic';
@@ -6,6 +7,8 @@ import { layoutGraph, type MapLayout } from './layout.logic';
 export interface Layouts {
   optimized: MapLayout;
   raw: MapLayout;
+  /** The corridors of each layout, for the edge routes (made here, at rest, off the main thread). */
+  corridors: { optimized: Corridors; raw: Corridors };
 }
 
 /**
@@ -18,5 +21,10 @@ export function computeLayouts(graph: GraphSnapshot): Layouts {
   const natural = layoutGraph(graph);
   const optimized =
     layoutCrossings(searched, graph) < layoutCrossings(natural, graph) ? searched : natural;
-  return { optimized, raw: layoutGraph(graph, alphabeticalOrder(graph)) };
+  const raw = layoutGraph(graph, alphabeticalOrder(graph));
+  return {
+    optimized,
+    raw,
+    corridors: { optimized: buildCorridors(optimized), raw: buildCorridors(raw) },
+  };
 }

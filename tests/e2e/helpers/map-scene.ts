@@ -67,6 +67,8 @@ export interface SceneEdge {
   hovered: boolean;
   /** R19: faded by the step-by-step focus. */
   faded: boolean;
+  /** U32: the points of the route along the corridors, in client coordinates; null for the direct curve. */
+  route: { x: number; y: number }[] | null;
 }
 
 /** U31: edges that enter (or leave) a box by the same side, drawn as a shared trunk. */

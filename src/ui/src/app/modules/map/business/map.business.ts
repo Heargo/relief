@@ -1,4 +1,4 @@
-import { computed, inject, Injectable, signal } from '@angular/core';
+import { computed, DestroyRef, inject, Injectable, signal } from '@angular/core';
 
 import { measured } from '../../../core/helpers/perf';
 
@@ -32,6 +32,7 @@ import {
   edgeGeometry,
   type EdgeGeometry,
   edgeShape,
+  routedEdgeShape,
   type EdgeShape,
   isAncestor,
   visibleAncestor,
@@ -44,6 +45,7 @@ import {
 } from '../../review/helpers/diff-layer.logic';
 import { breadcrumbTrail, type Crumb } from '../helpers/breadcrumb.logic';
 import { layoutCrossings } from '../helpers/crossings.logic';
+import { routeEdge, type Corridors, type RoutePoint } from '../helpers/edge-routing.logic';
 import { computeLayouts, type Layouts } from '../helpers/layout-compute.logic';
 import { LAYOUT_EXECUTOR, onThreadExecutor } from './layout-executor';
 import {
@@ -61,6 +63,7 @@ import { createEdgeStateCache } from '../helpers/edge-state-cache.logic';
 import {
   edgeBounds,
   edgeInView,
+  keepsFullRendering,
   partitionEdges,
   type EdgeDetail,
 } from '../helpers/edge-culling.logic';
@@ -606,17 +609,67 @@ export class MapBusiness {
     { a: Rect; b: Rect; scale: number; geometry: EdgeGeometry }
   >();
 
+  /** The routes already made, in world units: they stay the same at any zoom. */
+  private readonly routes = new WeakMap<Corridors, Map<string, RoutePoint[] | null>>();
+
+  private readonly routeTick = signal(0);
+  private readonly pendingRoutes = new Map<
+    string,
+    { corridors: Corridors; from: string; to: string }
+  >();
+  private routeFrame = 0;
+  private readonly routeDestroy = inject(DestroyRef).onDestroy(() => {
+    if (this.routeFrame) cancelAnimationFrame(this.routeFrame);
+    this.routeFrame = 0;
+    this.pendingRoutes.clear();
+  });
+
+  /** Routes the missing edges a few per animation frame, then draws them again. */
+  private scheduleRoutes(): void {
+    if (this.routeFrame) return;
+    this.routeFrame = requestAnimationFrame(() => {
+      this.routeFrame = 0;
+      let n = 0;
+      for (const [key, job] of this.pendingRoutes) {
+        if (n++ >= ROUTE_BATCH) break;
+        this.pendingRoutes.delete(key);
+        let made = this.routes.get(job.corridors);
+        if (!made) this.routes.set(job.corridors, (made = new Map()));
+        made.set(
+          key,
+          measured('routes', () => routeEdge(job.corridors, job.from, job.to)),
+        );
+      }
+      if (n > 0) this.routeTick.update((t) => t + 1);
+      if (this.pendingRoutes.size > 0) this.scheduleRoutes();
+    });
+  }
+
   /** The shape of an edge, made on demand: follows the layout, the last rest scale and the boxes. */
   private readonly edgeShapes = computed(() => {
     const layout = this._layout();
     const scale = this.modesScale();
     const boxes = this.boxGrid();
     this.edges();
+    // The routes follow the corridors of the layout the map is at, not one that is flying.
+    const layouts = this._layouts();
+    const key = layoutKey(this._layoutMode());
+    const corridors = layouts && layouts[key] === layout ? layouts.corridors[key] : null;
+    this.routeTick();
+    // What is still wanted is asked again by the edges in view.
+    this.pendingRoutes.clear();
+    let sync = ROUTE_SYNC;
+    // The edges of a bundle are drawn on their branches: their route would be thrown away.
+    const bundled = new Set<string>();
+    for (const bundle of this.bundles())
+      for (const br of bundle.branches) bundled.add(pairKey(br.from, br.to));
     const cache = new Map<AggregatedEdge, EdgeShape>();
     const geometries = this.geometries;
-    return (edge: AggregatedEdge, a: Rect, b: Rect): EdgeShape => {
+    // `routable`: false past the edge count where the lines are thin and unrouted anyway.
+    return (edge: AggregatedEdge, a: Rect, b: Rect, routable: boolean): EdgeShape => {
       let shape = cache.get(edge);
-      if (!shape) {
+      // A shape made without trying a route (`route` absent) is made again once it is routable.
+      if (!shape || (routable && corridors && shape.route === undefined)) {
         // The curve does not depend on the boxes to avoid: kept while the rects and the scale stay.
         let kept = geometries.get(edge);
         if (!kept || kept.a !== a || kept.b !== b || kept.scale !== scale) {
@@ -624,6 +677,32 @@ export class MapBusiness {
           geometries.set(edge, kept);
         }
         shape = edgeShape(a, b, boxes, scale, kept.geometry);
+        let route: RoutePoint[] | null = null;
+        let routed = false;
+        if (corridors && routable && !bundled.has(pairKey(edge.from, edge.to))) {
+          // Kept by pair of boxes, so that a level change finds again the routes it made.
+          let made = this.routes.get(corridors);
+          if (!made) this.routes.set(corridors, (made = new Map()));
+          const key = pairKey(edge.from, edge.to);
+          const known = made.get(key);
+          if (known !== undefined) {
+            route = known;
+            routed = true;
+          } else if (sync > 0) {
+            // A few at once (a handful of milliseconds at most), so that a small map is routed
+            // on its first drawing.
+            sync--;
+            route = measured('routes', () => routeEdge(corridors, edge.from, edge.to));
+            made.set(key, route);
+            routed = true;
+          } else {
+            // The rest not in a frame: the direct curve now, the route in a batch of its own.
+            this.pendingRoutes.set(key, { corridors, from: edge.from, to: edge.to });
+            this.scheduleRoutes();
+          }
+        }
+        if (routed)
+          shape = route ? routedEdgeShape(route, boxes, scale, shape) : { ...shape, route: null };
         cache.set(edge, shape);
       }
       return shape;
@@ -657,21 +736,26 @@ export class MapBusiness {
       }
       const stateOf = states(inView.map((v) => v.edge));
       const lines: DetailedEdgeLine[] = [];
+      const few = inView.length <= ROUTE_LIMIT;
       for (const { edge, a, b } of inView) {
-        const shape = shapes(edge, a, b);
         const state = stateOf(edge);
         const isSelected =
           selected !== null && selected.from === edge.from && selected.to === edge.to;
         // An edge the selection singles out (linked, picked, folded) keeps its full rendering,
         // so that the common path only holds edges the selection dims.
         const onPath = onImpactPath(impact, edge.from, edge.to) || singledOut(edge, emphasis);
+        const detail: EdgeDetail = {
+          changed: edge.changed || state.status !== 'unchanged',
+          violations: state.violations,
+          selected: isSelected,
+          onImpactPath: onPath,
+        };
         lines.push({
           edge,
-          shape,
-          selected: isSelected,
+          // Routed while there are few lines, and past that the edges in full rendering only.
+          shape: shapes(edge, a, b, few || keepsFullRendering(detail)),
           ...state,
-          changed: edge.changed || state.status !== 'unchanged',
-          onImpactPath: onPath,
+          ...detail,
         });
       }
       return lines;
@@ -1355,7 +1439,14 @@ function pairKey(from: string, to: string): string {
   return `${from}\u0000${to}`;
 }
 
-function layoutKey(mode: LayoutMode): keyof Layouts {
+/** Edges in view beyond which only those in full rendering are routed (the others are thin). */
+const ROUTE_LIMIT = 50;
+/** Routes made per animation frame (a few milliseconds). */
+const ROUTE_BATCH = 4;
+/** Routes a drawing may make by itself before the rest waits for the batches. */
+const ROUTE_SYNC = 6;
+
+function layoutKey(mode: LayoutMode): 'optimized' | 'raw' {
   return mode === 'raw-grid' ? 'raw' : 'optimized';
 }
 

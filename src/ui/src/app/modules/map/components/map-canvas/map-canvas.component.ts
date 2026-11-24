@@ -428,8 +428,9 @@ export class MapCanvasComponent {
           ...client(r),
           tabRect: tabRect ? client(tabRect) : null,
         })),
-        edges: scene.edges.map(({ mid, labelRect, ...edge }) => ({
+        edges: scene.edges.map(({ mid, labelRect, route, ...edge }) => ({
           ...edge,
+          route: route ? route.map((p) => ({ x: px(p.x), y: py(p.y) })) : null,
           mid: { x: px(mid.x), y: py(mid.y) },
           labelRect: labelRect ? client(labelRect) : null,
         })),

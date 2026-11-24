@@ -230,7 +230,7 @@ Retour du 2026-11-23 : sur une PR de migration, des centaines d'arêtes « new �
 | ✓ | 72 | **R18** Changements répétitifs dans la relecture | Un constat et un représentant au lieu de N. | E08 |
 | ✓ | 73 | **U31** Faisceaux d'arêtes et ports d'entrée | Une étoile devient un arbre lisible. | U30 |
 | ✓ | 74 | **R19** Relecture pas à pas | Seules les arêtes de l'élément en cours. | aucun |
-| ☐ | 75 | **U32** Tracés d'arête dans les couloirs | Les arêtes ne traversent plus les boîtes. | U31 |
+| ✓ | 75 | **U32** Tracés d'arête dans les couloirs | Les arêtes ne traversent plus les boîtes. | U31 |
 
 ## Plus tard (pas encore de tickets)
 
