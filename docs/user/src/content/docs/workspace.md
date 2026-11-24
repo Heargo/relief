@@ -40,6 +40,12 @@ Deux liens relient les dépôts :
 
 Au niveau **Dépôts**, ces liens sont regroupés en une flèche d'un dépôt à l'autre ; cliquez-la pour lister ses liens et leurs usages. Dans l'onglet Relecture, les flèches inchangées sont masquées par défaut : activez **Arêtes inchangées** pour voir celles qui n'ont pas bougé. L'impact d'un changement de route atteint les appelants à travers les dépôts.
 
+## Lire le code, chercher, parcourir l'historique
+
+Tout ce qui se fait sur un nœud ou une flèche marche en espace de travail, à la plage du dépôt concerné : le code d'un fichier ou d'un symbole (côté base ou côté tête), son diff texte, les usages d'une flèche, y compris entre deux dépôts. La recherche (`/`) couvre tous les dépôts, et le mode Exploration (churn, propriétaires, co-changement) aussi ; le co-changement ne relie que des fichiers d'un même dépôt.
+
+Il n'y a pas d'ordre commun entre les commits de dépôts différents. Le journal et la lecture par commit listent donc les commits de chaque dépôt l'un après l'autre, dans l'ordre du fichier d'espace, chacun précédé du nom de son dépôt (la plage `rev` demandée est ignorée : chaque dépôt est lu depuis sa source, et la limite s'applique à chaque dépôt). Il en va de même du mode Exploration : les métriques et le co-changement lisent chaque dépôt à sa source.
+
 ## Limites
 
 - Les règles d'architecture (`relief.config.yaml`) ne sont pas évaluées en espace de travail.

@@ -2,22 +2,33 @@
 //! under its `repo:<name>` node, with prefixed ids, each read at its own source and diffed on its
 //! own range (the workspace file's `source` into `destination`).
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 use relief_adapter_api::{HttpCallSite, PublishedPackage, http_edge, path_matches, verb_matches};
 use relief_git::{CommitId, GitSource, ResolvedRange};
 use relief_model::{
-    Edge, EdgeChange, EdgeKind, EdgeStatus, FileChange, FileRename, GraphDiff, GraphSnapshot, Node,
+    CoChangePair, CoChangeResponse, CommitReadingResponse, Edge, EdgeChange, EdgeKind, EdgeStatus,
+    EdgeUsagesResponse, FileChange, FileRename, GraphDiff, GraphSnapshot, MetricsResponse, Node,
     NodeChange, NodeId, NodeKind, NodeStatus, RepoComparison, SnapshotMeta, SnapshotResponse,
     Visibility,
 };
 
-use crate::{AppError, DiffAnalysis, Session, Workspace, WorkspaceRepo, is_virtual};
+use crate::{
+    AppError, CodeRequest, DiffAnalysis, EdgeUsagesRequest, LogEntry, Session, Side, Wanted,
+    Workspace, WorkspaceRepo, import_wanted, is_virtual,
+};
 
 /// One repository of the workspace, open.
 struct Member {
     repo: WorkspaceRepo,
     source: GitSource,
+}
+
+/// A node of a repository of the workspace: the repository, its range, the id without prefix.
+struct Located {
+    member: Member,
+    sides: ResolvedRange,
+    local: NodeId,
 }
 
 /// A repository of the workspace, its `repo:<name>` node and its graph.
@@ -343,6 +354,17 @@ impl Session {
         Ok(())
     }
 
+    /// The commit the history of a repository is read from: its `source`, or `HEAD` when that is
+    /// the working tree or the index.
+    fn member_tip(&self, member: &Member) -> Result<CommitId, AppError> {
+        let head = self.member_head(member)?;
+        if is_virtual(&head) {
+            self.resolve(&member.source, "HEAD")
+        } else {
+            Ok(head)
+        }
+    }
+
     /// The commit a repository is read at (its `source`).
     fn member_head(&self, member: &Member) -> Result<CommitId, AppError> {
         self.resolve(&member.source, &member.repo.source)
@@ -352,11 +374,7 @@ impl Session {
     /// `source`) against its `source`.
     fn member_sides(&self, member: &Member) -> Result<ResolvedRange, AppError> {
         let new = self.member_head(member)?;
-        let tip = if is_virtual(&new) {
-            self.resolve(&member.source, "HEAD")?
-        } else {
-            new.clone()
-        };
+        let tip = self.member_tip(member)?;
         // The repository names the error: several repositories share the review.
         let destination = self
             .resolve(&member.source, &member.repo.destination)
@@ -379,6 +397,199 @@ impl Session {
         } else {
             member.repo.source.clone()
         }
+    }
+
+    /// The member repository serving a prefixed id, with its range and the id without prefix.
+    fn locate(&self, id: &NodeId) -> Result<Located, AppError> {
+        let unknown = || AppError::UnknownNode(format!("unknown node '{id}'"));
+        let name = id.repo().ok_or_else(unknown)?;
+        let member = self
+            .members()?
+            .into_iter()
+            .find(|m| m.repo.name == name)
+            .ok_or_else(unknown)?;
+        let sides = self.member_sides(&member)?;
+        Ok(Located {
+            member,
+            sides,
+            local: id.without_repo(),
+        })
+    }
+
+    pub(crate) fn workspace_code(&self, request: &CodeRequest) -> Result<String, AppError> {
+        let at = self.locate(&request.node)?;
+        self.code_in(&at.member.source, &at.sides, &at.local, request.side)
+    }
+
+    /// What the files of `from` use of `to`, a node of another repository: the import edges of
+    /// `from` that a package published by the other repository redirects to a file under `to`.
+    /// The edge does not name what is imported, so the names are the symbols that file declares.
+    fn cross_repo_wanted(
+        &self,
+        from: &Located,
+        graph: &GraphSnapshot,
+        commit: &CommitId,
+        to: &Located,
+        side: Side,
+    ) -> Result<BTreeMap<String, Wanted>, AppError> {
+        let to_commit = if side == Side::Head {
+            to.sides.new.clone()
+        } else {
+            to.sides.old.clone()
+        };
+        let to_graph = self.indexed_snapshot(&to.member.source, &to_commit)?.graph;
+        let part = |at: &Located, graph: &GraphSnapshot, commit: &CommitId| {
+            Ok::<_, AppError>(Part {
+                root: repo_node(
+                    &at.member.repo,
+                    Self::member_branch(&at.member),
+                    &commit.to_string(),
+                )?,
+                name: at.member.repo.name.clone(),
+                graph: graph.clone(),
+                published: self.indexer.published_packages(&at.member.source, commit)?,
+                calls: Vec::new(),
+            })
+        };
+        let redirect = redirects(&[part(from, graph, commit)?, part(to, &to_graph, &to_commit)?]);
+        let within = |g: &GraphSnapshot, id: &NodeId, root: &NodeId| {
+            id == root || g.ancestors(id).any(|a| &a.id == root)
+        };
+        let mut wanted = std::collections::BTreeMap::new();
+        for edge in graph.edges().iter().filter(|e| e.kind == EdgeKind::Imports) {
+            let Some(path) = edge.from.file_path() else {
+                continue;
+            };
+            let Some(entry) = redirect.get(&prefixed(&edge.to, &from.member.repo.name)?) else {
+                continue;
+            };
+            let entry = entry.without_repo();
+            if !within(graph, &edge.from, &from.local) || !within(&to_graph, &entry, &to.local) {
+                continue;
+            }
+            // The names the entry file declares: the edge itself does not name what is imported.
+            let bindings = to_graph
+                .nodes()
+                .iter()
+                .filter(|n| n.kind == NodeKind::Symbol && within(&to_graph, &n.id, &entry))
+                .filter(|n| {
+                    within(&to_graph, &n.id, &to.local) || within(&to_graph, &to.local, &n.id)
+                })
+                .filter_map(|n| n.id.symbol_key())
+                .collect::<Vec<_>>();
+            let wanted: &mut Wanted = wanted
+                .entry(path.to_owned())
+                .or_insert_with(|| Wanted::new(edge.from.file_id()));
+            for binding in bindings {
+                if !wanted.bindings.contains(&binding) {
+                    wanted.bindings.push(binding);
+                }
+            }
+        }
+        Ok(wanted)
+    }
+
+    pub(crate) fn workspace_edge_usages(
+        &self,
+        request: &EdgeUsagesRequest,
+    ) -> Result<EdgeUsagesResponse, AppError> {
+        let from = self.locate(&request.from)?;
+        let head = request.side == Side::Head;
+        let commit_of = |sides: &ResolvedRange| {
+            if head {
+                sides.new.clone()
+            } else {
+                sides.old.clone()
+            }
+        };
+        let source = &from.member.source;
+        let commit = commit_of(&from.sides);
+        let graph = self.indexed_snapshot(source, &commit)?.graph;
+        let wanted = if request.to.repo() == request.from.repo() {
+            import_wanted(&graph, &from.local, &request.to.without_repo())
+        } else {
+            let to = self.locate(&request.to)?;
+            self.cross_repo_wanted(&from, &graph, &commit, &to, request.side)?
+        };
+        let mut response = self.usages_in(source, &commit, wanted)?;
+        for file in &mut response.files {
+            file.file = prefixed(&file.file, &from.member.repo.name)?;
+        }
+        Ok(response)
+    }
+
+    pub(crate) fn workspace_log(
+        &self,
+        limit: usize,
+        query: Option<&str>,
+    ) -> Result<Vec<LogEntry>, AppError> {
+        let mut entries = Vec::new();
+        for member in self.members()? {
+            let tip = self.member_tip(&member)?;
+            entries.extend(
+                Self::log_of(&member.source, &tip, limit, query)?
+                    .into_iter()
+                    .map(|entry| LogEntry {
+                        repo: Some(member.repo.name.clone()),
+                        ..entry
+                    }),
+            );
+        }
+        Ok(entries)
+    }
+
+    pub(crate) fn workspace_commit_reading(&self) -> Result<CommitReadingResponse, AppError> {
+        let mut commits = Vec::new();
+        for member in self.members()? {
+            let sides = self.member_sides(&member)?;
+            for mut commit in self.commit_reading_in(&member.source, &sides)? {
+                commit.repo = Some(member.repo.name.clone());
+                for file in &mut commit.files {
+                    file.id = prefixed(&file.id, &member.repo.name)?;
+                }
+                commits.push(commit);
+            }
+        }
+        Ok(CommitReadingResponse { commits })
+    }
+
+    pub(crate) fn workspace_metrics(&self, since_days: u32) -> Result<MetricsResponse, AppError> {
+        let mut nodes = std::collections::BTreeMap::new();
+        for member in self.members()? {
+            let commit = self.member_head(&member)?;
+            for (id, metrics) in self.metrics_of(&member.source, &commit, since_days)?.nodes {
+                let id: NodeId = id
+                    .parse()
+                    .map_err(|e| AppError::Workspace(format!("invalid node id '{id}': {e}")))?;
+                nodes.insert(prefixed(&id, &member.repo.name)?.to_string(), metrics);
+            }
+        }
+        Ok(MetricsResponse { since_days, nodes })
+    }
+
+    pub(crate) fn workspace_co_change(
+        &self,
+        since_days: u32,
+        min_commits: Option<u32>,
+    ) -> Result<CoChangeResponse, AppError> {
+        let mut pairs: Vec<CoChangePair> = Vec::new();
+        for member in self.members()? {
+            let commit = self.member_head(&member)?;
+            let name = &member.repo.name;
+            let found = self.co_change_of(&member.source, &commit, since_days, min_commits)?;
+            pairs.extend(found.pairs.into_iter().map(|p| CoChangePair {
+                a: prefixed_path(&p.a, name),
+                b: prefixed_path(&p.b, name),
+                ..p
+            }));
+        }
+        pairs.sort_by(|x, y| {
+            y.commits
+                .cmp(&x.commits)
+                .then_with(|| x.a.cmp(&y.a))
+                .then_with(|| x.b.cmp(&y.b))
+        });
+        Ok(CoChangeResponse { pairs })
     }
 
     /// The union of the repositories, each at its own source.

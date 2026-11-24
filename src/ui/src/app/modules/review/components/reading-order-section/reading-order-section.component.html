@@ -91,6 +91,9 @@
             [attr.data-selected]="selectedCommit() === commit.commit"
             (click)="commitSelect.emit(commit.commit)"
           >
+            @if (commit.repo) {
+              <span class="tag" data-testid="commit-repo">{{ commit.repo }}</span>
+            }
             <code>{{ commit.short }}</code>
             <span class="message">{{ commit.message }}</span>
             <span class="tag">

@@ -330,6 +330,9 @@ pub struct CommitReadingEntry {
     pub files: Vec<ReadingItem>,
     /// Files of the commit without a structural change.
     pub other_files: usize,
+    /// The repository of the commit, in a workspace.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub repo: Option<String>,
 }
 
 /// One commit of a log.
@@ -344,6 +347,9 @@ pub struct LogEntry {
     pub author: String,
     /// Author time, in seconds since the Unix epoch.
     pub time: i64,
+    /// The repository of the commit, in a workspace.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub repo: Option<String>,
 }
 
 /// Response of the `log` command: the commits, newest first.

@@ -40,6 +40,12 @@ Two kinds of link connect repositories:
 
 At the **Repos** level these links are grouped into one arrow from a repository to the other; click it to list its links and their usages. In Review mode, unchanged arrows are hidden by default: turn on **Unchanged edges** to see those that did not move. The impact of a route change reaches the callers across repositories.
 
+## Read code, search, browse the history
+
+Everything you do on a node or an arrow works in a workspace, on the range of the repository it belongs to: the code of a file or a symbol (base or head side), its text diff, the usages of an arrow, including between two repositories. The search (`/`) covers every repository, and so does Explore mode (churn, owners, co-change); co-change only links files of the same repository.
+
+There is no common order between the commits of different repositories. The log and the per-commit reading therefore list the commits of each repository one after the other, in the order of the workspace file, each preceded by the name of its repository (the requested `rev` is ignored: each repository is read from its source, and the limit applies to each repository). The same goes for Explore mode: metrics and co-change read each repository at its source.
+
 ## Limits
 
 - Architecture rules (`relief.config.yaml`) are not evaluated in a workspace.

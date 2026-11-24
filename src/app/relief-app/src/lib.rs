@@ -312,8 +312,8 @@ impl Session {
         self.workspace.as_ref().map(Workspace::file)
     }
 
-    /// The git source of the repository; a workspace has none until the multi-repository
-    /// snapshot exists.
+    /// The git source of the repository; a workspace has none (see `Session::locate` for the
+    /// repository serving a prefixed id), so the use cases without a workspace version refuse it.
     fn git(&self) -> Result<GitSource, AppError> {
         if self.workspace.is_some() {
             return Err(AppError::Workspace(
@@ -441,9 +441,13 @@ impl Session {
 
     /// The nodes of the head snapshot of a range whose name matches `query`, best match first.
     pub fn search(&self, request: &SearchRequest) -> Result<SearchResponse, AppError> {
-        let source = self.git()?;
-        let head = self.sides(&source, request.range.as_ref())?.new;
-        let graph = self.indexed_snapshot(&source, &head)?.graph;
+        let graph = if self.workspace.is_some() {
+            self.workspace_snapshot()?.graph
+        } else {
+            let source = self.git()?;
+            let head = self.sides(&source, request.range.as_ref())?.new;
+            self.indexed_snapshot(&source, &head)?.graph
+        };
         let hits = relief_diff::rank_search(&graph, &request.query, request.limit)
             .into_iter()
             .filter_map(|id| {
@@ -520,11 +524,23 @@ impl Session {
         limit: usize,
         query: Option<&str>,
     ) -> Result<Vec<LogEntry>, AppError> {
+        if self.workspace.is_some() {
+            return self.workspace_log(limit, query);
+        }
         let source = self.git()?;
         let head = source.resolve(rev)?;
+        Self::log_of(&source, &head, limit, query)
+    }
+
+    fn log_of(
+        source: &GitSource,
+        head: &CommitId,
+        limit: usize,
+        query: Option<&str>,
+    ) -> Result<Vec<LogEntry>, AppError> {
         let query = query.map(str::trim).filter(|q| !q.is_empty());
         let needle = query.map(str::to_lowercase);
-        let items = source.first_parent_log(&head, limit, |item| match &needle {
+        let items = source.first_parent_log(head, limit, |item| match &needle {
             None => true,
             Some(q) => {
                 item.id.to_string().starts_with(q) || item.subject.to_lowercase().contains(q)
@@ -538,6 +554,7 @@ impl Session {
                 subject: item.subject,
                 author: item.author,
                 time: item.date,
+                repo: None,
             })
             .collect())
     }
@@ -548,9 +565,22 @@ impl Session {
         &self,
         request: &CommitReadingRequest,
     ) -> Result<CommitReadingResponse, AppError> {
+        if self.workspace.is_some() {
+            return self.workspace_commit_reading();
+        }
         let source = self.git()?;
         let sides = self.sides(&source, request.range.as_ref())?;
-        let log = source.log(&sides)?;
+        Ok(CommitReadingResponse {
+            commits: self.commit_reading_in(&source, &sides)?,
+        })
+    }
+
+    fn commit_reading_in(
+        &self,
+        source: &GitSource,
+        sides: &ResolvedRange,
+    ) -> Result<Vec<CommitReadingEntry>, AppError> {
+        let log = source.log(sides)?;
         let mut steps = Vec::new();
         let mut parent = sides.old.clone();
         for info in &log {
@@ -558,7 +588,7 @@ impl Session {
                 old: parent,
                 new: info.id.clone(),
             };
-            let analysed = self.analyse_sides(&source, &step)?;
+            let analysed = self.analyse_sides(source, &step)?;
             steps.push((analysed.diff, analysed.head));
             parent = info.id.clone();
         }
@@ -578,9 +608,10 @@ impl Session {
                     })
                     .collect(),
                 other_files: reading.other_files,
+                repo: None,
             })
             .collect();
-        Ok(CommitReadingResponse { commits })
+        Ok(commits)
     }
 
     /// What the reviewer marked as seen in a range; empty when never saved.
@@ -705,10 +736,22 @@ impl Session {
     /// snapshot: the churn depends on the window, counted back from the date of the commit.
     /// The answer is kept in the cache folder, keyed by commit and window.
     pub fn metrics(&self, request: &MetricsRequest) -> Result<MetricsResponse, AppError> {
+        let since_days = request.since_days.unwrap_or(DEFAULT_CHURN_DAYS);
+        if self.workspace.is_some() {
+            return self.workspace_metrics(since_days);
+        }
         let source = self.git()?;
         let commit = self.resolve(&source, &request.rev)?;
-        let since_days = request.since_days.unwrap_or(DEFAULT_CHURN_DAYS);
-        let cache = self.metrics_cache_file(&commit, since_days);
+        self.metrics_of(&source, &commit, since_days)
+    }
+
+    fn metrics_of(
+        &self,
+        source: &GitSource,
+        commit: &CommitId,
+        since_days: u32,
+    ) -> Result<MetricsResponse, AppError> {
+        let cache = self.metrics_cache_file(commit, since_days);
         if let Some(file) = &cache
             && let Some(hit) = fs::read_to_string(file)
                 .ok()
@@ -716,7 +759,7 @@ impl Session {
         {
             return Ok(hit);
         }
-        let response = self.compute_metrics(&source, &commit, since_days)?;
+        let response = self.compute_metrics(source, commit, since_days)?;
         if let Some(file) = &cache
             && let Ok(text) = serde_json::to_string(&response)
         {
@@ -852,18 +895,31 @@ impl Session {
     /// Pairs of files changed in the same commits over a period before a ref. Kept apart from the
     /// snapshot (it depends on the history); the answer is kept in the cache folder.
     pub fn co_change(&self, request: &CoChangeRequest) -> Result<CoChangeResponse, AppError> {
+        let since_days = request.since_days.unwrap_or(DEFAULT_CHURN_DAYS);
+        if self.workspace.is_some() {
+            return self.workspace_co_change(since_days, request.min_commits);
+        }
         let source = self.git()?;
         let commit = self.resolve(&source, &request.rev)?;
-        let since_days = request.since_days.unwrap_or(DEFAULT_CHURN_DAYS);
-        let min_commits = match request.min_commits {
+        self.co_change_of(&source, &commit, since_days, request.min_commits)
+    }
+
+    fn co_change_of(
+        &self,
+        source: &GitSource,
+        commit: &CommitId,
+        since_days: u32,
+        min_commits: Option<u32>,
+    ) -> Result<CoChangeResponse, AppError> {
+        let min_commits = match min_commits {
             Some(min) => min,
             None => self
-                .read_config(&source, &commit)?
+                .read_config(source, commit)?
                 .and_then(|(_, config)| config.ok())
                 .and_then(|config| config.co_change.min_commits)
                 .unwrap_or(DEFAULT_CO_CHANGE_MIN_COMMITS),
         };
-        let cache = if is_virtual(&commit) {
+        let cache = if is_virtual(commit) {
             None
         } else {
             self.data_dir.as_ref().map(|data| {
@@ -879,7 +935,7 @@ impl Session {
         {
             return Ok(hit);
         }
-        let log_head = if is_virtual(&commit) {
+        let log_head = if is_virtual(commit) {
             source.resolve("HEAD")?
         } else {
             commit.clone()
@@ -943,16 +999,30 @@ impl Session {
 
     /// The text of a node (a file, or the declaration of a symbol) at one side of a range.
     pub fn code(&self, request: &CodeRequest) -> Result<String, AppError> {
+        if self.workspace.is_some() {
+            return self.workspace_code(request);
+        }
         let source = self.git()?;
         let sides = self.sides(&source, request.range.as_ref())?;
-        let head = request.side == Side::Head;
+        self.code_in(&source, &sides, &request.node, request.side)
+    }
+
+    /// The text of a node of `source`, at one side of `sides`.
+    fn code_in(
+        &self,
+        source: &GitSource,
+        sides: &ResolvedRange,
+        node: &NodeId,
+        side: Side,
+    ) -> Result<String, AppError> {
+        let head = side == Side::Head;
         let commit = if head { &sides.new } else { &sides.old };
-        let node = request.node.to_string();
-        let graph = self.indexed_snapshot(&source, commit)?.graph;
+        let node = node.to_string();
+        let graph = self.indexed_snapshot(source, commit)?.graph;
         // A symbol moved to another file has another id on the base side.
         let mut wanted = node.clone();
         if !head && !graph.nodes().iter().any(|n| n.id.to_string() == node) {
-            let analysed = self.analyse_sides(&source, &sides)?;
+            let analysed = self.analyse_sides(source, sides)?;
             let moved = analysed.diff.nodes.iter().find_map(|c| match &c.status {
                 NodeStatus::Moved { from, .. } if c.id.to_string() == node => {
                     Some(from.to_string())
@@ -994,6 +1064,9 @@ impl Session {
     /// Where the source files of an edge use the symbols they import from its target, read in
     /// the blobs of one side of a range. At most [`EDGE_USAGES_CAP`] usages are listed.
     pub fn edge_usages(&self, request: &EdgeUsagesRequest) -> Result<EdgeUsagesResponse, AppError> {
+        if self.workspace.is_some() {
+            return self.workspace_edge_usages(request);
+        }
         let source = self.git()?;
         let sides = self.sides(&source, request.range.as_ref())?;
         let commit = if request.side == Side::Head {
@@ -1002,40 +1075,21 @@ impl Session {
             &sides.old
         };
         let graph = self.indexed_snapshot(&source, commit)?.graph;
-        let within =
-            |id: &NodeId, root: &NodeId| id == root || graph.ancestors(id).any(|a| &a.id == root);
-        // Imported symbols and imported files per source file, from the import edges under the
-        // requested edge.
-        let mut wanted: std::collections::BTreeMap<String, Wanted> =
-            std::collections::BTreeMap::new();
-        for edge in graph.edges().iter().filter(|e| e.kind == EdgeKind::Imports) {
-            let Some(path) = edge.from.file_path() else {
-                continue;
-            };
-            if !within(&edge.from, &request.from) || !within(&edge.to, &request.to) {
-                continue;
-            }
-            let entry = wanted
-                .entry(path.to_owned())
-                .or_insert_with(|| Wanted::new(file_id(&edge.from)));
-            match (edge.to.symbol_key(), edge.to.file_path()) {
-                (Some(binding), _) => {
-                    if !entry.bindings.contains(&binding) {
-                        entry.bindings.push(binding);
-                    }
-                }
-                (None, Some(target)) => {
-                    if !entry.targets.iter().any(|t| t == target) {
-                        entry.targets.push(target.to_owned());
-                    }
-                }
-                (None, None) => {}
-            }
-        }
+        let wanted = import_wanted(&graph, &request.from, &request.to);
+        self.usages_in(&source, commit, wanted)
+    }
+
+    /// The usages of what `wanted` asks for, read in the blobs of `commit`.
+    fn usages_in(
+        &self,
+        source: &GitSource,
+        commit: &CommitId,
+        wanted: std::collections::BTreeMap<String, Wanted>,
+    ) -> Result<EdgeUsagesResponse, AppError> {
         let tree = source.list_tree(commit)?;
         let paths: Vec<&str> = tree.iter().map(|e| e.path.as_str()).collect();
         let blobs: HashMap<&str, _> = tree.iter().map(|e| (e.path.as_str(), &e.blob)).collect();
-        let package_dirs = self.indexer.package_dirs(&source, commit)?;
+        let package_dirs = self.indexer.package_dirs(source, commit)?;
         let read = |p: &str| source.read_blob(blobs.get(p)?).ok();
         let env = relief_adapter_api::ResolveEnv {
             paths: &paths,
@@ -1406,6 +1460,43 @@ impl Session {
             warnings,
         })
     }
+}
+
+/// Imported symbols and imported files per source file, from the import edges of `graph` that
+/// leave `from` (or what is under it) for `to` (or what is under it).
+fn import_wanted(
+    graph: &GraphSnapshot,
+    from: &NodeId,
+    to: &NodeId,
+) -> std::collections::BTreeMap<String, Wanted> {
+    let within =
+        |id: &NodeId, root: &NodeId| id == root || graph.ancestors(id).any(|a| &a.id == root);
+    let mut wanted: std::collections::BTreeMap<String, Wanted> = std::collections::BTreeMap::new();
+    for edge in graph.edges().iter().filter(|e| e.kind == EdgeKind::Imports) {
+        let Some(path) = edge.from.file_path() else {
+            continue;
+        };
+        if !within(&edge.from, from) || !within(&edge.to, to) {
+            continue;
+        }
+        let entry = wanted
+            .entry(path.to_owned())
+            .or_insert_with(|| Wanted::new(file_id(&edge.from)));
+        match (edge.to.symbol_key(), edge.to.file_path()) {
+            (Some(binding), _) => {
+                if !entry.bindings.contains(&binding) {
+                    entry.bindings.push(binding);
+                }
+            }
+            (None, Some(target)) => {
+                if !entry.targets.iter().any(|t| t == target) {
+                    entry.targets.push(target.to_owned());
+                }
+            }
+            (None, None) => {}
+        }
+    }
+    wanted
 }
 
 /// The file node an id (a file or one of its symbols) belongs to.

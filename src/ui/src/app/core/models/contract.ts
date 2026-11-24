@@ -713,6 +713,10 @@ export interface CommitReadingEntry {
    * Files of the commit without a structural change.
    */
   otherFiles: number;
+  /**
+   * The repository of the commit, in a workspace.
+   */
+  repo?: string | null;
   short: string;
 }
 /**
@@ -726,6 +730,10 @@ export interface LogResponse {
  */
 export interface LogEntry {
   author: string;
+  /**
+   * The repository of the commit, in a workspace.
+   */
+  repo?: string | null;
   /**
    * Full SHA.
    */

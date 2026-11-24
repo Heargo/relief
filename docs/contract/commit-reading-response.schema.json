@@ -40,6 +40,13 @@
           "format": "uint",
           "minimum": 0
         },
+        "repo": {
+          "description": "The repository of the commit, in a workspace.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "short": {
           "type": "string"
         }
