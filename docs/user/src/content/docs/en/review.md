@@ -23,7 +23,6 @@ Picking a source or a destination reloads the diff.
 
 - **In the URL**: the range is kept in the `?range=` parameter. A link to `/?range=main...feat/promo-codes` reopens the same review.
 - **At launch**: `relief . main...feat/promo-codes` opens that range directly. Without a range, the map shows the saved default comparison, by default the working tree against `main`.
-- For now, the selector only offers pairs of branches: neither the working tree nor the index.
 - The diff follows the chosen range; the map itself keeps the repository as relief opened it.
 
 ## Compare each repository of a workspace
@@ -32,7 +31,7 @@ In a workspace, the range selector is replaced by one comparison per repository.
 
 - A change only reads that repository again; the others are kept as they are, and the map and the diff follow.
 - The change lasts for the session. **Set as default** on a line writes that repository's comparison in the workspace file (`source` and `destination`), where relief reads it back the next time.
-- The **Back** button brings the usual panel back. The button is only in the Review mode of a workspace.
+- The **Back to the panel** button brings the usual panel back. The button is only in the Review mode of a workspace.
 
 ## Review changes in progress
 
@@ -81,7 +80,7 @@ A legend at the bottom left of the map recalls the colours: Added, Modified, Rem
 
 ![The PR card at the top of the left sidebar](../../../assets/screens/en/review-card.png)
 
-Below the mode switch, **The PR** summarises the range:
+At the top of the **Tools** block, **The PR** summarises the range:
 
 - the range under review (`main...feat/promo-codes`);
 
@@ -97,12 +96,14 @@ Below the mode switch, **The PR** summarises the range:
 With nothing selected, the right panel lists what the PR changes, computed from the graph by relief's core (no AI summary):
 
 - **Modified signatures**: each symbol whose signature changes, with a **breaking** or **compatible** badge, and its number of direct and transitive callers (for example "3 direct callers · 6 transitive").
-- **Rule violations introduced**: coming soon. The group does not show until architecture rules are checked during review.
+- **Rule violations introduced**: the dependencies the range adds that a rule of `relief.config.yaml` forbids (see [Architecture rules](../rules/)). The violations that already existed on the base are listed apart, under **Rule violations already existing**. Without rules, these groups do not show.
 - **Files added, removed, moved**: one file per row, with its status (added, removed, moved, format only). A moved file shows its old and new path.
 - **Out of the diff, calls a breaking signature**: symbols the PR does not touch but which directly call a breaking signature, with a **tested** or **no test** badge. On acme-shop, `requireAuth` (tested) and `renewSubscriptions` (untested) call `SessionStore.refresh`.
 - **Repeated changes**: three or more files that make the same change (same imports added or removed, same symbols added or removed) form a single row, for example "4 files: adds imports → src/util/helpers.ts". The ▸ button unfolds the list of the files of the group; clicking a file selects it.
 
 Clicking a row selects its node and frames it on the map.
+
+On the map, the first file of a group of repeated changes (the representative) stays normal and carries "×4 identical"; the other members are faded and their changed edges are folded into those of the representative, with a counter. Selecting a member unfolds it: its edges and badge come back.
 
 ## Signals
 
@@ -113,9 +114,9 @@ In the left sidebar, the **Signals** section counts and lists:
 - breaking signatures, with "N transitive callers · M without tests";
 - new couplings between modules (+) and removed ones (−), for example `apps/web/components → packages/db/repos`. HTTP edges count too: on acme-shop, `apps/web/components → apps/api/routes` is added, making 4 new couplings;
 - files ignored because only their formatting changes;
-- rule violations introduced: coming soon.
+- the rule violations introduced by the range, then those that already existed (marked "existing"), each with the id of its rule.
 
-Clicking a signature or an ignored file selects it.
+Clicking a signature, a violation or an ignored file selects the node concerned.
 
 ## Layers
 
@@ -157,8 +158,6 @@ In the node panel, the impact section gives:
 On acme-shop, `SessionStore.refresh` has 8 transitive callers via HTTP, 6 without.
 
 ![The Impact radius section of the panel, for SessionStore.refresh](../../../assets/screens/en/review-impact.png)
-
-On the map, the first file of the group (the representative) stays normal and carries "×4 identical"; the other members are faded and their changed edges are folded into those of the representative, with a counter. Selecting a member unfolds it: its edges and badge come back.
 
 ## Reading order
 

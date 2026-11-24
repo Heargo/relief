@@ -18,7 +18,7 @@ La section **Points d'entrée** de la barre de gauche liste par où le code comm
 - **Jobs** : les fonctions exportées sous un dossier `jobs/` ;
 - **Scripts** : les packages qui déclarent des `scripts` dans leur `package.json` (`start`, `dev`, `test`…).
 
-Clique sur un point d'entrée pour le sélectionner sur la carte. Sur acme-shop, relief trouve 4 routes, 3 pages (Checkout, Invoices, Login) le job `renewSubscriptions`, et les scripts de `@acme/api` et `@acme/web`.
+Cliquez sur un point d'entrée pour le sélectionner sur la carte. Sur acme-shop, relief trouve 4 routes, 3 pages (Checkout, Invoices, Login) le job `renewSubscriptions`, et les scripts de `@acme/api` et `@acme/web`.
 
 En dessous, la **Vue d'ensemble** chiffre le dépôt : le detector utilisé, le nombre de packages, de dépendances externes, de fichiers et de symboles, et les liens par type.
 
@@ -32,7 +32,7 @@ Sur acme-shop, `POST /checkout` mène à `computeTotal` et `chargeCustomer` (dir
 
 ## Hotspots : où regarder en premier
 
-En exploration, la section **Hotspots** liste les 6 symboles les plus risqués du dépôt. Clique sur l'un d'eux pour le sélectionner. Le risque combine trois mesures :
+En exploration, la section **Hotspots** liste les 6 symboles les plus risqués du dépôt. Cliquez sur l'un d'eux pour le sélectionner. Le risque combine trois mesures :
 
 - **churn** : le nombre de commits des 90 derniers jours qui touchent le symbole (ou le fichier), en comptant depuis la date du commit affiché ;
 - **complexité** : la complexité cyclomatique (chaque `if`, boucle, `case`, `catch`, ternaire, `&&`, `||` ou `??` ajoute un chemin) ;
@@ -69,8 +69,8 @@ Comme les hotspots, ce calcul est rangé dans `.relief/cache/` et ne change pas 
 
 ## Chercher un symbole
 
-À venir : cette fonctionnalité n'existe pas encore.
+La recherche (`/`) marche aussi en exploration : voir [Rechercher et se repérer](../map/#rechercher-et-se-repérer).
 
 ## Impact d'un changement
 
-À venir : cette fonctionnalité n'existe pas encore.
+Sélectionnez un nœud pour voir ce qui dépend de lui : voir [Rayon d'impact](../review/#rayon-dimpact). En exploration, le sens **Dépendances** sert à [suivre un flux](#suivre-un-flux).

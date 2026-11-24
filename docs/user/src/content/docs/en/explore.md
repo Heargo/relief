@@ -69,8 +69,8 @@ Like the hotspots, this computation is kept in `.relief/cache/` and does not cha
 
 ## Search a symbol
 
-Coming soon: this feature does not exist yet.
+Search (`/`) works in exploration too: see [Search and find your way](../map/#search-and-find-your-way).
 
 ## Impact of a change
 
-Coming soon: this feature does not exist yet.
+Select a node to see what depends on it: see [Impact radius](../review/#impact-radius). In exploration, the **Dependencies** direction is how you [follow a flow](#follow-a-flow).

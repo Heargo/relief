@@ -23,7 +23,6 @@ Choisir une source ou une destination recharge le diff.
 
 - **Dans l'URL** : la plage est gardée dans le paramètre `?range=`. Un lien vers `/?range=main...feat/promo-codes` rouvre donc la même relecture.
 - **Au lancement** : `relief . main...feat/promo-codes` ouvre directement cette plage. Sans plage, la carte montre la comparaison par défaut enregistrée, par défaut l'arbre de travail contre `main`.
-- Pour l'instant, le sélecteur ne propose que des paires de branches : ni l'arbre de travail, ni l'index.
 - Le calcul du diff suit la plage choisie ; la carte, elle, garde le dépôt tel que relief l'a ouvert.
 
 ## Comparer chaque dépôt d'un espace
@@ -32,7 +31,7 @@ Dans un espace, le sélecteur de plage est remplacé par une comparaison par dé
 
 - Un changement ne relit que ce dépôt ; les autres sont gardés tels quels, et la carte et le diff suivent.
 - Le changement vaut pour la session. **Définir par défaut** sur une ligne écrit la comparaison de ce dépôt dans le fichier d'espace (`source` et `destination`), où relief la relit à la prochaine ouverture.
-- Le bouton **Retour** ramène le panneau habituel. Le bouton n'existe qu'en mode Relecture d'un espace.
+- Le bouton **Retour au panneau** ramène le panneau habituel. Le bouton n'existe qu'en mode Relecture d'un espace.
 
 ## Relire des changements en cours
 
@@ -81,7 +80,7 @@ Une légende en bas à gauche de la carte rappelle les couleurs : Ajouté, Modif
 
 ![La carte de la PR en haut de la barre de gauche](../../assets/screens/fr/review-card.png)
 
-Sous la bascule de mode, **La PR** résume la plage :
+En tête du bloc **Outils**, **La PR** résume la plage :
 
 - la plage relue (`main...feat/promo-codes`) ;
 
@@ -97,12 +96,14 @@ Sous la bascule de mode, **La PR** résume la plage :
 Sans sélection, le panneau de droite liste ce que la PR change, calculé depuis le graphe par le cœur de relief (pas de résumé par IA) :
 
 - **Signatures modifiées** : chaque symbole dont la signature change, avec le badge **cassante** ou **compatible**, et le nombre d'appelants directs et transitifs (par exemple « 3 appelants directs · 6 transitifs »).
-- **Violations de règles introduites** : à venir. Le groupe n'apparaît pas tant que les règles d'architecture ne sont pas vérifiées dans la relecture.
+- **Violations de règles introduites** : les dépendances que la plage ajoute et qu'une règle de `relief.config.yaml` interdit (voir [Règles d'architecture](../rules/)). Les violations qui existaient déjà sur la base sont listées à part, sous **Violations de règles déjà existantes**. Sans règles, ces groupes n'apparaissent pas.
 - **Fichiers ajoutés, supprimés, déplacés** : un fichier par ligne, avec son statut (ajouté, supprimé, déplacé, format seul). Un fichier déplacé montre son ancien et son nouveau chemin.
 - **Hors du diff, appelle une signature cassante** : les symboles que la PR ne touche pas mais qui appellent directement une signature cassante, avec le badge **testé** ou **sans test**. Sur acme-shop, `requireAuth` (testé) et `renewSubscriptions` (sans test) appellent `SessionStore.refresh`.
 - **Changements répétitifs** : trois fichiers ou plus qui font le même changement (mêmes imports ajoutés ou retirés, mêmes symboles ajoutés ou retirés) forment une seule ligne, par exemple « 4 fichiers : ajoute imports → src/util/helpers.ts ». Le bouton ▸ déplie la liste des fichiers du groupe ; un clic sur un fichier le sélectionne.
 
 Un clic sur une ligne sélectionne son nœud et le cadre sur la carte.
+
+Sur la carte, le premier fichier d'un groupe de changements répétitifs (le représentant) reste normal et porte « ×4 identiques » ; les autres membres sont atténués et leurs arêtes modifiées sont repliées dans celles du représentant, avec un compteur. Sélectionner un membre le déplie : ses arêtes et son badge reviennent.
 
 ## Signaux
 
@@ -113,9 +114,9 @@ Dans la barre de gauche, la section **Signaux** donne leur nombre et les liste :
 - les signatures cassantes, avec « N appelants transitifs · M sans tests » ;
 - les nouveaux couplages entre modules (+) et les couplages retirés (−), par exemple `apps/web/components → packages/db/repos`. Les arêtes HTTP comptent aussi : sur acme-shop, `apps/web/components → apps/api/routes` s'ajoute, soit 4 nouveaux couplages ;
 - les fichiers ignorés parce que seul leur formatage change ;
-- les violations de règles introduites : à venir.
+- les violations de règles introduites par la plage, puis celles qui existaient déjà (marquées « existante »), chacune avec l'id de sa règle.
 
-Un clic sur une signature ou un fichier ignoré le sélectionne.
+Un clic sur une signature, une violation ou un fichier ignoré sélectionne le nœud concerné.
 
 ## Calques
 
@@ -143,7 +144,7 @@ En mode « Relire la PR », sélectionner un symbole ou un fichier changé (clic
 
 ## Rayon d'impact
 
-Sélectionne un nœud (clic, ou recherche avec `/`) : relief calcule tout ce qui dépend de lui, directement ou de proche en proche. Sur la carte, les nœuds atteints ont un contour orange pointillé, le reste est estompé et les arêtes du chemin passent en orange. Une boîte fermée qui contient des nœuds atteints affiche « ⚡ n ».
+Sélectionnez un nœud (clic, ou recherche avec `/`) : relief calcule tout ce qui dépend de lui, directement ou de proche en proche. Sur la carte, les nœuds atteints ont un contour orange pointillé, le reste est estompé et les arêtes du chemin passent en orange. Une boîte fermée qui contient des nœuds atteints affiche « ⚡ n ».
 
 Le calque **Rayon d'impact** du menu Calques (touche `i`) active ou coupe ce surlignage.
 
@@ -158,8 +159,6 @@ Sur acme-shop, `SessionStore.refresh` a 8 appelants transitifs via HTTP, 6 sans.
 
 ![La section Rayon d'impact du panneau, pour SessionStore.refresh](../../assets/screens/fr/review-impact.png)
 
-Sur la carte, le premier fichier du groupe (le représentant) reste normal et porte « ×4 identiques » ; les autres membres sont atténués et leurs arêtes modifiées sont repliées dans celles du représentant, avec un compteur. Sélectionner un membre le déplie : ses arêtes et son badge reviennent.
-
 ## Ordre de lecture
 
 La section **Ordre de lecture** liste les changements dans l'ordre où les lire : un fichier vient après ceux dont il dépend, pour qu'on ne lise jamais un appel avant ce qu'il appelle. À égalité, l'ordre suit le chemin. Les fichiers qui ne changent que par leur mise en forme et les anciens emplacements des fichiers déplacés n'y figurent pas.
@@ -172,13 +171,13 @@ Trois modes :
 
 Chaque ligne est numérotée et dit pourquoi la lire : signature cassante ou modifiée, nouveau, supprimé, déplacé, et le nombre de lignes ajoutées et supprimées. Sur acme-shop, la PR compte 14 fichiers, ou 22 symboles.
 
-Un groupe de changements répétitifs n'est qu'une seule entrée dans l'ordre de lecture, en mode Fichier : la ligne du représentant porte « ×4 ». Quand tu marques le représentant comme vu, la section propose de marquer tout le groupe.
+Un groupe de changements répétitifs n'est qu'une seule entrée dans l'ordre de lecture, en mode Fichier : la ligne du représentant porte « ×4 ». Quand vous marquez le représentant comme vu, la section propose de marquer tout le groupe.
 
 ![La section Ordre de lecture, en mode Fichier](../../assets/screens/fr/review-reading-order.png)
 
 ## Lire pas à pas
 
-Le bouton **Pas à pas** de la section Ordre de lecture ne garde vifs que l'élément courant et ses voisins directs (ce qu'il appelle et ce qui l'appelle, avec les boîtes qui les contiennent). Tout le reste de la carte, flèches comprises, est estompé à 10 %. L'élément courant est l'entrée que tu viens d'ouvrir, sinon la première entrée non vue ; sa ligne est marquée dans la liste.
+Le bouton **Pas à pas** de la section Ordre de lecture ne garde vifs que l'élément courant et ses voisins directs (ce qu'il appelle et ce qui l'appelle, avec les boîtes qui les contiennent). Tout le reste de la carte, flèches comprises, est estompé à 10 %. L'élément courant est l'entrée que vous venez d'ouvrir, sinon la première entrée non vue ; sa ligne est marquée dans la liste.
 
 Les boutons **←** et **→** (ou les touches `p` et `n`) passent à l'entrée précédente ou suivante, et la caméra se cadre sur elle et ses voisins. Le réglage n'est pas gardé d'une session à l'autre. Désactivé, la carte redevient normale et la sélection reste.
 
@@ -186,7 +185,7 @@ Les boutons **←** et **→** (ou les touches `p` et `n`) passent à l'entrée 
 
 En mode **Commit**, chaque ligne est un commit de la plage : SHA court, message, « x/y vus » et, s'il y en a, le nombre de fichiers sans changement structurel (mise en forme seule). Les fichiers du commit sélectionné s'affichent en dessous, dans l'ordre de lecture.
 
-Clique sur un commit pour le rejouer : la carte ne colore que ses changements (nœuds et arêtes) et se cadre sur ses fichiers. Le panneau de diff montre alors ce que ce commit a changé, même si un fichier est touché par plusieurs commits. Clique à nouveau sur le commit, ou sur **Voir tous les commits**, pour revenir à toute la plage. `n` et `p` passent d'un commit à l'autre.
+Cliquez sur un commit pour le rejouer : la carte ne colore que ses changements (nœuds et arêtes) et se cadre sur ses fichiers. Le panneau de diff montre alors ce que ce commit a changé, même si un fichier est touché par plusieurs commits. Cliquez à nouveau sur le commit, ou sur **Voir tous les commits**, pour revenir à toute la plage. `n` et `p` passent d'un commit à l'autre.
 
 « Vu » est le même qu'en modes Fichier et Symbole : ce qui est marqué dans un commit est vu partout.
 
@@ -194,7 +193,7 @@ Clique sur un commit pour le rejouer : la carte ne colore que ses changements (n
 
 ## Marquer comme vu
 
-Coche la case d'une ligne, ou utilise **Marquer vu** et **Vu, suivant →** dans le panneau. Au clavier :
+Cochez la case d'une ligne, ou utilisez **Marquer vu** et **Vu, suivant →** dans le panneau. Au clavier :
 
 - `n` sélectionne l'entrée suivante non vue, `p` la précédente ;
 - `v` marque l'entrée sélectionnée comme vue (ou la décoche).

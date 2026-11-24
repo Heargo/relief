@@ -7,7 +7,7 @@ relief is a desktop app: you launch it on a repository and it opens its window.
 
 ## relief [path] [range]
 
-`relief [PATH] [RANGE]` opens the map of the repository at `PATH` ; without `PATH`, `relief` opens the welcome screen (recent repositories, folder picker), not the current folder (`relief .`). With no range, the map shows `HEAD` up to the working tree. A range is written `A...B` (against the merge base) or `A..B`.
+`relief [PATH] [RANGE]` opens the map of the repository at `PATH` ; without `PATH`, `relief` opens the welcome screen (recent repositories, folder picker), not the current folder (`relief .`). With no range, the map shows the default comparison of the repository: the working tree against `main`, or the one saved with **Set as default**. A range is written `A...B` (against the merge base) or `A..B`.
 
 ## relief file.relief.json
 

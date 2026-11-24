@@ -1,7 +1,8 @@
 import { $, $$, browser } from '@wdio/globals';
 import { openRelief } from '../../../tests/e2e/helpers/open-relief';
 import { clearReviewState } from '../../../tests/e2e/helpers/review-state';
-import { press, toggleLayer, typeText } from '../../../tests/e2e/helpers/ui';
+import { openLayersMenu, press, typeText } from '../../../tests/e2e/helpers/ui';
+import { waitForScene } from '../../../tests/e2e/helpers/map-scene';
 import { languages, shot } from './shots';
 
 const size = { width: 1600, height: 900 };
@@ -13,7 +14,7 @@ for (const lang of languages) {
     await $('[data-testid="pr-stats"]').waitForDisplayed();
     await $('[data-testid="level-2"]').click();
     await $('[data-testid="current-level"][data-level="2"]').waitForExist();
-    await $('[data-diff-status="added"]').waitForDisplayed();
+    await waitForScene((s) => s.nodes.some((n) => n.status === 'added'));
     await browser.pause(700); // end of the framing animation
     await browser.saveScreenshot(shot(lang, 'review-map'));
   });
@@ -23,8 +24,8 @@ for (const lang of languages) {
 for (const lang of languages) {
   it(`review: PR card (${lang})`, async () => {
     await openRelief({ lang, size });
-    const card = $('[data-testid="pr-stats"]');
-    await card.waitForDisplayed();
+    await $('[data-testid="pr-stats"]').waitForDisplayed();
+    const card = $('[data-testid="pr-card"]');
     await card.saveScreenshot(shot(lang, 'review-card'));
   });
 }
@@ -107,7 +108,7 @@ for (const lang of languages) {
   });
 }
 
-// The Layers section (left sidebar), PR focus on.
+// The Layers menu (top bar), with PR focus on.
 for (const lang of languages) {
   it(`review: layers section (${lang})`, async () => {
     clearReviewState();
@@ -115,8 +116,7 @@ for (const lang of languages) {
     await $('[data-testid="pr-stats"]').waitForDisplayed();
     await press('f');
     await $('[data-testid="toggle-focus-layer"][aria-checked="true"]').waitForExist();
-    await toggleLayer('toggle-unchanged-edges');
-    await $('[data-testid="toggle-unchanged-edges"][aria-checked="false"]').waitForExist();
-    await $('[data-testid="layers-section"]').saveScreenshot(shot(lang, 'review-layers'));
+    await openLayersMenu();
+    await $('[data-testid="layers-panel"]').saveScreenshot(shot(lang, 'review-layers'));
   });
 }

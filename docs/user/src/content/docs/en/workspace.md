@@ -29,7 +29,11 @@ The header of the left panel lists each repository with its branch and labels. T
 
 Each repository is compared on its own range: by default, its working tree against `main`, else `master`, else its current branch. The **Comparisons per repository** button (under the Review / Explore switch) lists one row per repository, where you change the source or the destination; **Set as default** writes it to the workspace file. Details in [Review a PR](../review/#compare-each-repository-of-a-workspace).
 
+![The Comparisons per repository menu, one row per repository](../../../assets/screens/en/workspace-comparisons.png)
+
 A change that touches the front end and the API thus shows on the same map: at the **Repos** level both boxes are marked; going down to the files, the modified files of each repository are marked too, with the reading order and the impact across the whole.
+
+![A workspace of two repositories, web and api, at the Repos level](../../../assets/screens/en/workspace-map.png)
 
 ## Follow an arrow between repositories
 
