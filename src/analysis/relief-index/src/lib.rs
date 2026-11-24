@@ -224,6 +224,21 @@ impl Indexer {
             .collect())
     }
 
+    /// The HTTP calls found in the files of `snapshot`, as declared by the adapters.
+    pub fn http_calls(&self, snapshot: &IndexedSnapshot) -> Vec<relief_adapter_api::HttpCallSite> {
+        let Some(parts) = &snapshot.parts else {
+            return Vec::new();
+        };
+        let mut files: Vec<_> = parts.files.iter().collect();
+        files.sort_by_key(|((ai, path), _)| (*ai, path.as_str()));
+        files
+            .into_iter()
+            .flat_map(|((ai, _), part)| {
+                self.adapters[*ai].http_calls(&part.file, part.index.as_deref())
+            })
+            .collect()
+    }
+
     /// Builds the snapshot of `commit`.
     pub fn snapshot(
         &self,

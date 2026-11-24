@@ -4,11 +4,12 @@
 
 use std::collections::{HashMap, HashSet};
 
-use relief_adapter_api::PublishedPackage;
+use relief_adapter_api::{HttpCallSite, PublishedPackage, http_edge, path_matches, verb_matches};
 use relief_git::{CommitId, GitSource, ResolvedRange};
 use relief_model::{
-    Edge, EdgeChange, FileChange, FileRename, GraphDiff, GraphSnapshot, Node, NodeChange, NodeId,
-    NodeKind, NodeStatus, RepoComparison, SnapshotMeta, SnapshotResponse, Visibility,
+    Edge, EdgeChange, EdgeKind, EdgeStatus, FileChange, FileRename, GraphDiff, GraphSnapshot, Node,
+    NodeChange, NodeId, NodeKind, NodeStatus, RepoComparison, SnapshotMeta, SnapshotResponse,
+    Visibility,
 };
 
 use crate::{AppError, DiffAnalysis, Session, Workspace, WorkspaceRepo, is_virtual};
@@ -26,6 +27,45 @@ struct Part {
     graph: GraphSnapshot,
     /// The packages this repository publishes.
     published: Vec<PublishedPackage>,
+    /// The HTTP calls found in this repository (ids not prefixed).
+    calls: Vec<HttpCallSite>,
+}
+
+/// `http` edges from the calls of a repository to the routes declared in another one, by the
+/// rule inside a repository: same verb (when the call has one), matching path.
+fn cross_http(parts: &[Part]) -> Result<Vec<Edge>, AppError> {
+    let routes: Vec<(&str, &Node, &str, &str)> = parts
+        .iter()
+        .flat_map(|part| {
+            part.graph.nodes().iter().filter_map(move |n| {
+                let (verb, path) = n.route.as_deref()?.split_once(' ')?;
+                Some((part.name.as_str(), n, verb, path))
+            })
+        })
+        .collect();
+    let mut edges: Vec<Edge> = Vec::new();
+    for part in parts {
+        for call in &part.calls {
+            for (repo, node, verb, path) in &routes {
+                if *repo == part.name
+                    || !verb_matches(call.verb.as_deref(), verb)
+                    || !path_matches(path, &call.path)
+                {
+                    continue;
+                }
+                let edge = http_edge(
+                    prefixed(&call.from, &part.name)?,
+                    prefixed(&node.id, repo)?,
+                    call.verb.as_deref(),
+                );
+                if !edges.contains(&edge) {
+                    edges.push(edge);
+                }
+            }
+        }
+    }
+    edges.sort_by_key(|e| (e.from.to_string(), e.to.to_string()));
+    Ok(edges)
 }
 
 const EXTERNAL_PREFIX: &str = "pkg:external/";
@@ -168,7 +208,7 @@ fn unite_with(
         .collect::<Vec<_>>()
         .join("+");
     let mut nodes = Vec::new();
-    let mut edges = Vec::new();
+    let mut edges = cross_http(&parts)?;
     for part in parts {
         let root_id = part.root.id.clone();
         nodes.push(part.root);
@@ -347,8 +387,9 @@ impl Session {
             parts.push(Part {
                 root,
                 name: member.repo.name.clone(),
-                graph: indexed.graph,
+                graph: indexed.graph.clone(),
                 published: self.indexer.published_packages(&member.source, &commit)?,
+                calls: self.indexer.http_calls(&indexed),
             });
             metas.push(indexed.meta);
         }
@@ -405,17 +446,31 @@ impl Session {
             let published_head = self
                 .indexer
                 .published_packages(&member.source, &sides.new)?;
-            let part = |root: Node, graph: &GraphSnapshot, published: Vec<PublishedPackage>| Part {
+            let part = |root: Node,
+                        graph: &GraphSnapshot,
+                        published: Vec<PublishedPackage>,
+                        calls: Vec<HttpCallSite>| Part {
                 root,
                 name: name.to_owned(),
                 graph: graph.clone(),
                 published,
+                calls,
             };
             let branch = Self::member_branch(&member);
             let root =
                 |graph: &GraphSnapshot| repo_node(&member.repo, branch.clone(), graph.commit());
-            bases.push(part(root(&analysed.base)?, &analysed.base, published_base));
-            heads.push(part(root(&analysed.head)?, &analysed.head, published_head));
+            bases.push(part(
+                root(&analysed.base)?,
+                &analysed.base,
+                published_base,
+                analysed.base_calls.clone(),
+            ));
+            heads.push(part(
+                root(&analysed.head)?,
+                &analysed.head,
+                published_head,
+                analysed.head_calls.clone(),
+            ));
             bases_text.push(analysed.diff.base.clone());
             heads_text.push(analysed.diff.head.clone());
             for change in &analysed.diff.nodes {
@@ -449,6 +504,24 @@ impl Session {
                 edge.to = to.clone();
             }
         }
+        // The HTTP edges between repositories are not in any repository's own diff.
+        let (before, after) = (cross_http(&bases)?, cross_http(&heads)?);
+        let key = |e: &Edge| (e.from.clone(), e.to.clone());
+        for (edges, other, status) in [
+            (&after, &before, EdgeStatus::Added),
+            (&before, &after, EdgeStatus::Removed),
+        ] {
+            let other: HashSet<_> = other.iter().map(key).collect();
+            for e in edges.iter().filter(|e| !other.contains(&key(e))) {
+                diff.edges.push(EdgeChange {
+                    from: e.from.clone(),
+                    to: e.to.clone(),
+                    kind: EdgeKind::Http,
+                    status,
+                    commit: None,
+                });
+            }
+        }
         let (base, head) = (unite_with(bases, &redirect)?, unite_with(heads, &redirect)?);
         // The external nodes replaced by a file, and the groups left empty, have no change.
         let kept: HashSet<&NodeId> = base
@@ -468,6 +541,8 @@ impl Session {
             diff,
             renames,
             base_resolved: resolved.join("+"),
+            base_calls: Vec::new(),
+            head_calls: Vec::new(),
             warnings,
         })
     }

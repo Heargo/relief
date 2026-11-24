@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use relief_adapter_api::{Detector, LanguageAdapter};
+use relief_adapter_api::{Detector, HttpCallSite, LanguageAdapter};
 use relief_diff::{
     DiffOptions, SignatureTexts, attribute_edge_commits, diff_graphs_with_options,
     format_only_summary,
@@ -107,6 +107,9 @@ pub struct DiffAnalysis {
     pub renames: Vec<FileRename>,
     /// Short SHA of the base really compared.
     pub base_resolved: String,
+    /// HTTP calls of the base and of the head, for the links between repositories.
+    pub base_calls: Vec<HttpCallSite>,
+    pub head_calls: Vec<HttpCallSite>,
     /// Cache warnings raised while indexing.
     pub warnings: Vec<String>,
 }
@@ -1224,6 +1227,10 @@ impl Session {
     ) -> Result<DiffAnalysis, AppError> {
         let base = self.indexed_snapshot(source, &sides.old)?;
         let head = self.indexed_snapshot_from(source, &sides.new, Some((&sides.old, &base)))?;
+        let (base_calls, head_calls) = (
+            self.indexer.http_calls(&base),
+            self.indexer.http_calls(&head),
+        );
         let mut warnings: Vec<String> =
             cache_warnings(&base).chain(cache_warnings(&head)).collect();
         let base_indexed = base;
@@ -1294,6 +1301,8 @@ impl Session {
             diff,
             renames,
             base_resolved: sides.old.to_string().chars().take(7).collect(),
+            base_calls,
+            head_calls,
             warnings,
         })
     }

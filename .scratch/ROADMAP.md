@@ -194,7 +194,7 @@ Brainstorm du 2026-11-20 : la carte rame sur un gros écran et les budgets de S0
 | ✓ | 54h | **K09** Étiquettes de dépôt | front, back, ops, tools ; filtre. | K08 |
 | ✓ | 54i | **K10** Comparaison par dépôt | Menu du panneau gauche, une ligne par dépôt. | K05, K08 |
 | ✓ | 54j | **K11** Imports de paquets entre dépôts | Paquets publiés résolus vers le dépôt local, par les adapters. | K08 |
-| ☐ | 54k | **K12** Appels HTTP entre dépôts | T04 entre dépôts. | K08 |
+| ✓ | 54k | **K12** Appels HTTP entre dépôts | T04 entre dépôts. | K08 |
 | ☐ | 54l | **K13** Parcours multidépôt de bout en bout | e2e de l'accueil à l'arête entre dépôts ; doc. | K09, K10, K11, K12 |
 
 ## Phase 13 : confort de relecture (nouvelles fonctionnalités)

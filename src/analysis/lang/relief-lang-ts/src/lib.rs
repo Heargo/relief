@@ -5,7 +5,8 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 
 use relief_adapter_api::{
-    EntryPoint, Extraction, LanguageAdapter, LinkContext, PublishedPackage, ResolveEnv, Usage,
+    EntryPoint, Extraction, HttpCallSite, LanguageAdapter, LinkContext, PublishedPackage,
+    ResolveEnv, Usage,
 };
 use relief_model::{
     Edge, EdgeKind, Node, NodeId, NodeKind, Precision, SignatureVerdict, Span, Visibility,
@@ -24,6 +25,8 @@ mod usages;
 
 pub use http::HttpCall;
 pub use refs::{Binding, Instance, Ref};
+pub use relief_adapter_api::path_matches;
+use relief_adapter_api::{http_edge, verb_matches};
 
 use resolve::{JsonMemo, Resolution, resolve};
 
@@ -221,6 +224,22 @@ impl TsAdapter {
 }
 
 impl LanguageAdapter for TsAdapter {
+    fn http_calls(&self, file: &Node, index: Option<&str>) -> Vec<HttpCallSite> {
+        let Some(index) = index.and_then(|json| serde_json::from_str::<FileIndex>(json).ok())
+        else {
+            return Vec::new();
+        };
+        index
+            .http_calls
+            .into_iter()
+            .map(|c| HttpCallSite {
+                from: file.id.clone().symbol(&c.from),
+                verb: c.verb,
+                path: c.path,
+            })
+            .collect()
+    }
+
     fn published_packages(
         &self,
         paths: &[&str],
@@ -548,19 +567,12 @@ fn link_http(file: &Node, index: &FileIndex, ctx: &LinkContext<'_>, out: &mut Ex
                 continue;
             };
             if *to == from
-                || call.verb.as_deref().is_some_and(|v| v != verb)
-                || !http::path_matches(path, &call.path)
+                || !verb_matches(call.verb.as_deref(), verb)
+                || !path_matches(path, &call.path)
             {
                 continue;
             }
-            let edge = Edge {
-                from: from.clone(),
-                to: to.clone(),
-                kind: EdgeKind::Http,
-                precision: Precision::Syntactic,
-                heuristic: call.verb.is_none(),
-                count: None,
-            };
+            let edge = http_edge(from.clone(), to.clone(), call.verb.as_deref());
             if !out.edges.contains(&edge) {
                 out.edges.push(edge);
             }
