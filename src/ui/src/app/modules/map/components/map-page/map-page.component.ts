@@ -67,7 +67,8 @@ import { PanelsBusiness } from '../../business/panels.business';
 import { RepoBusiness } from '../../business/repo.business';
 import { SubgraphBusiness } from '../../business/subgraph.business';
 import { repoMetaLine } from '../../helpers/repo-meta.logic';
-import { repoBoxes } from '../../helpers/repo-level.logic';
+import { pruneLabels, toggled } from '../../helpers/label-list.logic';
+import { repoBoxes, type RepoBox } from '../../helpers/repo-level.logic';
 import { isPartial } from '../../../review/helpers/review-graph.logic';
 import type { EdgeBundle } from '../../helpers/edge-bundles.logic';
 import type { SearchResult } from '../../helpers/search.logic';
@@ -176,6 +177,30 @@ export class MapPageComponent implements OnInit {
     const snapshot = this.repo.snapshot();
     return this.repo.meta()?.workspace && snapshot ? repoBoxes(snapshot.graph) : [];
   });
+
+  /** The repository whose label editor is open. */
+  protected readonly editingRepo = signal<string | null>(null);
+
+  protected toggleLabelEditor(name: string): void {
+    this.editingRepo.update((current) => (current === name ? null : name));
+  }
+
+  /** Adds the label to the repository, or removes it when it already carries it. */
+  protected async toggleRepoLabel(item: RepoBox, label: string): Promise<void> {
+    const labels = toggled(item.labels, label);
+    try {
+      await this.repo.setRepoLabels(item.name, labels);
+      // The review graph is the subgraph of the diff: it carries the labels too.
+      await this.review.reload();
+    } catch (error) {
+      // The labels stay as they were: the header still shows what is saved.
+      this.welcomeState.fail(error);
+    }
+  }
+
+  protected toggleLabelFilter(label: string): void {
+    this.map.setLabelFilter(toggled(this.map.labelFilter(), label));
+  }
 
   /** The grey line after the repo name: languages and detector. */
   protected readonly repoMeta = computed(() => {
@@ -366,6 +391,14 @@ export class MapPageComponent implements OnInit {
   });
 
   constructor() {
+    // A label that no longer exists leaves the active filter.
+    effect(() => {
+      const available = this.repo.availableLabels();
+      const chosen = this.map.labelFilter();
+      if (available.length === 0) return;
+      const kept = pruneLabels(chosen, available);
+      if (kept.length !== chosen.length) untracked(() => this.map.setLabelFilter(kept));
+    });
     // The unchanged edges layer has a default and a memory per mode.
     effect(() => {
       const review = this.review.reviewMode();

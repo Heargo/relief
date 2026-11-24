@@ -23,6 +23,8 @@ fn main() {
         "open_docs",
         "open_repo",
         "recents",
+        "workspace_labels",
+        "set_workspace_repo_labels",
     ]);
     tauri_build::try_build(tauri_build::Attributes::new().app_manifest(manifest))
         .expect("failed to run the tauri build script");

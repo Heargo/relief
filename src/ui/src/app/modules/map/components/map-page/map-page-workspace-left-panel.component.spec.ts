@@ -85,8 +85,11 @@ describe('MapPageComponent, left panel of a workspace', () => {
   it('names the workspace, then lists each repository with its branch, not WORKTREE', async () => {
     const el = await render();
     expect(byId(el, 'repo-name')?.textContent?.trim()).toBe('shop');
-    const rows = [...el.querySelectorAll('[data-testid="workspace-repo"]')].map((r) =>
-      r.textContent?.replace(/\s+/g, ' ').trim(),
+    // The row is the name and the branch, then the label chips and the edit button (K09).
+    const rows = [...el.querySelectorAll('[data-testid="workspace-repo"]')].map(
+      (r) =>
+        r.querySelector('b')?.textContent?.trim() +
+        (r.querySelector('[data-testid="workspace-repo-branch"]')?.textContent?.trim() ?? ''),
     );
     expect(rows).toEqual(['webfeat/order-badge', 'apifeat/order-total']);
     expect(byId(el, 'ref')).toBeNull();

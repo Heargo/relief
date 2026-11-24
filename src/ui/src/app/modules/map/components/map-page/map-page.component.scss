@@ -88,8 +88,38 @@
 
     li {
       display: flex;
-      gap: 0.6em;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.4em 0.6em;
       min-width: 0;
+    }
+
+    .chip,
+    .tag {
+      padding: 0 6px;
+      border: 1px solid var(--relief-line);
+      border-radius: 8px;
+      background: transparent;
+      color: var(--relief-muted);
+      font: inherit;
+      font-size: 0.85em;
+      cursor: pointer;
+
+      &.on {
+        border-color: var(--relief-fg);
+        color: var(--relief-fg);
+      }
+    }
+
+    .tag {
+      cursor: default;
+    }
+
+    .options {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      flex-basis: 100%;
     }
 
     b {

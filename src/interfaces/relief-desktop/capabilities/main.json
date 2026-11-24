@@ -25,6 +25,8 @@
     "allow-open-docs",
     "allow-open-repo",
     "allow-recents",
+    "allow-workspace-labels",
+    "allow-set-workspace-repo-labels",
     "dialog:allow-open"
   ]
 }

@@ -2,11 +2,13 @@
 //! labels and their default comparison. The data of the workspace live in the neighbouring
 //! `.relief/`; the `.relief/` of the member repositories are never read nor written.
 
+use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Component, Path, PathBuf};
 
 use relief_git::GitSource;
 use serde::{Deserialize, Serialize};
+use serde_json::{Map, Value};
 
 use crate::AppError;
 
@@ -38,18 +40,40 @@ fn default_destination() -> String {
     DEFAULT_DESTINATION.to_owned()
 }
 
+/// A repository as written in the file: the known fields, and the ones relief keeps untouched.
+#[derive(Serialize, Deserialize)]
+struct StoredRepo {
+    #[serde(flatten)]
+    repo: WorkspaceRepo,
+    #[serde(flatten)]
+    extra: Map<String, Value>,
+}
+
 /// What `<name>.relief.json` holds.
 #[derive(Serialize, Deserialize)]
 struct Stored {
     #[serde(default)]
-    repos: Vec<WorkspaceRepo>,
+    repos: Vec<StoredRepo>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    labels: Vec<String>,
+    /// Fields relief does not know, kept as written when the file is saved.
+    #[serde(flatten)]
+    extra: Map<String, Value>,
 }
+
+/// The labels every workspace offers.
+const DEFAULT_LABELS: [&str; 4] = ["front", "back", "ops", "tools"];
 
 /// A set of repositories read on one map.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Workspace {
     pub name: String,
     pub repos: Vec<WorkspaceRepo>,
+    /// The labels declared in the file, on top of the defaults.
+    declared: Vec<String>,
+    extra: Map<String, Value>,
+    /// The unknown fields of each repository, by name.
+    repo_extra: BTreeMap<String, Map<String, Value>>,
     file: PathBuf,
 }
 
@@ -72,6 +96,9 @@ impl Workspace {
         let workspace = Self {
             name: name.to_owned(),
             repos: Vec::new(),
+            declared: Vec::new(),
+            extra: Map::new(),
+            repo_extra: BTreeMap::new(),
             file,
         };
         workspace.save()?;
@@ -102,7 +129,7 @@ impl Workspace {
             .unwrap_or_default()
             .to_owned();
         let mut seen: Vec<&str> = Vec::new();
-        for repo in &stored.repos {
+        for StoredRepo { repo, .. } in &stored.repos {
             check_name(&repo.name)?;
             if seen.contains(&repo.name.as_str()) {
                 return Err(error(format!(
@@ -115,7 +142,14 @@ impl Workspace {
         }
         Ok(Self {
             name,
-            repos: stored.repos,
+            repo_extra: stored
+                .repos
+                .iter()
+                .map(|r| (r.repo.name.clone(), r.extra.clone()))
+                .collect(),
+            repos: stored.repos.into_iter().map(|r| r.repo).collect(),
+            declared: stored.labels,
+            extra: stored.extra,
             file,
         })
     }
@@ -222,9 +256,44 @@ impl Workspace {
         self.save()
     }
 
+    /// The labels a repository can carry: the defaults, then the declared ones.
+    pub fn available_labels(&self) -> Vec<String> {
+        let mut labels: Vec<String> = DEFAULT_LABELS.iter().map(|l| (*l).to_owned()).collect();
+        for label in &self.declared {
+            if !labels.contains(label) {
+                labels.push(label.clone());
+            }
+        }
+        labels
+    }
+
+    /// Replaces the labels of a repository and saves the file.
+    pub fn set_labels(&mut self, repo: &str, labels: &[&str]) -> Result<(), AppError> {
+        let available = self.available_labels();
+        if let Some(unknown) = labels.iter().find(|l| !available.iter().any(|a| a == *l)) {
+            return Err(error(format!("unknown label '{unknown}'")));
+        }
+        let target = self
+            .repos
+            .iter_mut()
+            .find(|r| r.name == repo)
+            .ok_or_else(|| error(format!("'{repo}' is not in the workspace")))?;
+        target.labels = labels.iter().map(|l| (*l).to_owned()).collect();
+        self.save()
+    }
+
     fn save(&self) -> Result<(), AppError> {
         let stored = Stored {
-            repos: self.repos.clone(),
+            labels: self.declared.clone(),
+            repos: self
+                .repos
+                .iter()
+                .map(|repo| StoredRepo {
+                    repo: repo.clone(),
+                    extra: self.repo_extra.get(&repo.name).cloned().unwrap_or_default(),
+                })
+                .collect(),
+            extra: self.extra.clone(),
         };
         let text = serde_json::to_string_pretty(&stored)
             .map_err(|e| error(format!("cannot write {}: {e}", self.file.display())))?;

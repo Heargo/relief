@@ -112,3 +112,11 @@ La section **Disposition**, dans la barre de gauche, choisit comment les boîtes
 - **Moins de croisements** (par défaut) : relief change l'ordre des enfants de chaque boîte pour que les flèches se croisent moins aux niveaux Modules, Fichiers et Symboles. La grille et la taille des boîtes ne changent pas, seul l'ordre change. Le calcul est limité à 300 ms : sur un gros dépôt, relief garde le meilleur ordre trouvé dans ce délai. La première boîte de premier niveau reste à sa place.
 - **Grille brute** : les boîtes sont rangées par ordre alphabétique.
 - Passer d'une disposition à l'autre déplace les boîtes avec une animation. Le choix est retenu pour la prochaine ouverture.
+
+## Étiqueter les dépôts d'un espace
+
+Dans un espace de travail, l'en-tête de la barre de gauche liste chaque dépôt avec sa branche et ses étiquettes. Le bouton **+** d'un dépôt ouvre la liste des étiquettes disponibles (`front`, `back`, `ops`, `tools`, plus celles déclarées dans le champ `labels` du fichier d'espace) : un clic ajoute ou retire une étiquette. Le choix est enregistré dans le fichier `<nom>.relief.json` et la carte l'affiche aussitôt sur la boîte du dépôt.
+
+Pour ajouter une étiquette à la liste, déclarez-la dans le champ `labels` de premier niveau du fichier d'espace, à côté de `repos`.
+
+Dans la section **Affichage**, **Filtrer par étiquette** masque les dépôts qui ne portent aucune des étiquettes choisies, avec tout ce qu'ils contiennent et les flèches qui y mènent. Un dépôt sans étiquette est masqué dès qu'une étiquette est choisie ; désactivez toutes les étiquettes pour tout revoir. Le filtre n'apparaît que dans un espace de travail et n'est pas enregistré.

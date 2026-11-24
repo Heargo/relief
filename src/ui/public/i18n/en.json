@@ -108,6 +108,11 @@
       "fewerCrossings": "Fewer crossings",
       "rawGrid": "Raw grid"
     },
+    "repoLabels": {
+      "title": "Labels",
+      "edit": "Edit the labels of {{name}}",
+      "filter": "Filter by label"
+    },
     "canvasLabel": "Map of the repository",
     "announce": {
       "node": "{{name}} selected",

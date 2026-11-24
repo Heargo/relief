@@ -113,7 +113,7 @@ Les dépôts membres restent intacts : en mode espace, relief n'écrit rien deda
 
 - `name` : le nom du dépôt dans l'espace, unique, non vide, sans `/` (par défaut, le nom de son dossier) ;
 - `path` : le dossier du dépôt, relatif au fichier (ou absolu) ;
-- `labels` : des étiquettes libres (`front`, `back`, `ops`, `tools`…), facultatif ;
+- `labels` : les étiquettes du dépôt, facultatif. Elles se choisissent parmi `front`, `back`, `ops` et `tools`, plus celles que vous déclarez dans un champ `labels` de premier niveau du fichier (par exemple `"labels": ["qa"]`, à côté de `repos`) ; une étiquette inconnue est refusée quand on étiquette depuis la carte ;
 - `source` et `destination` : la comparaison par défaut du dépôt (`WORKTREE` et `main` si absents).
 
 Pour ouvrir l'espace, donnez le fichier ou son dossier :

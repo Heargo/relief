@@ -183,6 +183,16 @@ export class ReliefApiService {
     return this.command<MetaResponse>('open_workspace', { path });
   }
 
+  /** The labels a repository of the open workspace can carry. */
+  workspaceLabels(): Promise<string[]> {
+    return this.command<string[]>('workspace_labels');
+  }
+
+  /** Replaces the labels of a repository of the open workspace; answers its meta. */
+  setRepoLabels(name: string, labels: string[]): Promise<MetaResponse> {
+    return this.command<MetaResponse>('set_workspace_repo_labels', { name, labels });
+  }
+
   /** The native folder picker; null when cancelled. */
   async pickRepoFolder(): Promise<string | null> {
     try {

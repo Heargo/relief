@@ -113,7 +113,7 @@ The member repositories stay untouched: in workspace mode relief writes nothing 
 
 - `name`: the name of the repository in the workspace, unique, non-empty, without `/` (by default, its folder name);
 - `path`: the repository folder, relative to the file (or absolute);
-- `labels`: free labels (`front`, `back`, `ops`, `tools`…), optional;
+- `labels`: the labels of the repository, optional. They are picked among `front`, `back`, `ops` and `tools`, plus the ones you declare in a top-level `labels` field of the file (for example `"labels": ["qa"]`, next to `repos`); an unknown label is refused when you label from the map;
 - `source` and `destination`: the default comparison of the repository (`WORKTREE` and `main` when absent).
 
 To open the workspace, give the file or its folder:

@@ -13,6 +13,11 @@ export class WelcomeBusiness {
   readonly recents = this._recents.asReadonly();
   readonly error = this._error.asReadonly();
 
+  /** Shows a failure of the page (the same line as a failed opening). */
+  fail(error: unknown): void {
+    this._error.set(error instanceof Error ? error.message : String(error));
+  }
+
   async load(): Promise<void> {
     try {
       this._recents.set(await this.api.recents());

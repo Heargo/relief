@@ -112,3 +112,11 @@ The **Layout** section, in the left sidebar, chooses how boxes are arranged insi
 - **Fewer crossings** (default): relief reorders the children of each box so that arrows cross less at the Modules, Files and Symbols levels. The grid and the box sizes stay the same; only the order changes. The computation is capped at 300 ms: on a large repository, relief keeps the best order found in that time. The first top-level box stays in place.
 - **Raw grid**: boxes are arranged in alphabetical order.
 - Switching layouts moves the boxes with an animation. The choice is remembered for the next visit.
+
+## Labelling the repositories of a workspace
+
+In a workspace, the header of the left sidebar lists each repository with its branch and its labels. The **+** button of a repository opens the available labels (`front`, `back`, `ops`, `tools`, plus the ones declared in the `labels` field of the workspace file): a click adds or removes a label. The choice is saved in the `<name>.relief.json` file and the map shows it at once on the repository box.
+
+To add a label to the list, declare it in the top-level `labels` field of the workspace file, next to `repos`.
+
+In the **Display** section, **Filter by label** hides the repositories that carry none of the chosen labels, with everything they contain and the arrows leading to them. A repository without labels is hidden as soon as a label is chosen; turn every label off to see everything again. The filter only appears in a workspace and is not saved.

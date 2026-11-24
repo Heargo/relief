@@ -286,3 +286,96 @@ fn add_workspace_repo_refuses_a_folder_that_is_not_a_repository() {
         json!({ "repos": [] })
     );
 }
+
+// Ticket K09: the labels of the repositories.
+//  - `workspace_labels {}` answers the labels one can pick (`front`, `back`, `ops`, `tools`, then
+//    the ones declared in the workspace file), on the open workspace;
+//  - `set_workspace_repo_labels { name, labels }` replaces the labels of a repository, saves the
+//    file, reopens the workspace and answers its meta. An unknown label fails and changes
+//    nothing; both commands fail with the code `bad_request` on a single repository.
+
+#[test]
+fn workspace_labels_lists_the_defaults_and_the_declared_labels() {
+    let h = harness();
+    create(&h);
+    assert_eq!(
+        call(&h, "workspace_labels", json!({})).unwrap(),
+        json!(["front", "back", "ops", "tools"])
+    );
+    let file = h.ws.join("shop.relief.json");
+    let mut value: Value = serde_json::from_str(&std::fs::read_to_string(&file).unwrap()).unwrap();
+    value["labels"] = json!(["qa"]);
+    std::fs::write(&file, value.to_string()).unwrap();
+    call(&h, "open_workspace", json!({ "path": p(&h.ws) })).unwrap();
+    assert_eq!(
+        call(&h, "workspace_labels", json!({})).unwrap(),
+        json!(["front", "back", "ops", "tools", "qa"])
+    );
+}
+
+#[test]
+fn set_workspace_repo_labels_replaces_the_labels_and_saves_the_file() {
+    let h = harness();
+    create(&h);
+    call(
+        &h,
+        "add_workspace_repo",
+        json!({ "repo": p(&h.acme), "labels": ["back"] }),
+    )
+    .unwrap();
+    let meta = call(
+        &h,
+        "set_workspace_repo_labels",
+        json!({ "name": "acme", "labels": ["front", "ops"] }),
+    )
+    .unwrap();
+    assert_eq!(
+        meta["workspace"],
+        json!({ "repos": [{ "name": "acme", "labels": ["front", "ops"] }] })
+    );
+    let file: Value =
+        serde_json::from_str(&std::fs::read_to_string(h.ws.join("shop.relief.json")).unwrap())
+            .unwrap();
+    assert_eq!(file["repos"][0]["labels"], json!(["front", "ops"]));
+}
+
+#[test]
+fn set_workspace_repo_labels_refuses_an_unknown_label() {
+    let h = harness();
+    create(&h);
+    call(
+        &h,
+        "add_workspace_repo",
+        json!({ "repo": p(&h.acme), "labels": ["back"] }),
+    )
+    .unwrap();
+    let error = call(
+        &h,
+        "set_workspace_repo_labels",
+        json!({ "name": "acme", "labels": ["qa"] }),
+    )
+    .expect_err("unknown label");
+    assert!(
+        error["message"].as_str().is_some_and(|m| m.contains("qa")),
+        "{error}"
+    );
+    assert_eq!(
+        call(&h, "meta", json!({})).unwrap()["workspace"],
+        json!({ "repos": [{ "name": "acme", "labels": ["back"] }] })
+    );
+}
+
+#[test]
+fn the_label_commands_need_an_open_workspace() {
+    let h = harness();
+    call(&h, "open_repo", json!({ "path": p(&h.acme) })).unwrap();
+    let error = call(&h, "workspace_labels", json!({})).expect_err("single repository");
+    assert_eq!(error["code"], "bad_request", "{error}");
+    let error = call(
+        &h,
+        "set_workspace_repo_labels",
+        json!({ "name": "acme", "labels": [] }),
+    )
+    .expect_err("single repository");
+    assert_eq!(error["code"], "bad_request", "{error}");
+}

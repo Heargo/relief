@@ -73,6 +73,7 @@ import { foldTestEdges, testNodeIds } from '../helpers/test-edges.logic';
 import { buildNodeInfos, type NodeInfo } from '../helpers/node-info.logic';
 import { mapLevels } from '../helpers/repo-level.logic';
 import { headRef } from '../helpers/repo.logic';
+import { filterReposByLabels } from '../helpers/repo-filter.logic';
 import { containerToLoad, zoomedBox } from '../helpers/subgraph.logic';
 import {
   DEFAULT_HIDE_EXTERNAL,
@@ -260,6 +261,7 @@ export class MapBusiness {
   private readonly _commitFiles = signal<ReadonlySet<string> | null>(null);
 
   private readonly _graph = signal<GraphSnapshot>(EMPTY_GRAPH);
+  private readonly _labelFilter = signal<string[]>([]);
   private readonly _repoName = signal('');
   private readonly _helpOpen = signal(false);
 
@@ -288,6 +290,8 @@ export class MapBusiness {
   readonly status = this._status.asReadonly();
   readonly layoutMode = this._layoutMode.asReadonly();
   readonly hideExternal = this._hideExternal.asReadonly();
+  /** The labels chosen in the Display section: only the repositories that carry one are shown. */
+  readonly labelFilter = this._labelFilter.asReadonly();
   readonly camera = this._camera.asReadonly();
   /** The whole camera, as the CSS transform of the layer that holds the nodes and the edges. */
   readonly layerTransform = computed(() => layerTransform(this._camera()));
@@ -1111,7 +1115,10 @@ export class MapBusiness {
    */
   show(received: GraphSnapshot, keepView = false): Promise<void> {
     this.sourceGraph = received;
-    const graph = hideExternalDeps(received, this._hideExternal());
+    const graph = filterReposByLabels(
+      hideExternalDeps(received, this._hideExternal()),
+      this._labelFilter(),
+    );
     const request = ++this.showRequest;
     if (!keepView) this.layingOut = true;
     if (this.executeLayout === onThreadExecutor) {
@@ -1205,6 +1212,12 @@ export class MapBusiness {
     this._hideExternal.set(hide);
     const source = storage();
     if (source) writeHideExternal(source, hide);
+    if (this.sourceGraph.nodes.length > 0) void this.show(this.sourceGraph, true);
+  }
+
+  /** Keeps the repositories that carry one of `labels` (none: all); the map is laid out again. */
+  setLabelFilter(labels: string[]): void {
+    this._labelFilter.set(labels);
     if (this.sourceGraph.nodes.length > 0) void this.show(this.sourceGraph, true);
   }
 

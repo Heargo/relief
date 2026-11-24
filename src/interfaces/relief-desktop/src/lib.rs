@@ -126,6 +126,8 @@ fn handlers<R: Runtime>(builder: Builder<R>) -> Builder<R> {
         open_repo_as_workspace,
         add_workspace_repo,
         remove_workspace_repo,
+        workspace_labels,
+        set_workspace_repo_labels,
         recents
     ])
 }
@@ -681,6 +683,31 @@ async fn remove_workspace_repo<R: Runtime>(
     let file = open_workspace_file(&app)?;
     let mut workspace = Workspace::open(&file).map_err(api_error)?;
     workspace.remove_repo(&name).map_err(api_error)?;
+    start_workspace(&app, file, false).await
+}
+
+/// The labels a repository of the open workspace can carry.
+#[tauri::command]
+fn workspace_labels<R: Runtime>(app: AppHandle<R>) -> Result<Vec<String>, ApiError> {
+    welcome(&app)?;
+    let file = open_workspace_file(&app)?;
+    Ok(Workspace::open(&file)
+        .map_err(api_error)?
+        .available_labels())
+}
+
+/// Replaces the labels of a repository of the open workspace and reopens it.
+#[tauri::command]
+async fn set_workspace_repo_labels<R: Runtime>(
+    app: AppHandle<R>,
+    name: String,
+    labels: Vec<String>,
+) -> Result<MetaResponse, ApiError> {
+    welcome(&app)?;
+    let file = open_workspace_file(&app)?;
+    let mut workspace = Workspace::open(&file).map_err(api_error)?;
+    let labels: Vec<&str> = labels.iter().map(String::as_str).collect();
+    workspace.set_labels(&name, &labels).map_err(api_error)?;
     start_workspace(&app, file, false).await
 }
 

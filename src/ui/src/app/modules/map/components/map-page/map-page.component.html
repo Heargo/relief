@@ -76,6 +76,9 @@
       <p class="state error" data-testid="open-error">{{ error }}</p>
     }
   }
+  @if (repo.labelsError(); as error) {
+    <p class="state error" data-testid="labels-error">{{ error }}</p>
+  }
   @if (repo.noSession()) {
     <app-welcome (opened)="start()" />
   } @else {
@@ -103,6 +106,39 @@
                   <b>{{ item.name }}</b>
                   @if (item.branch) {
                     <span class="ref" data-testid="workspace-repo-branch">{{ item.branch }}</span>
+                  }
+                  @for (label of item.labels; track label) {
+                    <span class="tag" data-testid="repo-label">{{ label }}</span>
+                  }
+                  <button
+                    type="button"
+                    class="chip edit"
+                    data-testid="repo-labels-edit"
+                    [attr.aria-label]="'map.repoLabels.edit' | translate: { name: item.name }"
+                    [attr.aria-expanded]="editingRepo() === item.name"
+                    (click)="toggleLabelEditor(item.name)"
+                  >
+                    +
+                  </button>
+                  @if (editingRepo() === item.name) {
+                    <span
+                      class="options"
+                      role="group"
+                      [attr.aria-label]="'map.repoLabels.title' | translate"
+                    >
+                      @for (option of repo.availableLabels(); track option) {
+                        <button
+                          type="button"
+                          class="chip"
+                          [attr.data-testid]="'repo-label-option-' + option"
+                          [class.on]="item.labels.includes(option)"
+                          [attr.aria-pressed]="item.labels.includes(option)"
+                          (click)="toggleRepoLabel(item, option)"
+                        >
+                          {{ option }}
+                        </button>
+                      }
+                    </span>
                   }
                 </li>
               }
@@ -305,6 +341,28 @@
               [coChange]="coChangeState.layer()"
               (coChangeChange)="coChangeState.setLayer($event)"
             />
+            @if (workspaceRepos().length > 0) {
+              <section class="sec" data-testid="label-filter">
+                <h3>{{ 'map.repoLabels.filter' | translate }}</h3>
+                <div
+                  class="seg"
+                  role="group"
+                  [attr.aria-label]="'map.repoLabels.title' | translate"
+                >
+                  @for (label of repo.availableLabels(); track label) {
+                    <button
+                      type="button"
+                      [attr.data-testid]="'label-filter-' + label"
+                      [class.on]="map.labelFilter().includes(label)"
+                      [attr.aria-pressed]="map.labelFilter().includes(label)"
+                      (click)="toggleLabelFilter(label)"
+                    >
+                      {{ label }}
+                    </button>
+                  }
+                </div>
+              </section>
+            }
             <section class="sec" data-testid="layout-section">
               <h3>{{ 'map.layout.title' | translate }}</h3>
               <div class="seg">

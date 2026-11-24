@@ -33,6 +33,9 @@ export class RepoBusiness {
   /** The containers opened on demand, asked again with each read of the snapshot. */
   private expanded: string[] = [];
 
+  private readonly _labels = signal<string[]>([]);
+  private readonly _labelsError = signal<string | null>(null);
+
   readonly status = this._status.asReadonly();
   readonly error = this._error.asReadonly();
   /** relief started without a path: the welcome screen is shown instead of the map. */
@@ -41,6 +44,10 @@ export class RepoBusiness {
   readonly snapshot = this._snapshot.asReadonly();
   /** Ids of the nodes whose content is being loaded. */
   readonly loading = this._loading.asReadonly();
+  /** The labels a repository of the workspace can carry. */
+  readonly availableLabels = this._labels.asReadonly();
+  /** Why the labels could not be read, when they could not. */
+  readonly labelsError = this._labelsError.asReadonly();
   readonly repoName = computed(() => this._meta()?.repo ?? null);
   readonly range = computed(() => this._meta()?.range ?? null);
   readonly ref = this._ref.asReadonly();
@@ -63,6 +70,7 @@ export class RepoBusiness {
       const ref = headRef(meta.range);
       this._snapshot.set(await this.api.snapshot(ref, DISPLAY_BUDGET));
       this._ref.set(ref);
+      if (meta.workspace) await this.loadLabels();
       this._status.set('ready');
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -70,6 +78,24 @@ export class RepoBusiness {
       this._error.set(message);
       this._status.set('error');
     }
+  }
+
+  private async loadLabels(): Promise<void> {
+    try {
+      this._labels.set(await this.api.workspaceLabels());
+      this._labelsError.set(null);
+    } catch (error) {
+      this._labels.set([]);
+      this._labelsError.set(error instanceof Error ? error.message : String(error));
+    }
+  }
+
+  /** Replaces the labels of a repository of the workspace, then reads the snapshot again. */
+  async setRepoLabels(name: string, labels: string[]): Promise<void> {
+    const meta = await this.api.setRepoLabels(name, labels);
+    const ref = this._ref();
+    this._meta.set({ ...meta, range: this._meta()?.range ?? meta.range });
+    if (ref) await this.refreshSnapshot(ref);
   }
 
   /** Without a range, the saved comparison (source merged into destination) is the range. */
